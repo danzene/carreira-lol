@@ -8,7 +8,7 @@ export default function BarraAtributo({ nome, valor }: { nome: string; valor: nu
           style={{ width: `${valor}%` }}
         />
       </div>
-      <span className="w-7 shrink-0 text-right text-sm font-semibold text-zinc-200">{valor}</span>
+      <span className="w-7 shrink-0 text-right text-sm font-semibold text-zinc-200">{Math.round(valor)}</span>
     </div>
   );
 }

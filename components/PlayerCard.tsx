@@ -119,7 +119,7 @@ function Medidor({ rotulo, valor, cor }: { rotulo: string; valor: number; cor: s
     <div>
       <div className="mb-1 flex justify-between text-[11px]">
         <span className="text-zinc-400">{rotulo}</span>
-        <span className="text-zinc-300">{valor}</span>
+        <span className="text-zinc-300">{Math.round(valor)}</span>
       </div>
       <div className="h-2 overflow-hidden rounded-full bg-borda">
         <div className={`h-full rounded-full bg-gradient-to-r ${cor}`} style={{ width: `${valor}%` }} />

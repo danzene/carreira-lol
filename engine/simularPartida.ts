@@ -121,7 +121,7 @@ export function simularPartida(player: Player, championId: string, seed: number)
 function aplicarXp(attrs: Attributes, xp: Partial<Attributes>): Attributes {
   const novo: Attributes = { ...attrs };
   (Object.keys(xp) as AtributoKey[]).forEach((k) => {
-    novo[k] = clamp(novo[k] + (xp[k] ?? 0), 0, 100);
+    novo[k] = clamp(Math.round((novo[k] + (xp[k] ?? 0)) * 100) / 100, 0, 100);
   });
   return novo;
 }

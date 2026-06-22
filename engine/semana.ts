@@ -30,7 +30,10 @@ export function treinar(career: CareerState, atributo: AtributoKey): CareerState
     player: {
       ...career.player,
       energia: clamp(career.player.energia - LOOP.custoTreino, 0, 100),
-      atributos: { ...career.player.atributos, [atributo]: clamp(atual + LOOP.ganhoTreino, 0, 100) },
+      atributos: {
+        ...career.player.atributos,
+        [atributo]: clamp(Math.round((atual + LOOP.ganhoTreino) * 100) / 100, 0, 100),
+      },
     },
   };
 }
@@ -48,7 +51,7 @@ export function avancarSemana(career: CareerState, modo: "normal" | "descanso"):
   const bonusDescanso = modo === "descanso" ? LOOP.moralDescanso : 0;
   const energia =
     modo === "descanso" ? 100 : clamp(career.player.energia + LOOP.recuperaEnergiaSemana, 0, 100);
-  const moral = clamp(career.player.moral + drift + bonusDescanso, 0, 100);
+  const moral = clamp(Math.round((career.player.moral + drift + bonusDescanso) * 10) / 10, 0, 100);
 
   let semanaAtual = career.semanaAtual + 1;
   let temporada = career.temporada;

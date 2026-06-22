@@ -2,8 +2,8 @@
 
 ## Status das fases
 - [x] Fase 0 — Setup
-- [ ] Fase 1 — Criação de jogador + dashboard + save
-- [ ] Fase 2 — Motor + soloq
+- [x] Fase 1 — Criação de jogador + dashboard + save
+- [x] Fase 2 — Motor + soloq
 - [ ] Fase 3 — Loop semanal
 - [ ] Fase 4 — Economia
 - [ ] Fase 5 — Reputação + propostas
@@ -36,6 +36,36 @@
   `NEXT_PUBLIC_SUPABASE_ANON_KEY`). Dependência: `@supabase/supabase-js`.
 - Pasta `/lib` adicionada à estrutura para helpers de infra.
 
+### Fase 1 (criação + dashboard + save)
+- **Motor puro** (`engine/types.ts`, `engine/player.ts`): tipos do domínio +
+  `criarPlayer`/`criarCareerState`/`validarCriacao`. Testado em `engine/player.test.ts`.
+- **Criação:** atributos começam em 40, **80 pontos** em passos de 5, teto **75**
+  na criação; pool de **3 campeões**; tudo configurável em `data/config.ts`.
+- **Data Dragon** (`lib/ddragon.ts`): lista de campeões + ícones, locale `pt_BR`,
+  cacheada em localStorage por versão.
+- **Save multi-slot** (`store/saves.ts`): mapa de slots no localStorage + ponteiro
+  de "slot atual" (pra Continuar). Estado global em `store/careerStore.ts` (Zustand).
+- **Telas:** Home (`Nova Carreira` + lista Continuar) → `/criar` (wizard de 3 passos)
+  → `/dashboard` (PlayerCard com atributos, pool, rank, energia/moral, dinheiro).
+- **Decisões técnicas:** Vitest com alias `@` (`vitest.config.ts`); testes excluídos
+  do build TS (`tsconfig`); regra `no-img-element` desligada (ícones do Data Dragon
+  via `<img>`, sem otimização do next/image num grid grande).
+
+### Fase 2 (motor de simulação + soloq)
+- **Motor puro e determinístico** (`engine/rng.ts` mulberry32, `engine/elo.ts`,
+  `engine/simularPartida.ts`): `simularPartida(player, championId, seed)` → `MatchResult`.
+  Testes em `engine/simularPartida.test.ts` (vitória↑ com atributos, variância↓ com
+  consistência/mental, XP, elo). Balanceamento em `data/simulacao.ts`.
+- **Pilar do design:** a **nota** vem da força individual vs nível do lobby (alta até
+  em derrota); a **vitória** vem do time (você + 4 aliados vs 5 inimigos gerados).
+- **Elo:** ladder Ferro IV→Desafiante derivada do MMR (1 MMR = 1 LP na divisão);
+  ganho maior contra MMR alto.
+- **Fluxo soloq** (`app/soloq/page.tsx`): pick (da pool) → draft simplificada
+  (lobby cosmético com campeões aleatórios) → resultado (`ResultadoPartida`).
+- **Efeitos aplicados** (`aplicarResultado`): elo/LP, XP nos atributos (cap 100),
+  histórico (últimas 50). Ação `jogarPartida` no `careerStore` persiste no slot.
+- **Dashboard:** botão *Jogar Soloq* + `HistoricoPartidas` (últimas 8).
+
 ## Como rodar
 
 > Pré-requisito: Node 18+ instalado na máquina.
@@ -43,7 +73,7 @@
 ```bash
 npm install      # instala as dependências (1ª vez)
 npm run dev      # sobe o dev server em http://localhost:3000
-npm run test     # roda os testes (Vitest) — deve passar o teste dummy
+npm run test     # roda os testes (Vitest) — devem passar os testes do motor
 npm run build    # build de produção (checa que compila)
 npm run lint     # lint (eslint-config-next)
 ```

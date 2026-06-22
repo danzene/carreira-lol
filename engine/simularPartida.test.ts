@@ -89,4 +89,14 @@ describe("simulação de partida", () => {
     expect(eloDeMmr(850).lp).toBe(50);
     expect(eloDeMmr(900).elo).toBe("Ferro III");
   });
+
+  it("moral alta melhora a nota média", () => {
+    const alta = playerCom(60);
+    alta.moral = 100;
+    const baixa = playerCom(60);
+    baixa.moral = 40;
+    const mAlta = media(Array.from({ length: 200 }, (_, s) => simularPartida(alta, "A", s).notaPerformance));
+    const mBaixa = media(Array.from({ length: 200 }, (_, s) => simularPartida(baixa, "A", s).notaPerformance));
+    expect(mAlta).toBeGreaterThan(mBaixa);
+  });
 });

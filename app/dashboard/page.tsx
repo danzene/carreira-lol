@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import PlayerCard from "@/components/PlayerCard";
 import HistoricoPartidas from "@/components/HistoricoPartidas";
+import PainelSemana from "@/components/PainelSemana";
 import { useCareer } from "@/store/careerStore";
 
 export default function DashboardPage() {
@@ -41,12 +42,7 @@ export default function DashboardPage() {
         </button>
       </header>
 
-      <Link
-        href="/soloq"
-        className="rounded-xl bg-destaque px-6 py-3 text-center text-base font-semibold text-white shadow-lg shadow-destaque/30 transition hover:bg-violet-600"
-      >
-        🎮 Jogar Soloq
-      </Link>
+      <PainelSemana career={career} />
 
       <PlayerCard career={career} />
 

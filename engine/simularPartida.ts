@@ -78,7 +78,8 @@ export function simularPartida(player: Player, championId: string, seed: number)
 
   const estabilidade = (player.atributos.consistencia + player.atributos.mental) / 2; // 0-100
   const ampRuido = SIMULACAO.ruidoMax - (SIMULACAO.ruidoMax - SIMULACAO.ruidoMin) * (estabilidade / 100);
-  const forcaFinal = clamp(baseIndividual + entre(rng, -ampRuido, ampRuido), 0, 100);
+  const moralMod = (player.moral - 70) * SIMULACAO.pesoMoral; // moral alta ajuda, baixa atrapalha
+  const forcaFinal = clamp(baseIndividual + entre(rng, -ampRuido, ampRuido) + moralMod, 0, 100);
 
   const nivel = nivelMedio(player.rankSoloq.mmr);
 

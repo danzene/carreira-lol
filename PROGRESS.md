@@ -4,7 +4,7 @@
 - [x] Fase 0 — Setup
 - [x] Fase 1 — Criação de jogador + dashboard + save
 - [x] Fase 2 — Motor + soloq
-- [ ] Fase 3 — Loop semanal
+- [x] Fase 3 — Loop semanal
 - [ ] Fase 4 — Economia
 - [ ] Fase 5 — Reputação + propostas
 - [ ] Fase 6 — Campeonatos
@@ -65,6 +65,18 @@
 - **Efeitos aplicados** (`aplicarResultado`): elo/LP, XP nos atributos (cap 100),
   histórico (últimas 50). Ação `jogarPartida` no `careerStore` persiste no slot.
 - **Dashboard:** botão *Jogar Soloq* + `HistoricoPartidas` (últimas 8).
+
+### Fase 3 (loop semanal)
+- **Energia como recurso** (`data/loop.ts`, `engine/semana.ts`): soloq custa −12,
+  treino custa −20. Testes em `engine/semana.test.ts`.
+- **Treino focado:** escolhe 1 atributo → +1.2 de XP nele (foco > soloq).
+- **Avançar semana:** +1 semana, recupera energia (+55); moral oscila pela *forma*
+  recente (nota média das últimas 5). **Descansar a semana:** energia 100 + moral.
+  Vira a temporada após 26 semanas.
+- **Moral afeta performance:** termo pequeno na simulação (`pesoMoral`, neutro em 70),
+  então os testes das fases anteriores seguem passando.
+- **UI:** `components/PainelSemana.tsx` no dashboard (energia + treino + avançar/
+  descansar); soloq mostra energia e bloqueia quando acaba.
 
 ## Como rodar
 

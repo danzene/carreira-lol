@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import ResultadoPartida from "@/components/ResultadoPartida";
+import { LOOP } from "@/data/loop";
 import { buscarCampeoes, type Campeao } from "@/lib/ddragon";
 import type { MatchResult } from "@/engine/types";
 import { useCareer } from "@/store/careerStore";
@@ -52,6 +53,7 @@ export default function SoloqPage() {
   }
 
   const pool = career.player.pool;
+  const semEnergia = career.player.energia < LOOP.custoSoloq;
 
   function escolher(id: string) {
     setChampionId(id);
@@ -78,7 +80,12 @@ export default function SoloqPage() {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col gap-5 px-4 py-6">
       <header className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-zinc-100">Soloq</h1>
+        <div>
+          <h1 className="text-lg font-bold text-zinc-100">Soloq</h1>
+          <p className="text-xs text-zinc-500">
+            Energia: {Math.round(career.player.energia)}/100 · custo {LOOP.custoSoloq}/partida
+          </p>
+        </div>
         <Link
           href="/dashboard"
           className="rounded-lg px-3 py-1.5 text-xs text-zinc-400 transition hover:bg-borda hover:text-zinc-200"
@@ -89,7 +96,13 @@ export default function SoloqPage() {
 
       {etapa === "pick" && (
         <section className="flex flex-col gap-3">
-          <p className="text-sm text-zinc-400">Escolha o campeão desta partida:</p>
+          {semEnergia ? (
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-center text-sm text-amber-300">
+              Sem energia para jogar. Volte ao dashboard e <strong>avance a semana</strong> para recuperar.
+            </div>
+          ) : (
+            <p className="text-sm text-zinc-400">Escolha o campeão desta partida:</p>
+          )}
           <div className="grid grid-cols-3 gap-3">
             {pool.map((m) => {
               const c = campMap[m.championId];
@@ -98,7 +111,8 @@ export default function SoloqPage() {
                   key={m.championId}
                   type="button"
                   onClick={() => escolher(m.championId)}
-                  className="flex flex-col items-center gap-2 rounded-xl border border-borda bg-painel p-4 transition hover:border-destaque"
+                  disabled={semEnergia}
+                  className="flex flex-col items-center gap-2 rounded-xl border border-borda bg-painel p-4 transition hover:border-destaque disabled:opacity-40"
                 >
                   {c ? (
                     <img src={c.icone} alt={c.nome} width={64} height={64} className="h-16 w-16 rounded-lg" />
@@ -126,7 +140,8 @@ export default function SoloqPage() {
             <button
               type="button"
               onClick={jogar}
-              className="rounded-lg bg-destaque px-8 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-600"
+              disabled={semEnergia}
+              className="rounded-lg bg-destaque px-8 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-600 disabled:opacity-40"
             >
               Jogar partida
             </button>
@@ -148,7 +163,8 @@ export default function SoloqPage() {
             <button
               type="button"
               onClick={denovo}
-              className="rounded-lg bg-destaque px-8 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-600"
+              disabled={semEnergia}
+              className="rounded-lg bg-destaque px-8 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-600 disabled:opacity-40"
             >
               Jogar de novo
             </button>

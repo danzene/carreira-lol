@@ -29,6 +29,8 @@ export const SIMULACAO = {
   // xp (ganho de atributo por partida)
   xpPorPartida: 0.5, // total aprox. distribuído nos atributos da rota
   xpBonusLobbyForte: 0.5, // extra por jogar acima do seu nível
+  // moral afeta a performance (neutra em 70)
+  pesoMoral: 0.1, // +/- pontos de força por ponto de moral acima/abaixo de 70
 } as const;
 
 // Escala MMR -> nível médio (0-100) do lobby. Sobe conforme você escala.

@@ -4,7 +4,7 @@
 - [x] 0  Setup + base pixel art
 - [x] 1  Criação de jogador + dashboard + save
 - [x] 2  Banco de campeões
-- [ ] 3  Draft (pick & ban)
+- [x] 3  Draft (pick & ban)
 - [ ] 4  Motor de partida + resultado
 - [ ] 5  Loop semanal + atividades
 - [ ] 6  Economia + equipamentos
@@ -59,6 +59,16 @@
 - **Tier list por rota** (`components/TierList.tsx`, `app/campeoes/page.tsx`): abas de
   rota, tiers S–D por `forcaMetaBase`, e inspeção do perfil ao tocar no campeão.
   Link no dashboard.
+
+### Fase 3 (draft pick & ban)
+- **Motor do draft** (`engine/draft.ts`, +`draft.test.ts`): ordem oficial de torneio
+  (6 bans, 6 picks, 4 bans, 4 picks); `escolhaIA` (inimigo + coach) que preenche rotas
+  e prioriza meta/comfort; `forcaComp` (sinergia: frente + diversidade; counters:
+  dano×resistência, cc×mobilidade); `vocePica`/`passosCoach` = **voz escala com reputação**
+  (rep baixa → coach assume seus últimos picks).
+- **UI** (`components/DraftBoard.tsx`, `app/draft/page.tsx`): dois times com bans/picks,
+  auto-avanço da IA, sua pool destacada (★), e a força de comp ao fim. Link "Treinar
+  draft" no dashboard. Partida fica pra Fase 4.
 
 ## Como rodar
 

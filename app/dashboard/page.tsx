@@ -38,14 +38,22 @@ export default function DashboardPage() {
 
       <PlayerCard career={career} />
 
-      <Link
-        href="/campeoes"
-        className="border-2 border-borda bg-painel px-4 py-3 text-center font-pixel text-[10px] text-ciano transition hover:border-ciano"
-      >
-        📋 TIER LIST DE CAMPEÕES
-      </Link>
+      <div className="grid grid-cols-2 gap-2">
+        <Link
+          href="/draft"
+          className="border-2 border-rosa bg-rosa/10 px-4 py-3 text-center font-pixel text-[10px] text-rosa transition hover:bg-rosa hover:text-fundo"
+        >
+          ⚔️ TREINAR DRAFT
+        </Link>
+        <Link
+          href="/campeoes"
+          className="border-2 border-borda bg-painel px-4 py-3 text-center font-pixel text-[10px] text-ciano transition hover:border-ciano"
+        >
+          📋 TIER LIST
+        </Link>
+      </div>
 
-      <p className="text-center font-pixel text-[8px] text-borda">PRÓXIMA FASE · DRAFT (PICK &amp; BAN)</p>
+      <p className="text-center font-pixel text-[8px] text-borda">PRÓXIMA FASE · MOTOR DE PARTIDA</p>
       <p className="text-center text-xs">
         <Link href="/" className="text-ciano hover:underline">
           Início

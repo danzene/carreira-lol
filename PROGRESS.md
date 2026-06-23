@@ -2,7 +2,7 @@
 
 ## Status das fases
 - [x] 0  Setup + base pixel art
-- [ ] 1  Criação de jogador + dashboard + save
+- [x] 1  Criação de jogador + dashboard + save
 - [ ] 2  Banco de campeões
 - [ ] 3  Draft (pick & ban)
 - [ ] 4  Motor de partida + resultado
@@ -34,6 +34,20 @@
 - **Login fora do layout por ora** (home pública); religado numa fase de criação/save.
 - Modelo de dados completo em `engine/types.ts` (tipos puros, sem lógica).
 - Teste dummy em `engine/dummy.test.ts`.
+
+### Fase 1 (criação + dashboard + save)
+- **Motor puro** (`engine/player.ts`, +`player.test.ts`): `criarPlayer`/`criarCareerState`
+  no modelo novo (traços, `tierAtual: "SOLOQ"`, `patchVigente: 1`, `equipamentos: []`).
+- **Dados** (`data/config.ts`): atributos, rotas, nacionalidades, **TRACOS** (9, com
+  `inicial` p/ os selecionáveis), CRIACAO e INICIO.
+- **Criação pixel** (`components/CriacaoWizard.tsx`, 4 passos): identidade → atributos
+  → **traço** → campeões (Data Dragon). Componentes: `EditorAtributos`, `SeletorTraco`,
+  `SeletorCampeoes`, `BarraAtributo`.
+- **Dashboard pixel** (`PlayerCard.tsx`): rank, reputação, dinheiro, tier, semana,
+  energia/moral, **traços**, atributos e pool.
+- **Save multi-slot** reaproveitando `store/saves.ts` (namespace "anon", sem login por
+  ora) via `store/careerStore.ts`. Home com lista "Continuar".
+- Dummy test removido; testes do motor em `engine/player.test.ts`.
 
 ## Como rodar
 

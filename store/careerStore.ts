@@ -9,6 +9,14 @@ import {
   temEnergiaParaSoloq,
   treinar as treinarEngine,
 } from "@/engine/semana";
+import {
+  alternarCoach,
+  bootcampCoreia,
+  comprarSetup,
+  processarSemanaEconomia,
+  sessaoMental,
+  stream,
+} from "@/engine/economia";
 import type { AtributoKey, CareerState, MatchResult, Player } from "@/engine/types";
 import {
   apagarSlot,
@@ -33,9 +41,12 @@ interface CareerStore {
   treinar: (atributo: AtributoKey) => boolean;
   avancarSemana: (modo: "normal" | "descanso") => void;
   sincronizarEnergia: () => void;
+  investir: (tipo: TipoInvestimento) => string | null;
   apagar: (slotId: string) => void;
   sair: () => void;
 }
+
+export type TipoInvestimento = "stream" | "setup" | "mental" | "bootcamp" | "coach";
 
 export const useCareer = create<CareerStore>((set, get) => ({
   career: null,
@@ -102,7 +113,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
   avancarSemana: (modo) => {
     const { career, slotId } = get();
     if (!career) return;
-    const novo = avancarSemanaEngine(career, modo);
+    const novo = processarSemanaEconomia(avancarSemanaEngine(career, modo));
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
   },
@@ -115,6 +126,42 @@ export const useCareer = create<CareerStore>((set, get) => ({
       set({ career: regen });
       if (slotId) salvarSlot(slotId, regen);
     }
+  },
+
+  investir: (tipo) => {
+    const { career, slotId } = get();
+    if (!career) return "Sem carreira ativa.";
+    const base = regenerarEnergia(career);
+
+    let novo: CareerState | null;
+    let erro: string;
+    switch (tipo) {
+      case "stream":
+        novo = stream(base);
+        erro = "Sem energia para a live.";
+        break;
+      case "setup":
+        novo = comprarSetup(base);
+        erro = base.setupComprado ? "Você já comprou o setup." : "Dinheiro insuficiente.";
+        break;
+      case "mental":
+        novo = sessaoMental(base);
+        erro = "Dinheiro insuficiente.";
+        break;
+      case "bootcamp":
+        novo = bootcampCoreia(base);
+        erro = "Dinheiro insuficiente.";
+        break;
+      case "coach":
+        novo = alternarCoach(base);
+        erro = "";
+        break;
+    }
+
+    if (!novo) return erro;
+    set({ career: novo });
+    if (slotId) salvarSlot(slotId, novo);
+    return null;
   },
 
   apagar: (slotId) => {

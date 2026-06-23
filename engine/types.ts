@@ -81,4 +81,6 @@ export interface CareerState {
   historicoPartidas: MatchResult[];
   inbox: Offer[];
   energiaEm?: number; // timestamp (ms) da última atualização da energia (regen em tempo real)
+  coachAtivo?: boolean; // assinatura de coach (XP passivo semanal, custa upkeep)
+  setupComprado?: boolean; // upgrade de setup já comprado (permanente, 1x)
 }

@@ -5,7 +5,7 @@
 - [x] Fase 1 — Criação de jogador + dashboard + save
 - [x] Fase 2 — Motor + soloq
 - [x] Fase 3 — Loop semanal
-- [ ] Fase 4 — Economia
+- [x] Fase 4 — Economia
 - [ ] Fase 5 — Reputação + propostas
 - [ ] Fase 6 — Campeonatos
 - [ ] Fase 7 — Dados reais
@@ -108,6 +108,18 @@
 - Store regenera ao **carregar**, ao **gastar** (soloq/treino) e num **tick de 1s**
   (`sincronizarEnergia`); `PainelSemana` mostra "+1 em mm:ss" ao vivo.
 - **Avançar/Descansar semana não dão mais energia** (só o tempo dá).
+
+### Fase 4 (economia + investimentos)
+- **Renda semanal** (`data/economia.ts`, `engine/economia.ts`): `processarSemanaEconomia`
+  credita renda base + salário do contrato (stub) ao avançar a semana. Testes em
+  `engine/economia.test.ts`.
+- **Loja** (`components/Loja.tsx`, `app/loja/page.tsx`, ação `investir` no store):
+  - 📺 **Stream** — troca energia por $ (+moral).
+  - 🖱️ **Setup** — +2 Mecânica permanente (1x, `setupComprado`).
+  - 🧠 **Sessão mental/nutri** — +moral/+energia.
+  - 🎓 **Coach** — assinatura (`coachAtivo`): −$/semana, +XP em todos por semana.
+  - 🇰🇷 **Bootcamp Coreia** — caro, consome 3 semanas, +XP geral forte.
+- Link 💰 no `PainelSemana` → `/loja`.
 
 ## Como rodar
 

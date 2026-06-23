@@ -139,6 +139,13 @@ export default function PainelSemana({ career }: { career: CareerState }) {
           😴 Descansar a semana
         </button>
       </div>
+
+      <Link
+        href="/loja"
+        className="mt-2 block rounded-xl border border-borda bg-fundo/40 px-3 py-2.5 text-center text-sm font-semibold text-zinc-200 transition hover:border-destaque"
+      >
+        💰 Loja de investimentos
+      </Link>
     </div>
   );
 }

@@ -3,33 +3,28 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import MapaPartida from "@/components/MapaPartida";
 import ResultadoPartida from "@/components/ResultadoPartida";
 import { LOOP } from "@/data/loop";
-import { buscarCampeoes, type Campeao } from "@/lib/ddragon";
+import type { RoteiroPartida } from "@/engine/partida";
 import type { MatchResult } from "@/engine/types";
+import { buscarCampeoes, type Campeao } from "@/lib/ddragon";
 import { useCareer } from "@/store/careerStore";
 
-type Etapa = "pick" | "draft" | "resultado";
-
-function embaralhar<T>(xs: T[]): T[] {
-  const a = [...xs];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
+type Etapa = "pick" | "partida" | "resultado";
 
 export default function SoloqPage() {
   const router = useRouter();
   const career = useCareer((s) => s.career);
   const recarregarAtual = useCareer((s) => s.recarregarAtual);
-  const jogarPartida = useCareer((s) => s.jogarPartida);
+  const prepararSoloq = useCareer((s) => s.prepararSoloq);
+  const finalizarSoloq = useCareer((s) => s.finalizarSoloq);
 
   const [campeoes, setCampeoes] = useState<Campeao[]>([]);
   const [etapa, setEtapa] = useState<Etapa>("pick");
   const [championId, setChampionId] = useState("");
-  const [lobby, setLobby] = useState<{ aliados: Campeao[]; inimigos: Campeao[] } | null>(null);
+  const [seed, setSeed] = useState(0);
+  const [roteiro, setRoteiro] = useState<RoteiroPartida | null>(null);
   const [resultado, setResultado] = useState<MatchResult | null>(null);
 
   useEffect(() => {
@@ -56,14 +51,16 @@ export default function SoloqPage() {
   const semEnergia = career.player.energia < LOOP.custoSoloq;
 
   function escolher(id: string) {
+    const r = prepararSoloq();
+    if (!r) return;
     setChampionId(id);
-    const baralho = embaralhar(campeoes.filter((c) => c.id !== id));
-    setLobby({ aliados: baralho.slice(0, 4), inimigos: baralho.slice(4, 9) });
-    setEtapa("draft");
+    setSeed(r.seed);
+    setRoteiro(r.roteiro);
+    setEtapa("partida");
   }
 
-  function jogar() {
-    const r = jogarPartida(championId);
+  function aoFim(modificador: number) {
+    const r = finalizarSoloq(championId, seed, modificador);
     if (r) {
       setResultado(r);
       setEtapa("resultado");
@@ -72,7 +69,7 @@ export default function SoloqPage() {
 
   function denovo() {
     setChampionId("");
-    setLobby(null);
+    setRoteiro(null);
     setResultado(null);
     setEtapa("pick");
   }
@@ -128,25 +125,8 @@ export default function SoloqPage() {
         </section>
       )}
 
-      {etapa === "draft" && lobby && (
-        <section className="flex flex-col gap-4">
-          <Time titulo="Seu time" cor="text-emerald-400" destaque={campMap[championId]} jogadores={lobby.aliados} />
-          <p className="text-center text-xs font-bold uppercase tracking-widest text-zinc-600">VS</p>
-          <Time titulo="Inimigos" cor="text-red-400" jogadores={lobby.inimigos} />
-          <div className="flex justify-center gap-3 pt-2">
-            <button type="button" onClick={denovo} className="rounded-lg px-4 py-2 text-sm text-zinc-400 hover:text-zinc-200">
-              Trocar campeão
-            </button>
-            <button
-              type="button"
-              onClick={jogar}
-              disabled={semEnergia}
-              className="rounded-lg bg-destaque px-8 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-600 disabled:opacity-40"
-            >
-              Jogar partida
-            </button>
-          </div>
-        </section>
+      {etapa === "partida" && roteiro && (
+        <MapaPartida roteiro={roteiro} campeao={campMap[championId]} onFim={aoFim} />
       )}
 
       {etapa === "resultado" && resultado && (
@@ -172,43 +152,5 @@ export default function SoloqPage() {
         </section>
       )}
     </main>
-  );
-}
-
-function Time({
-  titulo,
-  cor,
-  destaque,
-  jogadores,
-}: {
-  titulo: string;
-  cor: string;
-  destaque?: Campeao;
-  jogadores: Campeao[];
-}) {
-  return (
-    <div className="rounded-xl border border-borda bg-painel p-3">
-      <p className={`mb-2 text-xs font-semibold uppercase tracking-wider ${cor}`}>{titulo}</p>
-      <div className="flex flex-wrap gap-2">
-        {destaque && (
-          <div className="flex w-14 flex-col items-center gap-1">
-            <img
-              src={destaque.icone}
-              alt={destaque.nome}
-              width={48}
-              height={48}
-              className="h-12 w-12 rounded-lg border-2 border-destaque"
-            />
-            <span className="w-full truncate text-center text-[10px] text-destaque2">{destaque.nome}</span>
-          </div>
-        )}
-        {jogadores.map((c) => (
-          <div key={c.id} className="flex w-14 flex-col items-center gap-1">
-            <img src={c.icone} alt={c.nome} width={48} height={48} className="h-12 w-12 rounded-lg border border-borda" />
-            <span className="w-full truncate text-center text-[10px] text-zinc-500">{c.nome}</span>
-          </div>
-        ))}
-      </div>
-    </div>
   );
 }

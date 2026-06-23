@@ -89,6 +89,17 @@
   no Vercel; recomendado `npm i @supabase/supabase-js@latest` (suporte às keys novas
   `sb_publishable_`); opcional desligar confirmação de email no Supabase.
 
+### Partida interativa — mapa + decisões (a pedido do usuário)
+- **Roteiro** (`engine/partida.ts`): `gerarRoteiro(player, seed)` cria momentos de
+  decisão (com opções seguras/arriscadas resolvidas por seed+atributo) + eventos de
+  ambiente. As escolhas viram um **modificador** que entra no `simularPartida(...,
+  modificador)`. Testes em `engine/partida.test.ts`.
+- **UI** (`components/MapaPartida.tsx`): mapa SVG estilo Summoner's Rift, timeline que
+  avança sozinha (~480ms/min), feed de eventos, marcador da ação se movendo, e nos
+  momentos-chave a partida pausa pra você decidir. Barra de "Impacto".
+- **Fluxo soloq** (`app/soloq/page.tsx`): pick → `prepararSoloq` (gera roteiro) →
+  mapa interativo → `finalizarSoloq(championId, seed, modificador)` → resultado.
+
 ## Como rodar
 
 > Pré-requisito: Node 18+ instalado na máquina.

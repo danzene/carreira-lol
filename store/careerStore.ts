@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { criarCareerState } from "@/engine/player";
+import { gerarRoteiro, type RoteiroPartida } from "@/engine/partida";
 import { aplicarResultado, simularPartida } from "@/engine/simularPartida";
 import {
   avancarSemana as avancarSemanaEngine,
@@ -26,7 +27,8 @@ interface CareerStore {
   carregar: (slotId: string) => boolean;
   recarregarAtual: () => boolean;
   persistir: () => void;
-  jogarPartida: (championId: string) => MatchResult | null;
+  prepararSoloq: () => { seed: number; roteiro: RoteiroPartida } | null;
+  finalizarSoloq: (championId: string, seed: number, modificador: number) => MatchResult | null;
   treinar: (atributo: AtributoKey) => boolean;
   avancarSemana: (modo: "normal" | "descanso") => void;
   apagar: (slotId: string) => void;
@@ -65,11 +67,17 @@ export const useCareer = create<CareerStore>((set, get) => ({
     if (career && slotId) salvarSlot(slotId, career);
   },
 
-  jogarPartida: (championId) => {
-    const { career, slotId } = get();
+  prepararSoloq: () => {
+    const { career } = get();
     if (!career || !temEnergiaParaSoloq(career)) return null;
     const seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
-    const resultado = simularPartida(career.player, championId, seed);
+    return { seed, roteiro: gerarRoteiro(career.player, seed) };
+  },
+
+  finalizarSoloq: (championId, seed, modificador) => {
+    const { career, slotId } = get();
+    if (!career) return null;
+    const resultado = simularPartida(career.player, championId, seed, modificador);
     const novo = gastarEnergiaSoloq(aplicarResultado(career, resultado));
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);

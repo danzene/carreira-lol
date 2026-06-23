@@ -68,8 +68,9 @@ function gerarXp(player: Player, nota: number, nivel: number): Partial<Attribute
   return xp;
 }
 
-// Simula uma partida de soloq. Pura: (jogador, campeão, semente) -> resultado.
-export function simularPartida(player: Player, championId: string, seed: number): MatchResult {
+// Simula uma partida de soloq. Pura: (jogador, campeão, semente, modificador) -> resultado.
+// `modificador` vem das decisões da partida interativa (engine/partida.ts); 0 = neutro.
+export function simularPartida(player: Player, championId: string, seed: number, modificador = 0): MatchResult {
   const rng = criarRng(seed);
 
   // força individual -> dirige a NOTA
@@ -79,7 +80,7 @@ export function simularPartida(player: Player, championId: string, seed: number)
   const estabilidade = (player.atributos.consistencia + player.atributos.mental) / 2; // 0-100
   const ampRuido = SIMULACAO.ruidoMax - (SIMULACAO.ruidoMax - SIMULACAO.ruidoMin) * (estabilidade / 100);
   const moralMod = (player.moral - 70) * SIMULACAO.pesoMoral; // moral alta ajuda, baixa atrapalha
-  const forcaFinal = clamp(baseIndividual + entre(rng, -ampRuido, ampRuido) + moralMod, 0, 100);
+  const forcaFinal = clamp(baseIndividual + entre(rng, -ampRuido, ampRuido) + moralMod + modificador, 0, 100);
 
   const nivel = nivelMedio(player.rankSoloq.mmr);
 

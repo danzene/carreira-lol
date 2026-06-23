@@ -6,11 +6,13 @@ import { useRouter } from "next/navigation";
 import { ROTAS } from "@/data/config";
 import { listarResumos, type SlotResumo } from "@/store/saves";
 import { useCareer } from "@/store/careerStore";
+import { useAuth } from "@/store/authStore";
 
 export default function Home() {
   const router = useRouter();
   const carregar = useCareer((s) => s.carregar);
   const apagar = useCareer((s) => s.apagar);
+  const sairConta = useAuth((s) => s.sairConta);
   const [saves, setSaves] = useState<SlotResumo[]>([]);
   const [pronto, setPronto] = useState(false);
 
@@ -36,6 +38,14 @@ export default function Home() {
         aria-hidden
         className="pointer-events-none absolute -top-40 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-destaque/20 blur-3xl"
       />
+
+      <button
+        type="button"
+        onClick={() => sairConta()}
+        className="absolute right-4 top-4 z-10 rounded-lg px-3 py-1.5 text-xs text-zinc-500 transition hover:bg-borda hover:text-zinc-200"
+      >
+        Sair da conta
+      </button>
 
       <div className="relative flex flex-col items-center gap-3">
         <span className="text-xs font-semibold uppercase tracking-[0.3em] text-destaque2">

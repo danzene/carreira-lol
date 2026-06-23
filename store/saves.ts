@@ -1,9 +1,28 @@
 import type { CareerState, Role } from "@/engine/types";
 
-// Save/load em localStorage com múltiplos slots. Tudo guardado num mapa só.
+// Save/load multi-slot. Os dados ficam em localStorage (cache) namespaceado por
+// usuário, e são sincronizados com a nuvem (ver cloudSync.ts) via observador.
 
-const KEY = "carreira-lol:saves:v1";
-const KEY_ATUAL = "carreira-lol:slot-atual:v1";
+const PREFIXO = "carreira-lol";
+let ns = "anon";
+let aoMudar: (() => void) | null = null;
+
+// Define o usuário atual (namespace dos saves). null = anônimo.
+export function definirUsuario(userId: string | null): void {
+  ns = userId ?? "anon";
+}
+
+// Registra um callback chamado a cada gravação local (usado pra empurrar pra nuvem).
+export function observarSaves(cb: () => void): void {
+  aoMudar = cb;
+}
+
+function chaveSaves(): string {
+  return `${PREFIXO}:saves:v1:${ns}`;
+}
+function chaveAtual(): string {
+  return `${PREFIXO}:slot-atual:v1:${ns}`;
+}
 
 export interface Slot {
   id: string;
@@ -26,7 +45,7 @@ export interface SlotResumo {
 function lerTudo(): Record<string, Slot> {
   if (typeof window === "undefined") return {};
   try {
-    const raw = window.localStorage.getItem(KEY);
+    const raw = window.localStorage.getItem(chaveSaves());
     return raw ? (JSON.parse(raw) as Record<string, Slot>) : {};
   } catch {
     return {};
@@ -35,7 +54,8 @@ function lerTudo(): Record<string, Slot> {
 
 function gravarTudo(slots: Record<string, Slot>): void {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(KEY, JSON.stringify(slots));
+  window.localStorage.setItem(chaveSaves(), JSON.stringify(slots));
+  aoMudar?.();
 }
 
 export function gerarId(): string {
@@ -85,11 +105,24 @@ export function apagarSlot(id: string): void {
 
 export function definirSlotAtual(id: string | null): void {
   if (typeof window === "undefined") return;
-  if (id) window.localStorage.setItem(KEY_ATUAL, id);
-  else window.localStorage.removeItem(KEY_ATUAL);
+  if (id) window.localStorage.setItem(chaveAtual(), id);
+  else window.localStorage.removeItem(chaveAtual());
 }
 
 export function lerSlotAtual(): string | null {
   if (typeof window === "undefined") return null;
-  return window.localStorage.getItem(KEY_ATUAL);
+  return window.localStorage.getItem(chaveAtual());
+}
+
+// ---- sincronização com a nuvem ----
+
+// Blob de todos os saves do usuário atual (pra subir pra nuvem).
+export function exportarTudo(): Record<string, Slot> {
+  return lerTudo();
+}
+
+// Sobrescreve os saves locais com o que veio da nuvem (não dispara o observador).
+export function importarTudo(dados: Record<string, Slot>): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(chaveSaves(), JSON.stringify(dados ?? {}));
 }

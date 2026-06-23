@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import AuthGate from "@/components/AuthGate";
 
 export const metadata: Metadata = {
   title: "Carreira LoL",
@@ -15,7 +16,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body className="min-h-screen bg-fundo text-zinc-100 antialiased">
-        {children}
+        <AuthGate>{children}</AuthGate>
       </body>
     </html>
   );

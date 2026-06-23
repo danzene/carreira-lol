@@ -78,6 +78,17 @@
 - **UI:** `components/PainelSemana.tsx` no dashboard (energia + treino + avançar/
   descansar); soloq mostra energia e bloqueia quando acaba.
 
+### Login + contas na nuvem (a pedido do usuário, fora do roteiro original)
+- **Auth email+senha** (Supabase Auth): `store/authStore.ts` + `components/TelaLogin.tsx`.
+  `components/AuthGate.tsx` envolve o app no `layout.tsx` — **login obrigatório**.
+- **Saves isolados por usuário:** `store/saves.ts` agora namespaceia o localStorage
+  por `userId` e expõe export/import; `store/cloudSync.ts` puxa no login e empurra
+  (debounced) a cada gravação. Tabela `user_saves` (jsonb por usuário) com RLS —
+  migration em `supabase/migrations/001_user_saves.sql`.
+- **Setup necessário:** rodar a migration no Supabase; setar `NEXT_PUBLIC_SUPABASE_*`
+  no Vercel; recomendado `npm i @supabase/supabase-js@latest` (suporte às keys novas
+  `sb_publishable_`); opcional desligar confirmação de email no Supabase.
+
 ## Como rodar
 
 > Pré-requisito: Node 18+ instalado na máquina.

@@ -1,21 +1,37 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ATRIBUTOS } from "@/data/config";
 import { LOOP } from "@/data/loop";
+import { tempoAteProxima } from "@/engine/energia";
 import type { AtributoKey, CareerState } from "@/engine/types";
 import { useCareer } from "@/store/careerStore";
 
 export default function PainelSemana({ career }: { career: CareerState }) {
   const treinar = useCareer((s) => s.treinar);
   const avancarSemana = useCareer((s) => s.avancarSemana);
+  const sincronizarEnergia = useCareer((s) => s.sincronizarEnergia);
   const [abrirTreino, setAbrirTreino] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
+  const [, setTick] = useState(0);
+
+  // tick de 1s: regenera a energia em tempo real e atualiza a contagem
+  useEffect(() => {
+    const id = setInterval(() => {
+      sincronizarEnergia();
+      setTick((t) => t + 1);
+    }, 1000);
+    return () => clearInterval(id);
+  }, [sincronizarEnergia]);
 
   const energia = career.player.energia;
   const podeSoloq = energia >= LOOP.custoSoloq;
   const podeTreinar = energia >= LOOP.custoTreino;
+
+  const restanteMs = tempoAteProxima(career);
+  const mm = Math.floor(restanteMs / 60000);
+  const ss = Math.floor((restanteMs % 60000) / 1000);
 
   function fazerTreino(k: AtributoKey) {
     if (!treinar(k)) {
@@ -35,7 +51,14 @@ export default function PainelSemana({ career }: { career: CareerState }) {
       <div className="mb-4">
         <div className="mb-1 flex justify-between text-xs">
           <span className="text-zinc-400">Energia</span>
-          <span className="text-zinc-300">{Math.round(energia)}/100</span>
+          <span className="text-zinc-300">
+            {Math.round(energia)}/100
+            {energia < LOOP.energiaMax && (
+              <span className="ml-2 text-zinc-500">
+                +1 em {mm}:{String(ss).padStart(2, "0")}
+              </span>
+            )}
+          </span>
         </div>
         <div className="h-2.5 overflow-hidden rounded-full bg-borda">
           <div

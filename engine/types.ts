@@ -80,4 +80,5 @@ export interface CareerState {
   temporada: number;
   historicoPartidas: MatchResult[];
   inbox: Offer[];
+  energiaEm?: number; // timestamp (ms) da última atualização da energia (regen em tempo real)
 }

@@ -70,9 +70,10 @@
 - **Energia como recurso** (`data/loop.ts`, `engine/semana.ts`): soloq custa −12,
   treino custa −20. Testes em `engine/semana.test.ts`.
 - **Treino focado:** escolhe 1 atributo → +1.2 de XP nele (foco > soloq).
-- **Avançar semana:** +1 semana, recupera energia (+55); moral oscila pela *forma*
-  recente (nota média das últimas 5). **Descansar a semana:** energia 100 + moral.
-  Vira a temporada após 26 semanas.
+- **Avançar semana:** +1 semana; moral oscila pela *forma* recente (nota média das
+  últimas 5). **Descansar a semana:** recuperação maior de moral. Vira a temporada
+  após 26 semanas. *(Obs.: a recarga de energia por semana foi substituída por energia
+  em tempo real — ver abaixo.)*
 - **Moral afeta performance:** termo pequeno na simulação (`pesoMoral`, neutro em 70),
   então os testes das fases anteriores seguem passando.
 - **UI:** `components/PainelSemana.tsx` no dashboard (energia + treino + avançar/
@@ -99,6 +100,14 @@
   momentos-chave a partida pausa pra você decidir. Barra de "Impacto".
 - **Fluxo soloq** (`app/soloq/page.tsx`): pick → `prepararSoloq` (gera roteiro) →
   mapa interativo → `finalizarSoloq(championId, seed, modificador)` → resultado.
+
+### Energia em tempo real (a pedido do usuário)
+- `engine/energia.ts`: `regenerarEnergia(career, agora)` dá +1 a cada
+  `LOOP.energiaPorMinutos` (2) min de relógio, cap 100; `tempoAteProxima` pra contagem
+  regressiva. Âncora em `CareerState.energiaEm`. Testes em `engine/energia.test.ts`.
+- Store regenera ao **carregar**, ao **gastar** (soloq/treino) e num **tick de 1s**
+  (`sincronizarEnergia`); `PainelSemana` mostra "+1 em mm:ss" ao vivo.
+- **Avançar/Descansar semana não dão mais energia** (só o tempo dá).
 
 ## Como rodar
 

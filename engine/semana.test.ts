@@ -34,20 +34,18 @@ describe("loop semanal", () => {
     expect(treinar(c, "mecanica")).toBeNull();
   });
 
-  it("avançar semana incrementa a semana e recupera energia", () => {
+  it("avançar semana incrementa a semana (energia não muda — é em tempo real)", () => {
     const c = novaCarreira();
     c.player.energia = 10;
     const novo = avancarSemana(c, "normal");
     expect(novo.semanaAtual).toBe(c.semanaAtual + 1);
-    expect(novo.player.energia).toBeGreaterThan(10);
+    expect(novo.player.energia).toBe(10);
   });
 
-  it("descansar recupera energia ao máximo e sobe moral", () => {
+  it("descansar sobe a moral", () => {
     const c = novaCarreira();
-    c.player.energia = 0;
     c.player.moral = 50;
     const novo = avancarSemana(c, "descanso");
-    expect(novo.player.energia).toBe(100);
     expect(novo.player.moral).toBeGreaterThan(50);
   });
 

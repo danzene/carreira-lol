@@ -45,12 +45,12 @@ export function formaRecente(career: CareerState): number {
   return ult.reduce((acc, m) => acc + m.notaPerformance, 0) / ult.length;
 }
 
-// Avança o tempo. "normal" = recupera parte da energia; "descanso" = recupera tudo + moral.
+// Avança o tempo (semana/temporada) e mexe na moral. A energia agora é em tempo
+// real (ver engine/energia.ts), então avançar a semana NÃO dá energia.
+// "descanso" = recuperação maior de moral.
 export function avancarSemana(career: CareerState, modo: "normal" | "descanso"): CareerState {
   const drift = (formaRecente(career) - 5) * LOOP.moralPorForma;
   const bonusDescanso = modo === "descanso" ? LOOP.moralDescanso : 0;
-  const energia =
-    modo === "descanso" ? 100 : clamp(career.player.energia + LOOP.recuperaEnergiaSemana, 0, 100);
   const moral = clamp(Math.round((career.player.moral + drift + bonusDescanso) * 10) / 10, 0, 100);
 
   let semanaAtual = career.semanaAtual + 1;
@@ -64,6 +64,6 @@ export function avancarSemana(career: CareerState, modo: "normal" | "descanso"):
     ...career,
     semanaAtual,
     temporada,
-    player: { ...career.player, energia, moral },
+    player: { ...career.player, moral },
   };
 }

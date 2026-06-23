@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { criarCareerState } from "@/engine/player";
+import { regenerarEnergia } from "@/engine/energia";
 import { gerarRoteiro, type RoteiroPartida } from "@/engine/partida";
 import { aplicarResultado, simularPartida } from "@/engine/simularPartida";
 import {
@@ -31,6 +32,7 @@ interface CareerStore {
   finalizarSoloq: (championId: string, seed: number, modificador: number) => MatchResult | null;
   treinar: (atributo: AtributoKey) => boolean;
   avancarSemana: (modo: "normal" | "descanso") => void;
+  sincronizarEnergia: () => void;
   apagar: (slotId: string) => void;
   sair: () => void;
 }
@@ -40,7 +42,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
   slotId: null,
 
   iniciarCarreira: (player) => {
-    const career = criarCareerState(player);
+    const career = regenerarEnergia(criarCareerState(player));
     const slotId = gerarId();
     salvarSlot(slotId, career);
     definirSlotAtual(slotId);
@@ -51,8 +53,10 @@ export const useCareer = create<CareerStore>((set, get) => ({
   carregar: (slotId) => {
     const slot = lerSlot(slotId);
     if (!slot) return false;
+    const career = regenerarEnergia(slot.state);
     definirSlotAtual(slotId);
-    set({ career: slot.state, slotId });
+    set({ career, slotId });
+    if (career.player.energia !== slot.state.player.energia) salvarSlot(slotId, career);
     return true;
   },
 
@@ -77,8 +81,9 @@ export const useCareer = create<CareerStore>((set, get) => ({
   finalizarSoloq: (championId, seed, modificador) => {
     const { career, slotId } = get();
     if (!career) return null;
-    const resultado = simularPartida(career.player, championId, seed, modificador);
-    const novo = gastarEnergiaSoloq(aplicarResultado(career, resultado));
+    const base = regenerarEnergia(career);
+    const resultado = simularPartida(base.player, championId, seed, modificador);
+    const novo = gastarEnergiaSoloq(aplicarResultado(base, resultado));
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
     return resultado;
@@ -87,7 +92,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
   treinar: (atributo) => {
     const { career, slotId } = get();
     if (!career) return false;
-    const novo = treinarEngine(career, atributo);
+    const novo = treinarEngine(regenerarEnergia(career), atributo);
     if (!novo) return false;
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
@@ -100,6 +105,16 @@ export const useCareer = create<CareerStore>((set, get) => ({
     const novo = avancarSemanaEngine(career, modo);
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
+  },
+
+  sincronizarEnergia: () => {
+    const { career, slotId } = get();
+    if (!career) return;
+    const regen = regenerarEnergia(career);
+    if (regen.player.energia !== career.player.energia) {
+      set({ career: regen });
+      if (slotId) salvarSlot(slotId, regen);
+    }
   },
 
   apagar: (slotId) => {

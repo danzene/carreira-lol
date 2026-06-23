@@ -1,134 +1,47 @@
 # Progresso — Carreira LoL
 
 ## Status das fases
-- [x] Fase 0 — Setup
-- [x] Fase 1 — Criação de jogador + dashboard + save
-- [x] Fase 2 — Motor + soloq
-- [x] Fase 3 — Loop semanal
-- [x] Fase 4 — Economia
-- [ ] Fase 5 — Reputação + propostas
-- [ ] Fase 6 — Campeonatos
-- [ ] Fase 7 — Dados reais
-- [ ] Fase 8 — Polimento
+- [x] 0  Setup + base pixel art
+- [ ] 1  Criação de jogador + dashboard + save
+- [ ] 2  Banco de campeões
+- [ ] 3  Draft (pick & ban)
+- [ ] 4  Motor de partida + resultado
+- [ ] 5  Loop semanal + atividades
+- [ ] 6  Economia + equipamentos
+- [ ] 7  Reputação + transferências
+- [ ] 8  Ligas + campeonatos
+- [ ] 9  Auto Patch + win rates reais
+- [ ] 10 Auto-battle pixel animado
+- [ ] 11 Opções de novo jogo + event matches
+- [ ] 12 Polimento
 
 ## Decisões tomadas
 
-### Fase 0 (setup)
-- **Stack fixada:** Next 14.2 (App Router) + React 18.3 + TypeScript 5.5 (estrito) +
-  Tailwind CSS 3.4 + Zustand 4.5 + Vitest 1.6. Combo estável e bem documentado.
-- **TS estrito reforçado:** além de `strict`, liguei `noUnusedLocals`,
-  `noUnusedParameters` e `noFallthroughCasesInSwitch`. Alias de import `@/*` = raiz.
-- **Tema:** escuro de esports, cores centralizadas em `tailwind.config.ts`
-  (`fundo`, `painel`, `borda`, `destaque` roxo, `destaque2` ciano).
-- **Testes:** Vitest no ambiente `node` (o `/engine` é JS puro, sem DOM). Pega
-  qualquer `*.test.ts`. Teste dummy em `engine/dummy.test.ts`.
-- **Estrutura:** `/app` (telas), `/components`, `/engine` (lógica pura), `/store`
-  (Zustand+save), `/data` (dados/balanceamento). Pastas ainda vazias usam `.gitkeep`.
-- **Home:** server component, sem estado; botão "Nova Carreira" ainda sem ação
-  (ligado na Fase 1).
+### Pivô (recomeço pelo plano pixel art / Teamfight Manager)
+- O plano antigo (não-pixel) virou o branch git **`prototipo-v0`** (preservado).
+- **Mantida a infra:** Vercel, Supabase + login/contas na nuvem (`store/authStore.ts`,
+  `cloudSync.ts`, `saves.ts`, `components/AuthGate.tsx`/`TelaLogin.tsx`, migration
+  `user_saves`), `lib/ddragon.ts`, `lib/supabaseClient.ts`, `engine/rng.ts`.
+- Removida a lógica de jogo antiga; `engine/types.ts` reescrito com o modelo novo
+  (classes, traços, `ChampionDef`, `Equip`, `patchVigente`).
 
-### Infra (Vercel + Supabase) — fora do roteiro de fases, a pedido do usuário
-- **Deploy:** projeto pronto pra Vercel (Next zero-config). Passo a passo em `DEPLOY.md`.
-- **Supabase:** projeto **novo e separado** (não reaproveita o do draft lol),
-  criado **vazio** (sem schema) — "pronto pra ligar depois". Cliente preguiçoso
-  em `lib/supabaseClient.ts`, **ainda não usado** (save segue em localStorage).
-  Variáveis em `.env.example`/`.env.local` (`NEXT_PUBLIC_SUPABASE_URL`,
-  `NEXT_PUBLIC_SUPABASE_ANON_KEY`). Dependência: `@supabase/supabase-js`.
-- Pasta `/lib` adicionada à estrutura para helpers de infra.
-
-### Fase 1 (criação + dashboard + save)
-- **Motor puro** (`engine/types.ts`, `engine/player.ts`): tipos do domínio +
-  `criarPlayer`/`criarCareerState`/`validarCriacao`. Testado em `engine/player.test.ts`.
-- **Criação:** atributos começam em 40, **80 pontos** em passos de 5, teto **75**
-  na criação; pool de **3 campeões**; tudo configurável em `data/config.ts`.
-- **Data Dragon** (`lib/ddragon.ts`): lista de campeões + ícones, locale `pt_BR`,
-  cacheada em localStorage por versão.
-- **Save multi-slot** (`store/saves.ts`): mapa de slots no localStorage + ponteiro
-  de "slot atual" (pra Continuar). Estado global em `store/careerStore.ts` (Zustand).
-- **Telas:** Home (`Nova Carreira` + lista Continuar) → `/criar` (wizard de 3 passos)
-  → `/dashboard` (PlayerCard com atributos, pool, rank, energia/moral, dinheiro).
-- **Decisões técnicas:** Vitest com alias `@` (`vitest.config.ts`); testes excluídos
-  do build TS (`tsconfig`); regra `no-img-element` desligada (ícones do Data Dragon
-  via `<img>`, sem otimização do next/image num grid grande).
-
-### Fase 2 (motor de simulação + soloq)
-- **Motor puro e determinístico** (`engine/rng.ts` mulberry32, `engine/elo.ts`,
-  `engine/simularPartida.ts`): `simularPartida(player, championId, seed)` → `MatchResult`.
-  Testes em `engine/simularPartida.test.ts` (vitória↑ com atributos, variância↓ com
-  consistência/mental, XP, elo). Balanceamento em `data/simulacao.ts`.
-- **Pilar do design:** a **nota** vem da força individual vs nível do lobby (alta até
-  em derrota); a **vitória** vem do time (você + 4 aliados vs 5 inimigos gerados).
-- **Elo:** ladder Ferro IV→Desafiante derivada do MMR (1 MMR = 1 LP na divisão);
-  ganho maior contra MMR alto.
-- **Fluxo soloq** (`app/soloq/page.tsx`): pick (da pool) → draft simplificada
-  (lobby cosmético com campeões aleatórios) → resultado (`ResultadoPartida`).
-- **Efeitos aplicados** (`aplicarResultado`): elo/LP, XP nos atributos (cap 100),
-  histórico (últimas 50). Ação `jogarPartida` no `careerStore` persiste no slot.
-- **Dashboard:** botão *Jogar Soloq* + `HistoricoPartidas` (últimas 8).
-
-### Fase 3 (loop semanal)
-- **Energia como recurso** (`data/loop.ts`, `engine/semana.ts`): soloq custa −12,
-  treino custa −20. Testes em `engine/semana.test.ts`.
-- **Treino focado:** escolhe 1 atributo → +1.2 de XP nele (foco > soloq).
-- **Avançar semana:** +1 semana; moral oscila pela *forma* recente (nota média das
-  últimas 5). **Descansar a semana:** recuperação maior de moral. Vira a temporada
-  após 26 semanas. *(Obs.: a recarga de energia por semana foi substituída por energia
-  em tempo real — ver abaixo.)*
-- **Moral afeta performance:** termo pequeno na simulação (`pesoMoral`, neutro em 70),
-  então os testes das fases anteriores seguem passando.
-- **UI:** `components/PainelSemana.tsx` no dashboard (energia + treino + avançar/
-  descansar); soloq mostra energia e bloqueia quando acaba.
-
-### Login + contas na nuvem (a pedido do usuário, fora do roteiro original)
-- **Auth email+senha** (Supabase Auth): `store/authStore.ts` + `components/TelaLogin.tsx`.
-  `components/AuthGate.tsx` envolve o app no `layout.tsx` — **login obrigatório**.
-- **Saves isolados por usuário:** `store/saves.ts` agora namespaceia o localStorage
-  por `userId` e expõe export/import; `store/cloudSync.ts` puxa no login e empurra
-  (debounced) a cada gravação. Tabela `user_saves` (jsonb por usuário) com RLS —
-  migration em `supabase/migrations/001_user_saves.sql`.
-- **Setup necessário:** rodar a migration no Supabase; setar `NEXT_PUBLIC_SUPABASE_*`
-  no Vercel; recomendado `npm i @supabase/supabase-js@latest` (suporte às keys novas
-  `sb_publishable_`); opcional desligar confirmação de email no Supabase.
-
-### Partida interativa — mapa + decisões (a pedido do usuário)
-- **Roteiro** (`engine/partida.ts`): `gerarRoteiro(player, seed)` cria momentos de
-  decisão (com opções seguras/arriscadas resolvidas por seed+atributo) + eventos de
-  ambiente. As escolhas viram um **modificador** que entra no `simularPartida(...,
-  modificador)`. Testes em `engine/partida.test.ts`.
-- **UI** (`components/MapaPartida.tsx`): mapa SVG estilo Summoner's Rift, timeline que
-  avança sozinha (~480ms/min), feed de eventos, marcador da ação se movendo, e nos
-  momentos-chave a partida pausa pra você decidir. Barra de "Impacto".
-- **Fluxo soloq** (`app/soloq/page.tsx`): pick → `prepararSoloq` (gera roteiro) →
-  mapa interativo → `finalizarSoloq(championId, seed, modificador)` → resultado.
-
-### Energia em tempo real (a pedido do usuário)
-- `engine/energia.ts`: `regenerarEnergia(career, agora)` dá +1 a cada
-  `LOOP.energiaPorMinutos` (2) min de relógio, cap 100; `tempoAteProxima` pra contagem
-  regressiva. Âncora em `CareerState.energiaEm`. Testes em `engine/energia.test.ts`.
-- Store regenera ao **carregar**, ao **gastar** (soloq/treino) e num **tick de 1s**
-  (`sincronizarEnergia`); `PainelSemana` mostra "+1 em mm:ss" ao vivo.
-- **Avançar/Descansar semana não dão mais energia** (só o tempo dá).
-
-### Fase 4 (economia + investimentos)
-- **Renda semanal** (`data/economia.ts`, `engine/economia.ts`): `processarSemanaEconomia`
-  credita renda base + salário do contrato (stub) ao avançar a semana. Testes em
-  `engine/economia.test.ts`.
-- **Loja** (`components/Loja.tsx`, `app/loja/page.tsx`, ação `investir` no store):
-  - 📺 **Stream** — troca energia por $ (+moral).
-  - 🖱️ **Setup** — +2 Mecânica permanente (1x, `setupComprado`).
-  - 🧠 **Sessão mental/nutri** — +moral/+energia.
-  - 🎓 **Coach** — assinatura (`coachAtivo`): −$/semana, +XP em todos por semana.
-  - 🇰🇷 **Bootcamp Coreia** — caro, consome 3 semanas, +XP geral forte.
-- Link 💰 no `PainelSemana` → `/loja`.
+### Fase 0 (setup + base pixel art)
+- **Pixel art:** paleta em CSS vars + cores no Tailwind (rosa `#ff2d7e`, ciano
+  `#19e6e0`, fundo `#0b0617`); fonte bitmap **Press Start 2P** via `next/font` (var
+  `--font-pixel`, classe `font-pixel`); `image-rendering: pixelated` em imagens.
+- **Home retrô** (`app/page.tsx`): título "CARREIRA LoL" + botão "▶ NOVA CARREIRA"
+  (sem ação ainda).
+- **Login fora do layout por ora** (home pública); religado numa fase de criação/save.
+- Modelo de dados completo em `engine/types.ts` (tipos puros, sem lógica).
+- Teste dummy em `engine/dummy.test.ts`.
 
 ## Como rodar
 
 > Pré-requisito: Node 18+ instalado na máquina.
 
 ```bash
-npm install      # instala as dependências (1ª vez)
-npm run dev      # sobe o dev server em http://localhost:3000
-npm run test     # roda os testes (Vitest) — devem passar os testes do motor
-npm run build    # build de produção (checa que compila)
-npm run lint     # lint (eslint-config-next)
+npm install      # 1ª vez
+npm run dev      # http://localhost:3000
+npm run test     # Vitest (deve passar o dummy)
+npm run build    # build de produção
 ```

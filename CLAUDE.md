@@ -1,252 +1,213 @@
 ## 0. PROTOCOLO DE TRABALHO (leia primeiro — vale pra todas as fases)
 
-Você vai construir este jogo **uma fase por vez**, em ordem, sem pular. Siga este protocolo à risca:
+Construa o jogo **uma fase por vez**, em ordem, sem pular.
 
-**Ao começar uma fase:**
-1. Releia `CLAUDE.md` e `PROGRESS.md` antes de escrever qualquer código.
-2. Diga em 2–3 linhas o que essa fase entrega e **liste os arquivos que vai criar/alterar**. Se algo no escopo estiver ambíguo, **pergunte antes de codar**.
-3. Respeite o "Fora do escopo" da fase. Se você sentir que precisa de algo de uma fase futura, **crie um stub mínimo** (placeholder) e siga — não construa a fase futura agora.
+**Ao começar uma fase:** (1) releia `CLAUDE.md` e `PROGRESS.md`; (2) diga o que a fase entrega e **liste os arquivos que vai criar/alterar** — se algo estiver ambíguo, **pergunte antes de codar**; (3) respeite o "Fora do escopo": se precisar de algo de uma fase futura, faça um **stub** e siga.
 
-**Ao terminar uma fase:**
-4. Rode o que der pra rodar (testes, build) e garanta que **compila e roda sem erro**.
-5. Atualize o `PROGRESS.md`: marque a fase como concluída e anote decisões importantes tomadas.
-6. Me diga **exatamente o que eu consigo testar agora** e **como rodar localmente** (comandos).
-7. **PARE e espere minha aprovação.** Não comece a próxima fase até eu dizer "fase aprovada" / "próxima". Se eu pedir ajustes, ajuste e pare de novo.
+**Ao terminar uma fase:** (4) garanta que **compila, roda e os testes passam**; (5) atualize o `PROGRESS.md`; (6) me diga **o que dá pra testar agora** e **como rodar**; (7) **PARE e espere minha aprovação.** Não comece a próxima até eu liberar.
 
-**Regras gerais:**
-- Uma fase só está "pronta" quando bate **todos** os itens do "Critério de pronto".
-- Prefira poucos arquivos bem feitos a muitos arquivos pela metade.
-- Não refatore coisas de fases já aprovadas sem me avisar o motivo.
-- TypeScript estrito, sem `any` solto. Lógica de jogo separada da UI.
+**Regras gerais:** uma fase só está pronta quando bate **todo** o "Critério de pronto". Poucos arquivos bem feitos > muitos pela metade. Não refatore fases aprovadas sem avisar o porquê. TypeScript estrito, sem `any` solto. Lógica de jogo separada da UI.
 
 ---
 
-## 1. Visão Geral (vai pro CLAUDE.md)
+## 1. Visão Geral
 
-**Carreira LoL** é um jogo web de **modo carreira de jogador profissional de League of Legends** — inspirado no Modo Carreira do FIFA / Master League do PES, mas no esports de LoL.
+**Carreira LoL** é um jogo web **em pixel art** de **modo carreira de jogador profissional de League of Legends**. É inspirado no **Teamfight Manager** (simulador de e-sports em pixel art), mas com uma virada de ponto de vista: no TFM você é o **treinador**; aqui você é **um jogador** fazendo carreira. Replicamos os SISTEMAS do TFM (que não têm copyright) e adaptamos pra ótica do jogador — sempre com arte e identidade originais, nada copiado.
 
-Você cria um pro player, começa do zero (subindo na soloq, sem time), e evolui numa **progressão lenta e viciante**: joga partidas, melhora atributos, sobe de elo, ganha reputação, recebe propostas de times cada vez melhores com salários melhores, e investe o dinheiro na própria evolução (bootcamp na Coreia, coach, soloq). O objetivo é sair da base e chegar ao **Tier 1** e às competições internacionais (MSI / Worlds).
+Você cria um pro player, começa do zero (subindo na soloq, sem time) e evolui numa **progressão lenta e viciante**: joga partidas, melhora atributos e traços, sobe de elo, ganha reputação, recebe propostas de times melhores, e investe o dinheiro na própria evolução (bootcamp Coreia, coach, periféricos). O objetivo é chegar ao **Tier 1** e ao **Mundial**.
 
-Pilar de design: **a nota de performance individual importa tanto quanto a vitória do time** — você pode perder a partida e ainda subir de reputação se jogou bem, como na vida real. É isso que prende o jogador.
+**Dois pilares de design:**
+1. **A nota de performance individual importa tanto quanto a vitória do time** — você pode perder e ainda subir de reputação se brilhar. É o que prende o jogador numa carreira individual.
+2. **O draft (pick & ban) decide partidas tanto quanto o talento** — um bom draft ganha de um time melhor, um draft ruim perde pra um pior. A meta muda sozinha a cada split (Auto Patch), forçando você a adaptar sua pool.
 
-## 2. Stack & Estrutura (vai pro CLAUDE.md)
+## 2. Stack & Direção de Arte
 
-- **Next.js (App Router) + TypeScript estrito**
-- **Tailwind CSS** (tema escuro de esports, mobile-first, bonito — use o skill `frontend-design` como régua de qualidade)
-- **Zustand** pro estado global
-- **localStorage** pra save (single player, múltiplos slots) no MVP
-- **Data Dragon** (`ddragon.leagueoflegends.com`) pra campeões/imagens — grátis, sem chave
-- **Riot API só via API Routes do Next** (chave em `.env.local`, nunca no client) — só na Fase 7
-- **Vitest** pra testar o motor de jogo
+- **Next.js (App Router) + TypeScript estrito**, **Tailwind CSS**, **Zustand** (estado), **localStorage** (save, múltiplos slots), **Vitest** (testes do motor).
+- **Data Dragon** (`ddragon.leagueoflegends.com`) pra dados/ícones dos campeões reais — grátis, sem chave.
+- **Riot API só via API Routes do Next** (chave em `.env.local`) — só na fase de dados reais.
 
-Estrutura de pastas:
+**Pixel art (regras de arte):**
+- Renderização em **resolução virtual baixa** (ex.: 384×216) escalada por inteiro com `image-rendering: pixelated`. Nada de blur.
+- **Paleta limitada e coesa** definida em CSS vars (tema escuro de e-sports). Fonte bitmap (ex.: "Press Start 2P") só em títulos/HUD; corpo de texto em fonte legível pra não cansar a vista.
+- Sprites em PNG/sprite-sheet, animação via CSS `steps()` ou canvas.
+- **Arte 100% original.** Começe com placeholders simples (retângulos coloridos / sprites genéricos) e refine depois. Identidade do campeão real aparece pelo **ícone do Data Dragon** na UI de gestão; na batalha, use **sprites genéricos por classe** (um sprite de tank, um de mago, etc.), não arte por campeão.
+
+**Estrutura de pastas:**
 
 ```
-/app          → rotas e telas (Next)
-/components    → componentes de UI
-/engine        → lógica de jogo PURA (sem React) + testes
-/store         → estado Zustand + save/load
-/data          → dados estáticos (times fictícios, config de balanceamento)
+/app        → rotas e telas (Next)
+/components  → UI
+/engine      → lógica de jogo PURA (sem React) + testes  ← coração do jogo
+/store       → estado Zustand + save/load
+/data        → dados estáticos (times, campeões, config de balanceamento)
+/public/art  → sprites e assets pixel
 ```
 
-Regra de ouro: tudo em `/engine` é função pura (recebe estado → retorna estado), zero dependência de React ou browser. Dá pra testar no Vitest sem UI.
+Regra de ouro: tudo em `/engine` é função pura (estado → estado), testável no Vitest sem UI.
 
-## 3. Modelo de Dados (vai pro CLAUDE.md)
+## 3. Modelo de Dados
 
 ```ts
-type Role = "TOP" | "JUNGLE" | "MID" | "ADC" | "SUPPORT";
-type Tier = "SOLOQ" | "AMADOR" | "ACADEMY" | "TIER1" | "INTERNACIONAL";
+type Role  = "TOP" | "JUNGLE" | "MID" | "ADC" | "SUPPORT";
+type Tier  = "SOLOQ" | "AMADOR" | "ACADEMY" | "TIER1" | "INTERNACIONAL";
+type Classe = "TANK" | "LUTADOR" | "MAGO" | "ATIRADOR" | "ASSASSINO" | "SUPORTE";
 
 interface Attributes {          // todos 0–100
-  mecanica: number;             // micro, combos, mira
-  macro: number;                // mapa, rotação, objetivos
-  laning: number;               // fase de rotas, wave management
-  teamfight: number;            // posicionamento e impacto em luta
+  mecanica: number; macro: number; laning: number; teamfight: number;
   consistencia: number;         // reduz variância de performance
-  mental: number;               // clutch, não tiltar, jogo sob pressão
-  comunicacao: number;          // sinergia/shotcalling com o time
+  mental: number;               // clutch / não tiltar
+  comunicacao: number;          // sinergia e shotcalling
   championPool: number;         // versatilidade da pool
+}
+
+type TraitId = "ROAMER" | "LANE_BULLY" | "CLUTCH" | "FLEX" | "CARRY_TARDIO"
+             | "AGRESSIVO" | "TILTAVEL" | "FRIO" | "SHOTCALLER" /* ... */;
+
+interface ChampionDef {         // campeão real mapeado p/ o motor
+  id: string;                   // id do Data Dragon
+  nome: string;
+  classes: Classe[];
+  rolesValidas: Role[];
+  perfil: { dano: number; resistencia: number; cc: number; mobilidade: number; sustain: number };
+  forcaMetaBase: number;        // ajustada pelo Auto Patch (win rate)
 }
 
 interface ChampionMastery { championId: string; pontos: number; } // 0–100
 
 interface Player {
   nome: string; nacionalidade: string; idade: number;
-  rota: Role;
-  atributos: Attributes;
-  pool: ChampionMastery[];
-  reputacao: number;            // 0–100, define as propostas que chegam
+  rota: Role; atributos: Attributes;
+  pool: ChampionMastery[]; tracos: TraitId[];
+  reputacao: number;            // define as propostas que chegam
   rankSoloq: { elo: string; lp: number; mmr: number };
-  energia: number;              // 0–100, gasta treinando
-  moral: number;                // 0–100, afeta performance
+  energia: number; moral: number;
 }
 
-interface Contract { timeId: string; salarioSemanal: number; semanasRestantes: number; tier: Tier; }
+interface Equip { tipo: "HEADSET"|"MOUSE"|"CADEIRA"|"MONITOR"; nivel: number; bonus: Partial<Attributes>; }
+interface Contract { timeId: string; salarioSemanal: number; bonusPorVitoria: number; semanasRestantes: number; tier: Tier; }
+interface Offer { timeId: string; tier: Tier; salarioSemanal: number; bonusPorVitoria: number; duracaoSemanas: number; condicao?: string; }
 
 interface MatchResult {
   vitoria: boolean;
   kda: { k: number; d: number; a: number };
-  notaPerformance: number;      // 0–10 (MVP individual) — move reputação
+  notaPerformance: number;      // 0–10 individual — move reputação
   csPorMin: number;
   championId: string;
-  lpDelta?: number;             // se soloq
+  lpDelta?: number;
   xpGanho: Partial<Attributes>;
+  log: string[];                // narração da batalha p/ o viewer
 }
-
-interface Offer { timeId: string; tier: Tier; salarioSemanal: number; duracaoSemanas: number; condicao?: string; }
 
 interface CareerState {
-  player: Player;
-  dinheiro: number;
+  player: Player; dinheiro: number; equipamentos: Equip[];
   contratoAtual: Contract | null;
-  semanaAtual: number;
-  temporada: number;
-  historicoPartidas: MatchResult[];
-  inbox: Offer[];
+  semanaAtual: number; temporada: number; tierAtual: Tier;
+  historicoPartidas: MatchResult[]; inbox: Offer[];
+  patchVigente: number;         // win rates mudam a cada split
 }
 ```
 
-## 4. Sistemas de Jogo (vai pro CLAUDE.md)
+## 4. Sistemas de Jogo — adaptação do Teamfight Manager
 
-- **Loop semanal:** o tempo avança em semanas. Por semana o jogador gasta energia entre: jogar **soloq**, **treino** (foca 1 atributo), **scrims** (se tem time, melhora comunicação), **descansar** (recupera energia/moral), e **investir dinheiro**.
-- **Motor de simulação** (`engine/simularPartida.ts`): função pura. Força do jogador na partida = atributos relevantes da rota + maestria no campeão + força do time + força da comp, com **variância controlada por `consistencia` e `mental`**. Compara com o inimigo. A **nota de performance** (não só o W/L) é o que move reputação.
-- **Economia:** salário semanal entra se tiver contrato (cresce com tier e reputação). Gastos: **bootcamp Coreia** (boost grande temporário, caro, consome semanas), **coach** (XP passivo), **setup** (pequeno boost permanente de mecânica), **coach mental/nutri** (recupera moral/energia), **stream** (renda extra, gasta energia). Equilíbrio: que sempre falte um pouco de dinheiro — cada escolha deve doer.
-- **Reputação & propostas:** reputação sobe com boas notas, subida de elo e títulos. Periodicamente, times mandam `Offer` pra inbox conforme a reputação (tiers altos exigem reputação alta). Aceitar/recusar contratos é a progressão macro.
-- **Tiers:** SOLOQ → AMADOR → ACADEMY → TIER1 → INTERNACIONAL. Com time há temporada regular + playoffs; vencer dá dinheiro, reputação e acesso a internacionais.
+| Sistema do TFM | Como vira na Carreira LoL |
+|---|---|
+| Pick & Ban (coração do jogo) | Você participa do draft do seu time: marca comfort picks, banes e counter-picks. Sua **voz no draft cresce com a reputação** (novato segue o coach; veterano decide). |
+| Partida auto-battle (você não controla) | Igual: a partida se resolve sozinha. O foco é a **sua performance individual** dentro da luta 5v5. |
+| Campeões: classes + skill + ult | Campeões REAIS (Data Dragon) mapeados em `ChampionDef` com classe e perfil simplificado. |
+| Stats de jogador + traços | Seus `atributos` + `tracos`. Traços dão efeitos no motor (ex.: ROAMER melhora macro fora da rota; TILTAVEL aumenta variância negativa). |
+| Treino especial / alteração mental | Ações semanais: treino especial (boost grande / aprender campeão) e alteração mental (ganhar/trocar traço). |
+| Streaming | Atividade semanal: renda extra gastando energia, cresce com fama. |
+| Transferências / contratos / contraproposta | Propostas na inbox (salário base + bônus por vitória + duração). Você **negocia e contrapropõe**. Agentes livres = times menores. |
+| Instalações / patrocinadores | Instalações do time afetam sua **velocidade de treino**; patrocínios pessoais e stream são sua renda extra ao ficar famoso. |
+| Crafting de equipamento (headset/cadeira...) | Crafting/upgrade de **periféricos pessoais** que dão bônus de atributo. |
+| **Auto Patch** (balance por win rate) | Win rates dos campeões mudam a cada split (sintético no MVP, **Riot API real** depois). A meta muda sob seus pés — adapte a pool. |
+| Ligas (Amadora→Mundial) | SOLOQ → AMADOR → ACADEMY → TIER1 → INTERNACIONAL. |
+| Sistema de táticas | Você define sua **playstyle** e influencia a tática do time por senioridade. |
+| Opções de novo jogo (Fearless, Hide Attributes, tempo de ban-pick, dificuldade) | Opções na criação de carreira. |
+| Event matches | Partidas de exibição por dinheiro/reputação. |
 
----
+**Motor de simulação** (`engine/`): função pura. Força do jogador na partida = atributos da rota + maestria no campeão + força do time + **força da comp (resultado do draft)**, com **variância controlada por consistência/mental e modificada por traços**. A nota de performance (0–10) pode ser alta mesmo em derrota.
 
-## 5. AS FASES (ordens de serviço — siga em ordem, uma de cada vez)
+## 5. Equação do motor (referência)
 
-### FASE 0 — Setup do projeto
-**Objetivo:** projeto rodando, vazio mas com a base toda no lugar.
-**Entra no escopo:**
-- Criar Next + TS estrito + Tailwind + Zustand + Vitest.
-- Estrutura de pastas da seção 2.
-- Salvar `CLAUDE.md` (seções 1–4) e criar `PROGRESS.md` (modelo da seção 7).
-- Tela inicial: título "Carreira LoL", tema escuro de esports, botão "Nova Carreira" (sem ação ainda) e um teste de Vitest dummy passando.
-**Fora do escopo:** qualquer lógica de jogo, criação de jogador, dados de campeão.
-**Critério de pronto:** `npm run dev` abre a tela inicial sem erro; `npm run test` passa; `CLAUDE.md` e `PROGRESS.md` existem.
-**Como vou testar:** abrir a home e ver o título + botão; rodar os testes.
+```
+forcaRota    = média ponderada dos atributos relevantes pra Role
+forcaCampeao = maestria no campeão + forcaMetaBase do campeão (Auto Patch)
+forcaComp    = sinergia + counters do draft (pick & ban)
+base         = 0.35*forcaRota + 0.25*forcaCampeao + 0.20*forcaTime + 0.20*forcaComp
+tracos       = aplicam modificadores (ex.: CLUTCH melhora em desvantagem; TILTAVEL piora variância)
+ruido        = aleatório, amplitude REDUZIDA por consistencia/mental
+forcaFinal   = clamp(base + tracos + ruido, 0, 100)
+vitoria      = forcaFinal do time vs inimigo (chance proporcional à diferença)
+nota(0–10)   = forcaFinal relativa à expectativa (pode ser alta em derrota)
+```
+
+Pesos e fórmulas exatas vão num arquivo de config em `/data` pra balancear fácil.
+
+## 6. AS FASES (uma de cada vez, em ordem)
+
+### FASE 0 — Setup + base de pixel art
+- **Objetivo:** projeto rodando, vazio, com base e direção de arte no lugar.
+- **Escopo:** Next+TS estrito+Tailwind+Zustand+Vitest; estrutura de pastas; pipeline de pixel art (resolução virtual escalada, `image-rendering: pixelated`, paleta em CSS vars, fonte bitmap); salvar `CLAUDE.md` e criar `PROGRESS.md`; tela inicial "Carreira LoL" estilo retrô com botão "Nova Carreira"; um teste Vitest dummy.
+- **Fora do escopo:** qualquer lógica de jogo.
+- **Pronto:** `npm run dev` abre a home pixel art sem erro; `npm run test` passa; `CLAUDE.md`/`PROGRESS.md` existem.
 
 ### FASE 1 — Criação de jogador + dashboard + save
-**Objetivo:** criar um personagem e ver o dashboard da carreira, com save funcionando.
-**Entra no escopo:**
-- Fluxo de criação: nome, nacionalidade, rota, distribuir pontos de atributo, escolher 2–3 campeões da pool.
-- Carregar a lista de campeões do **Data Dragon** (cacheada) com ícones.
-- Inicializar `CareerState` (elo baixo, pouco dinheiro, sem time).
-- Save/load em localStorage com **múltiplos slots**.
-- Dashboard: card do jogador (atributos, rota, pool), dinheiro, semana, rank, energia/moral.
-**Fora do escopo:** simular partidas, loop semanal, economia, propostas.
-**Critério de pronto:** dá pra criar um jogador, ele aparece no dashboard, recarregar a página mantém o save, dá pra ter 2+ saves.
-**Como vou testar:** criar um jogador, fechar e reabrir a aba, ver que persistiu.
+- **Escopo:** criação (nome, nacionalidade, rota, distribuir atributos, escolher 1 traço inicial, 2–3 campeões via Data Dragon); inicializar `CareerState`; save/load localStorage múltiplos slots; dashboard (atributos, traços, pool, dinheiro, semana, rank, energia/moral).
+- **Fora do escopo:** simular partidas, draft, loop semanal, economia.
+- **Pronto:** cria jogador → aparece no dashboard → recarregar mantém → 2+ saves.
 
-### FASE 2 — Motor de simulação + jogar soloq
-**Objetivo:** jogar uma partida de soloq e ver o resultado.
-**Entra no escopo:**
-- `engine/simularPartida.ts` puro + **testes Vitest** cobrindo: vitória/derrota, variância por consistência/mental, ganho de XP.
-- UI: na dashboard, botão "Jogar Soloq" → escolher campeão da pool → **tela de draft simplificada** (seu pick + aliados/inimigos gerados) → **tela de resultado** (KDA, nota 0–10, cs/min).
-- Aplicar efeitos: atualizar elo/LP, XP nos atributos, histórico de partidas.
-**Fora do escopo:** picks/bans completos, win rates reais, calendário semanal, dinheiro.
-**Critério de pronto:** dá pra jogar várias soloq seguidas; elo e atributos evoluem; existem testes do motor passando.
-**Como vou testar:** jogar 5–10 partidas e ver elo/atributos mexendo de forma coerente.
+### FASE 2 — Banco de campeões (classes + perfis + tier list)
+- **Escopo:** importar campeões do Data Dragon; mapear em classe(s)/rolesValidas/perfil (config em `/data`, editável); `forcaMetaBase` sintética; tela de tier list por rota.
+- **Fora do escopo:** draft, simulação, win rate real.
+- **Pronto:** banco consultável com classe/role/perfil; tier list renderiza.
 
-### FASE 3 — Loop semanal
-**Objetivo:** o tempo passa em semanas e o jogador escolhe o que fazer.
-**Entra no escopo:**
-- Calendário de semanas + `semanaAtual`/`temporada`.
-- Sistema de **energia** (ações custam, descanso recupera).
-- Ações da semana: jogar soloq, treino focado (1 atributo), descansar. Botão "Avançar semana" que processa tudo.
-- Ganho de atributos via treino.
-**Fora do escopo:** economia/dinheiro, times, propostas, campeonatos.
-**Critério de pronto:** dá pra avançar semanas, gastar energia em ações e ver atributos/elo evoluindo ao longo do tempo.
-**Como vou testar:** rodar várias semanas alternando treino e soloq.
+### FASE 3 — Draft (Pick & Ban)
+- **Escopo:** fluxo bans→picks 5v5 (ordem correta); IA simples de coach/inimigo; comfort picks; counter-picks, sinergia, prioridade; cálculo de `forcaComp`; influência no draft escala com reputação.
+- **Fora do escopo:** resolução da partida (Fase 4), Fearless/Hide (depois).
+- **Pronto:** completar um draft 5v5 coerente e ver a força de comp.
 
-### FASE 4 — Economia + investimentos
-**Objetivo:** dinheiro entra e dá pra investir na evolução.
-**Entra no escopo:**
-- Salário semanal (se tiver contrato — por ora um contrato fake inicial serve de stub).
-- Loja de investimentos: bootcamp Coreia, coach, setup, coach mental/nutri, stream.
-- Efeitos de cada investimento no jogador (boosts/temporários/passivos/renda).
-**Fora do escopo:** propostas de times, troca de time, campeonatos.
-**Critério de pronto:** dá pra ganhar e gastar dinheiro; cada investimento tem efeito visível; dá pra sentir a tensão de escolha.
-**Como vou testar:** acumular dinheiro algumas semanas e testar cada investimento.
+### FASE 4 — Motor de partida (auto-battle) + tela de resultado
+- **Escopo:** `engine/simularPartida.ts` puro + testes (vitória/derrota, variância, traços, XP); usa o draft da Fase 3; tela de partida com pixel simples (sprites por classe + timeline + log); tela de resultado (KDA, nota, cs/min); aplicar efeitos (elo/LP, XP, histórico).
+- **Fora do escopo:** auto-battle animado caprichado (Fase 10), win rate real.
+- **Pronto:** jogar partidas, ver resultado coerente e progressão; testes passam.
 
-### FASE 5 — Reputação + propostas + times
-**Objetivo:** receber propostas e trocar de time, subindo de tier.
-**Entra no escopo:**
-- Base de **times fictícios** por tier em `/data`.
-- Sistema de **reputação** (sobe com nota, elo, títulos).
-- Geração de `Offer` pra inbox conforme reputação; aceitar/recusar; assinar contrato (salário/duração).
-- Subir de tier ao assinar com times maiores.
-**Fora do escopo:** campeonatos com partidas oficiais (vem na 6).
-**Critério de pronto:** dá pra receber propostas coerentes com a reputação, assinar e ver o tier/salário mudarem.
-**Como vou testar:** evoluir o jogador, ver propostas chegando e assinar um time melhor.
+### FASE 5 — Loop semanal + atividades
+- **Escopo:** calendário (semana/temporada); energia; ações: soloq, treino focado, treino especial, streaming, alteração mental, descansar; ganho de atributos/traços; "avançar semana".
+- **Pronto:** avançar semanas alternando atividades e ver evolução.
 
-### FASE 6 — Campeonatos
-**Objetivo:** disputar temporada com o time.
-**Entra no escopo:**
-- Calendário de partidas oficiais (temporada regular + playoffs).
-- Resultado das partidas usando o motor; premiação em dinheiro/reputação.
-- Acesso a internacionais (MSI/Worlds) ao vencer a liga no Tier 1.
-**Fora do escopo:** win rates reais (vem na 7).
-**Critério de pronto:** dá pra jogar uma temporada inteira com time e ganhar título.
-**Como vou testar:** disputar uma temporada do começo ao fim.
+### FASE 6 — Economia + equipamentos (crafting)
+- **Escopo:** salário + bônus por vitória (contrato stub); loja (bootcamp, coach, mental/nutri); crafting/upgrade de periféricos com bônus; streaming como renda; tensão de "sempre falta um pouco".
+- **Pronto:** ganhar/gastar; cada investimento e equipamento com efeito visível.
 
-### FASE 7 — Dados reais (Riot API / win rates)
-**Objetivo:** plugar dados reais no motor sem reescrever a simulação.
-**Entra no escopo:**
-- Picks/bans completos que influenciam a **força de comp**.
-- Win rates reais via **API Route do Next** (chave em `.env.local`). (Eu vou te passar a fonte exata dos meus dados de win rate aqui.)
-- Interface do motor preparada pra alternar entre dados sintéticos e reais.
-**Fora do escopo:** multiplayer/cloud.
-**Critério de pronto:** o draft real altera a probabilidade de vitória de forma coerente.
+### FASE 7 — Reputação + transferências + contratos
+- **Escopo:** times fictícios por tier (`/data`); reputação; geração de `Offer`; negociação e contraproposta (salário + bônus + duração); agentes livres; janela de transferência; assinar muda tier/salário; instalações afetam treino.
+- **Pronto:** receber propostas coerentes, negociar e assinar um time melhor.
 
-### FASE 8 — Polimento
-Balanceamento da progressão (lenta e gostosa), eventos aleatórios, conquistas, melhorias de UI, áudio leve, múltiplos saves refinados.
+### FASE 8 — Ligas + campeonatos
+- **Escopo:** ligas Amadora→Mundial; calendário oficial (regular + playoffs); premiação; promoção/rebaixamento; acesso ao Internacional/Mundial no Tier 1.
+- **Pronto:** jogar uma temporada inteira e ganhar título.
 
----
+### FASE 9 — Auto Patch + win rates reais (Riot API)
+- **Escopo:** Auto Patch reajusta `forcaMetaBase` a cada split; win rate via API Route (chave em `.env.local`) — **fonte exata será passada aqui**; motor pronto pra alternar sintético/real; tela de "patch notes".
+- **Pronto:** o split novo muda a meta e afeta drafts/resultados.
 
-## 6. Equação do motor (referência pra Fase 2)
+### FASE 10 — Auto-battle pixel art animado
+- **Escopo:** viewer animado da luta 5v5 (sprites por classe, skills/ult, kills, HUD pixel) dirigido pelo `log` do motor; velocidade/pular; foco no seu jogador.
+- **Fora do escopo:** mudar a lógica (só visualiza).
+- **Pronto:** assistir a partida animada batendo com o resultado.
 
-Comece simples e determinístico, dá pra refinar depois:
+### FASE 11 — Opções de novo jogo + event matches
+- **Escopo:** opções na criação (dificuldade, Fearless Ban/Pick, Hide Attributes com revelação gradual, tempo de ban-pick); event matches por dinheiro/reputação.
+- **Pronto:** as opções funcionam e mudam a experiência.
 
-```
-forcaRota   = média ponderada dos atributos relevantes pra Role
-forcaCampeao = maestria no campeão escolhido
-base        = 0.5*forcaRota + 0.2*forcaCampeao + 0.2*forcaTime + 0.1*forcaComp
-ruido       = aleatório, com amplitude REDUZIDA por consistencia e mental
-forcaFinal  = clamp(base + ruido, 0, 100)
-vitoria     = forcaFinal vs forcaInimigo (com chance proporcional à diferença)
-nota (0–10) = derivada de forcaFinal relativa à expectativa (pode ser alta mesmo em derrota)
-```
+### FASE 12 — Polimento
+Balanceamento (progressão lenta e gostosa), eventos aleatórios, conquistas, áudio chiptune leve, refino de UI e saves.
 
-Pesos por rota e fórmula exata: deixe num arquivo de config em `/data` pra facilitar balanceamento.
+## 7. (reservado)
+## 8. (reservado)
 
-## 7. Modelo do PROGRESS.md (crie na Fase 0)
+## 9. PROGRESS.md — ver arquivo separado.
 
-```md
-# Progresso — Carreira LoL
-
-## Status das fases
-- [ ] Fase 0 — Setup
-- [ ] Fase 1 — Criação de jogador + dashboard + save
-- [ ] Fase 2 — Motor + soloq
-- [ ] Fase 3 — Loop semanal
-- [ ] Fase 4 — Economia
-- [ ] Fase 5 — Reputação + propostas
-- [ ] Fase 6 — Campeonatos
-- [ ] Fase 7 — Dados reais
-- [ ] Fase 8 — Polimento
-
-## Decisões tomadas
-(anote aqui escolhas técnicas e de design conforme avança)
-
-## Como rodar
-(comandos de dev/test/build)
-```
-
----
-
-## 8. Comece agora pela FASE 0
-Confirme a estrutura de pastas, crie o projeto, salve `CLAUDE.md` e `PROGRESS.md`, faça a tela inicial e o teste dummy. Ao terminar, me diga como rodar e **pare pra eu testar** antes da Fase 1.
+## 10. Infra mantida do protótipo anterior
+O jogo anterior (não-pixel) está preservado no branch git `prototipo-v0`. Mantida e reaproveitável: deploy na Vercel (`carreira-lol.vercel.app`), Supabase + login/contas na nuvem (`store/authStore.ts`, `cloudSync.ts`, `saves.ts`, `components/AuthGate.tsx`/`TelaLogin.tsx`, migration `user_saves`), `lib/ddragon.ts`, `lib/supabaseClient.ts`, `engine/rng.ts`. O login será re-skinado (pixel) e religado quando a criação/save voltar.

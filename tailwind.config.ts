@@ -1,19 +1,21 @@
 import type { Config } from "tailwindcss";
 
-// Tema escuro de esports. Cores centralizadas aqui pra manter a UI consistente.
+// Paleta pixel art de e-sports (rosa/ciano sobre roxo escuro).
 const config: Config = {
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
-        fundo: "#0a0a0f", // fundo da página
-        painel: "#13131c", // cards / superfícies
-        borda: "#23233a", // divisórias
-        destaque: "#6d28d9", // roxo (ação primária)
-        destaque2: "#22d3ee", // ciano (acento)
+        fundo: "#0b0617", // fundo da tela
+        painel: "#15102a", // cards / superfícies
+        borda: "#2a2150", // divisórias / bordas pixel
+        rosa: "#ff2d7e", // ação primária
+        ciano: "#19e6e0", // acento
+        texto: "#ece8ff", // texto claro
+        suave: "#9a90c0", // texto secundário
       },
       fontFamily: {
-        sans: ["ui-sans-serif", "system-ui", "sans-serif"],
+        pixel: ["var(--font-pixel)", "monospace"], // bitmap (títulos/HUD)
       },
     },
   },

@@ -1,23 +1,24 @@
 import type { Metadata } from "next";
+import { Press_Start_2P } from "next/font/google";
 import "./globals.css";
-import AuthGate from "@/components/AuthGate";
+
+// Fonte bitmap só pra títulos/HUD; o corpo usa fonte legível do sistema.
+const pixel = Press_Start_2P({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-pixel",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Carreira LoL",
-  description:
-    "Modo carreira de jogador profissional de League of Legends: do zero ao Worlds.",
+  description: "Modo carreira pixel art de pro player de League of Legends.",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR">
-      <body className="min-h-screen bg-fundo text-zinc-100 antialiased">
-        <AuthGate>{children}</AuthGate>
-      </body>
+    <html lang="pt-BR" className={pixel.variable}>
+      <body className="min-h-screen bg-fundo text-texto antialiased">{children}</body>
     </html>
   );
 }

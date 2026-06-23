@@ -1,16 +1,24 @@
 // Busca a lista de campeões do Data Dragon (grátis, sem chave) e cacheia em localStorage.
 // Usado só no cliente (componentes "use client").
 
+export interface InfoCampeao {
+  attack: number;
+  defense: number;
+  magic: number;
+  difficulty: number;
+}
+
 export interface Campeao {
   id: string; // ex.: "Aatrox"
   nome: string; // nome localizado
   icone: string; // URL do ícone
   tags: string[]; // ex.: ["Fighter", "Tank"]
+  info: InfoCampeao; // attack/defense/magic/difficulty (0–10) do Data Dragon
 }
 
 const LOCALE = "pt_BR";
 const VERSOES_URL = "https://ddragon.leagueoflegends.com/api/versions.json";
-const CACHE_KEY = "carreira-lol:ddragon:campeoes:v1";
+const CACHE_KEY = "carreira-lol:ddragon:campeoes:v2";
 
 interface Cache {
   versao: string;
@@ -22,6 +30,7 @@ interface CampeaoDDragon {
   name: string;
   image: { full: string };
   tags: string[];
+  info: InfoCampeao;
 }
 
 async function versaoMaisRecente(): Promise<string> {
@@ -68,6 +77,7 @@ export async function buscarCampeoes(): Promise<Campeao[]> {
       nome: c.name,
       icone: `https://ddragon.leagueoflegends.com/cdn/${versao}/img/champion/${c.image.full}`,
       tags: c.tags,
+      info: c.info,
     }))
     .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
 

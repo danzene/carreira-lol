@@ -3,7 +3,7 @@
 ## Status das fases
 - [x] 0  Setup + base pixel art
 - [x] 1  Criação de jogador + dashboard + save
-- [ ] 2  Banco de campeões
+- [x] 2  Banco de campeões
 - [ ] 3  Draft (pick & ban)
 - [ ] 4  Motor de partida + resultado
 - [ ] 5  Loop semanal + atividades
@@ -48,6 +48,17 @@
 - **Save multi-slot** reaproveitando `store/saves.ts` (namespace "anon", sem login por
   ora) via `store/careerStore.ts`. Home com lista "Continuar".
 - Dummy test removido; testes do motor em `engine/player.test.ts`.
+
+### Fase 2 (banco de campeões)
+- **`ChampionDef` sintético** (`engine/champions.ts`, +`champions.test.ts`):
+  `construirBanco` mapeia os campeões reais (Data Dragon) em classes (tags→classe),
+  `rolesValidas` (heurística por classe), `perfil` (dano/resistência do `info`;
+  cc/mobilidade/sustain por classe) e `forcaMetaBase` sintética determinística (45–63).
+- `lib/ddragon.ts` agora também puxa o `info` do campeão (cache v2).
+- Mapas editáveis em `data/champions.ts` (`TAG_CLASSE`, `CLASSE_PERFIL`).
+- **Tier list por rota** (`components/TierList.tsx`, `app/campeoes/page.tsx`): abas de
+  rota, tiers S–D por `forcaMetaBase`, e inspeção do perfil ao tocar no campeão.
+  Link no dashboard.
 
 ## Como rodar
 

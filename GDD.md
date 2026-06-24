@@ -185,11 +185,11 @@ historicoPartidas, **inbox**, **patchVigente**, energiaEm?, **coachAtivo?**).
 
 ## 5. PRÓXIMOS PASSOS
 
-**Estado atual:** Fases **0 a 9 CONCLUÍDAS** (setup pixel; criação+dashboard+save; banco de
+**Estado atual:** Fases **0 a 10 CONCLUÍDAS** (setup pixel; criação+dashboard+save; banco de
 campeões + tier list; draft pick&ban; motor de partida + resultado; loop semanal; economia
 + equipamentos; reputação + transferências; **ligas + campeonatos**; **Auto Patch / meta
-realista**). Mais a integração de **dados reais (Oracle's Elixir)** e a **correção do
-balanceamento** do loop.
+realista**; **auto-battle pixel animado**). Mais a integração de **dados reais (Oracle's
+Elixir)** e a **correção do balanceamento** do loop.
 
 **Fase 8 (ligas) — resumo:** com contrato você disputa a liga do seu tier (6 times,
 todos-contra-todos) → **playoffs top 4** → premiação ($/reputação) → **promoção/rebaixamento**.
@@ -207,9 +207,16 @@ patch notes; banner "🧪 PATCH" no dashboard.
 > Nota: "win rate ao vivo via Riot API" foi descartado de propósito — a API oficial da Riot NÃO
 > expõe win rate de campeão (só via scraping de op.gg/u.gg, contra os ToS). A âncora é o OE (real).
 
-**PRÓXIMA FASE A DESENVOLVER → Fase 10 — Auto-battle pixel art animado:**
-- Sprites por classe, animação da batalha dirigida pelo `log` do motor (`MatchResult.log`).
-- Pronto quando: a partida vira uma cena pixel animada em vez de só texto revelado.
+**Fase 10 FEITA (auto-battle pixel animado) — pilar do jogo:** Summoner's Rift estilizada em
+Canvas pixel (`components/BatalhaCanvas.tsx`), 5v5 de sprites animados, minions, projéteis,
+partículas, screen shake, kill feed, placar, retratos do draft, torres caindo e explosão do
+Nexus. Roteiro determinístico em `engine/batalha.ts` (a partir do `MatchResult`); layout em
+`data/batalha.ts`. Botões velocidade/Pular; ao fim, "Ver resultado".
+
+**PRÓXIMA FASE A DESENVOLVER → Fase 11 — Opções de novo jogo + event matches:**
+- Opções ao criar carreira (ex.: Fearless, esconder atributos, dificuldade) e "event matches"
+  (partidas especiais com regras/recompensas próprias).
+- Pronto quando: dá pra começar carreiras com modificadores e disputar partidas-evento.
 
 **Fases seguintes (roadmap):**
 - **9 — Auto Patch + win rates reais (Riot API):** a meta muda a cada split; win rate via
@@ -220,5 +227,5 @@ patch notes; banner "🧪 PATCH" no dashboard.
 - **12 — Polimento** (balanceamento, eventos aleatórios, conquistas, áudio chiptune).
 
 **Como retomar:** abrir a sessão na pasta `Carreira LoL`, ler `CLAUDE.md` + `PROGRESS.md` +
-este GDD, e iniciar a **Fase 10** seguindo o protocolo (listar arquivos antes de codar,
+este GDD, e iniciar a **Fase 11** seguindo o protocolo (listar arquivos antes de codar,
 parar pra aprovação no fim). Responder em PT-BR.

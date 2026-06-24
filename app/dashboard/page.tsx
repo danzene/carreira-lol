@@ -84,7 +84,7 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      <p className="text-center font-pixel text-[8px] text-borda">PRÓXIMA FASE · AUTO PATCH + WIN RATES</p>
+      <p className="text-center font-pixel text-[8px] text-borda">PRÓXIMA FASE · OPÇÕES + EVENT MATCHES</p>
       <p className="text-center text-xs">
         <Link href="/" className="text-ciano hover:underline">
           Início

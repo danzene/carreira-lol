@@ -17,12 +17,20 @@ import {
 import { buscarCampeoes, type Campeao } from "@/lib/ddragon";
 import type { ChampionDef, Role } from "@/engine/types";
 
+export interface LutadorInfo {
+  championId: string;
+  icone?: string;
+  rota: Role;
+}
+
 export interface JogarInfo {
   championId: string;
   forcaMetaCampeao: number;
   comp: number;
   compInimigo: number;
   icone?: string;
+  timeAzul: LutadorInfo[];
+  timeVermelho: LutadorInfo[];
 }
 
 export default function DraftBoard({
@@ -96,13 +104,22 @@ export default function DraftBoard({
 
   function jogar() {
     if (!fc) return;
-    const seu = atribuirRoles(estado.picks.azul, defMap).find((s) => s.role === rota)?.id ?? estado.picks.azul[0] ?? "";
+    const rolesAzul = atribuirRoles(estado.picks.azul, defMap);
+    const rolesVerm = atribuirRoles(estado.picks.vermelho, defMap);
+    const lut = (role: Role, id: string | null): LutadorInfo => ({
+      championId: id ?? "",
+      icone: id ? campMap[id]?.icone : undefined,
+      rota: role,
+    });
+    const seu = rolesAzul.find((s) => s.role === rota)?.id ?? estado.picks.azul[0] ?? "";
     onJogar({
       championId: seu,
       forcaMetaCampeao: defMap[seu]?.forcaMetaBase ?? 50,
       comp: fc.azul,
       compInimigo: fc.vermelho,
       icone: campMap[seu]?.icone,
+      timeAzul: rolesAzul.map((s) => lut(s.role, s.id)),
+      timeVermelho: rolesVerm.map((s) => lut(s.role, s.id)),
     });
   }
 

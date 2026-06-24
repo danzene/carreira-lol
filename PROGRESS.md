@@ -11,7 +11,7 @@
 - [x] 7  Reputação + transferências
 - [x] 8  Ligas + campeonatos
 - [x] 9  Auto Patch (meta realista)
-- [ ] 10 Auto-battle pixel animado
+- [x] 10 Auto-battle pixel animado
 - [ ] 11 Opções de novo jogo + event matches
 - [ ] 12 Polimento
 
@@ -147,6 +147,22 @@
 - **Decisão:** "win rate ao vivo via Riot API" foi descartado — a API oficial da Riot **não expõe
   win rate de campeão** (só sites tipo op.gg, via scraping/ToS). Usamos os dados reais do
   Oracle's Elixir como âncora, que é a fonte confiável e legal.
+
+### Fase 10 (auto-battle pixel animado) ✅ — pilar do jogo
+- **Layout/constantes** (`data/batalha.ts`): Summoner's Rift estilizada (lanes, rio, nexus,
+  pits do Dragão/Barão, torres) em coordenadas normalizadas + helpers de posição.
+- **Roteiro** (`engine/batalha.ts`, +`batalha.test.ts`): PURO. Transforma o `MatchResult`
+  num roteiro determinístico de eventos com tempo e posição (spawn, pokes, first blood,
+  Dragão, teamfights, torres, Barão, push e Nexus). O vencedor destrói o nexus certo;
+  os abates do jogador respeitam a KDA.
+- **Render** (`components/BatalhaCanvas.tsx`): Canvas pixel (320×224, upscale pixelado) com
+  loop de animação — mapa, **sprites 5v5 animados** (idle/andar/atacar/morrer) com arma por
+  arquétipo (atirador/mago/lutador/suporte), minions marchando, projéteis, partículas,
+  **screen shake**, kill feed, placar/tempo, **retratos dos campeões do draft** com barra de
+  vida, torres caindo e **explosão do Nexus**. Botões **velocidade (1x/2x)** e **Pular**.
+- **Integração:** `DraftBoard` passa os 10 campeões (`timeAzul`/`timeVermelho`) →
+  `Partida` simula o resultado, gera o roteiro e renderiza o `BatalhaCanvas`; ao terminar,
+  botão **VER RESULTADO**. Vale tanto pra soloq quanto pra partida oficial.
 
 ## Como rodar
 

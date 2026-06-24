@@ -104,7 +104,7 @@ function DraftFlow() {
             forcaTimeAliado: oficial && career.contratoAtual ? forcaTimeDe(career.contratoAtual.timeId) : undefined,
             forcaTimeInimigo: oficial && adversarioId ? forcaTimeDe(adversarioId) : undefined,
           }}
-          icone={info.icone}
+          times={{ azul: info.timeAzul, vermelho: info.timeVermelho }}
           onFim={aoFim}
         />
       )}

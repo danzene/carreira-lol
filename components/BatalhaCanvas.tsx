@@ -75,13 +75,14 @@ type Efeito =
   | { tipo: "projetil"; x: number; y: number; tx: number; ty: number; cor: string; vida: number; max: number }
   | { tipo: "explosao"; x: number; y: number; cor: string; vida: number; max: number; raio: number };
 
+type FeedLinha = { txt: string; lado: "azul" | "vermelho" | "neutro"; minuto: number };
+
 interface Estado {
   champs: ChampRT[];
   torres: TorreRT[];
   nexus: { azul: boolean; vermelho: boolean };
   minions: MinionRT[];
   efeitos: Efeito[];
-  feed: { txt: string; cor: string }[];
   placar: { azul: number; vermelho: number };
   minuto: number;
   clock: number;
@@ -119,6 +120,13 @@ export default function BatalhaCanvas({
   fimRef.current = aoTerminar;
   const [terminou, setTerminou] = useState(false);
   const [vel, setVel] = useState(1);
+  const [linhas, setLinhas] = useState<FeedLinha[]>([]);
+  const logRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = logRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [linhas]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -127,6 +135,7 @@ export default function BatalhaCanvas({
     if (!ctx) return;
     ctx.imageSmoothingEnabled = false;
     const familia = familiaPixel();
+    setLinhas([]);
 
     const W = BATALHA.largura;
     const H = BATALHA.altura;
@@ -177,7 +186,6 @@ export default function BatalhaCanvas({
       nexus: { azul: true, vermelho: true },
       minions: [],
       efeitos: [],
-      feed: [],
       placar: { azul: 0, vermelho: 0 },
       minuto: 0,
       clock: 0,
@@ -193,9 +201,8 @@ export default function BatalhaCanvas({
     const vivos = (time?: "azul" | "vermelho") =>
       est.champs.filter((c) => c.estado !== "morto" && (!time || c.comb.time === time));
 
-    function pushFeed(txt: string, cor: string) {
-      est.feed.push({ txt, cor });
-      if (est.feed.length > 4) est.feed.shift();
+    function narrar(txt: string, lado: "azul" | "vermelho" | "neutro") {
+      setLinhas((prev) => [...prev, { txt, lado, minuto: est.minuto }].slice(-40));
     }
     function particulas(p: Ponto, cor: string, n: number, forca = 0.06) {
       for (let i = 0; i < n; i++) {
@@ -217,6 +224,7 @@ export default function BatalhaCanvas({
       switch (ev.tipo) {
         case "spawn":
           for (const c of est.champs) c.estado = "move";
+          narrar("A partida começou. Saindo da base!", "neutro");
           break;
         case "poke": {
           const perto = [...est.champs]
@@ -224,11 +232,15 @@ export default function BatalhaCanvas({
             .sort((a, b) => dist(a, local) - dist(b, local))
             .slice(0, 2);
           est.foco = { ativo: true, local, ate: est.clock + 1.3, ids: new Set(perto.map((c) => c.comb.id)) };
+          narrar("Trocas de dano nas rotas.", "neutro");
           break;
         }
         case "teamfight":
           est.foco = { ativo: true, local, ate: est.clock + 3, ids: new Set(vivos().map((c) => c.comb.id)) };
-          if (ev.texto && !ev.abate) flutuante(local, ev.texto, COR.branco, 7);
+          if (ev.texto && !ev.abate) {
+            flutuante(local, ev.texto, COR.branco, 7);
+            narrar(ev.texto, "neutro");
+          }
           est.shake = Math.max(est.shake, 1.6);
           break;
         case "objetivo": {
@@ -236,7 +248,10 @@ export default function BatalhaCanvas({
           const cor = ev.objetivo === "barao" ? COR.barao : COR.dragao;
           flutuante(local, ev.objetivo === "barao" ? "BARÃO" : "DRAGÃO", cor, 8);
           est.efeitos.push({ tipo: "explosao", x: local.x, y: local.y, cor, vida: 1.2, max: 1.2, raio: 0.16 });
-          if (ev.texto) pushFeed(ev.texto, ev.vencedor === "azul" ? COR.azul : COR.vermelho);
+          narrar(
+            `${ev.vencedor === "azul" ? "Seu time" : "Time inimigo"} garantiu o ${ev.objetivo === "barao" ? "Barão" : "Dragão"}.`,
+            ev.vencedor ?? "neutro",
+          );
           est.shake = Math.max(est.shake, 1.4);
           break;
         }
@@ -254,7 +269,7 @@ export default function BatalhaCanvas({
               flutuante(p, "TORRE!", COR.ouro, 6);
             }
           }
-          if (ev.texto) pushFeed(ev.texto, COR.suave);
+          if (ev.texto) narrar(ev.texto, "neutro");
           est.shake = Math.max(est.shake, 1.6);
           break;
         }
@@ -267,7 +282,7 @@ export default function BatalhaCanvas({
           particulas(p, COR.ouro, 40, 0.16);
           est.foco = { ativo: true, local: p, ate: 999, ids: new Set(vivos(ev.vencedor).map((c) => c.comb.id)) };
           est.shake = Math.max(est.shake, 4);
-          if (ev.texto) pushFeed(ev.texto, ev.vencedor === "azul" ? COR.azul : COR.vermelho);
+          if (ev.texto) narrar(ev.texto, ev.vencedor ?? "neutro");
           break;
         }
       }
@@ -298,7 +313,7 @@ export default function BatalhaCanvas({
       if (abate.matadorId.startsWith("azul")) est.placar.azul++;
       else est.placar.vermelho++;
       flutuante(local, "ABATE!", COR.ouro, 7);
-      pushFeed(texto ?? "Abate", abate.matadorId.startsWith("azul") ? COR.azul : COR.vermelho);
+      narrar(texto ?? "Abate", abate.matadorId.startsWith("azul") ? "azul" : "vermelho");
       est.shake = Math.max(est.shake, 2.2);
     }
 
@@ -614,13 +629,6 @@ export default function BatalhaCanvas({
       texto("-", W / 2, 6, COR.suave, 9, true);
       texto(`${est.placar.vermelho}`, W / 2 + 14, 6, COR.vermelho, 9, true);
       texto(`${est.minuto}:00`, W / 2, 18, COR.texto, 6, true);
-      // feed
-      est.feed.forEach((f, i) => {
-        const idade = est.feed.length - 1 - i;
-        ctx!.globalAlpha = 1 - idade * 0.2;
-        texto(f.txt, 5, hud + 4 + i * 8, f.cor, 6);
-        ctx!.globalAlpha = 1;
-      });
     }
 
     function retrato(c: ChampRT, x: number, y: number) {
@@ -701,6 +709,19 @@ export default function BatalhaCanvas({
         className="w-full border-2 border-borda bg-fundo"
         style={{ imageRendering: "pixelated", aspectRatio: `${BATALHA.largura}/${BATALHA.altura}` }}
       />
+
+      <div ref={logRef} className="h-28 overflow-y-auto border-2 border-borda bg-painel p-2 text-xs leading-relaxed">
+        {linhas.length === 0 ? (
+          <p className="text-suave">A partida vai começar…</p>
+        ) : (
+          linhas.map((l, i) => (
+            <p key={i} className={l.lado === "azul" ? "text-ciano" : l.lado === "vermelho" ? "text-rosa" : "text-suave"}>
+              <span className="text-borda">{l.minuto}:00</span> · {l.txt}
+            </p>
+          ))
+        )}
+      </div>
+
       {!terminou && (
         <div className="flex justify-center gap-2">
           <button

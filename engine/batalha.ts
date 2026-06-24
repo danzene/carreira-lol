@@ -1,5 +1,5 @@
 import { BATALHA, type Lane, type Ponto, laneDeRota, LANES, pontoNaRota, posicaoObjetivo } from "@/data/batalha";
-import { criarRng, type Rng } from "./rng";
+import { criarRng } from "./rng";
 import type { KDA, Role } from "./types";
 
 // Roteiro de batalha (PURO): transforma o resultado da partida numa sequência determinística

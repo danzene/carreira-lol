@@ -10,16 +10,18 @@ export interface ContextoPartida {
   forcaMetaCampeao: number; // forcaMetaBase do ChampionDef escolhido
   comp: number; // forcaComp do seu time (resultado do draft)
   compInimigo: number; // forcaComp do inimigo
+  bonusAtributos?: Partial<Attributes>; // bônus de periféricos (Fase 6)
 }
 
 function clamp(v: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, v));
 }
 
-export function forcaRota(player: Player): number {
+export function forcaRota(player: Player, bonus: Partial<Attributes> = {}): number {
   let total = 0;
   for (const [chave, peso] of Object.entries(PESOS_ROTA[player.rota])) {
-    total += player.atributos[chave as AtributoKey] * (peso ?? 0);
+    const k = chave as AtributoKey;
+    total += (player.atributos[k] + (bonus[k] ?? 0)) * (peso ?? 0);
   }
   return total;
 }
@@ -88,7 +90,7 @@ function narrar(rng: Rng, player: Player, ctx: ContextoPartida, vitoria: boolean
 export function simularPartida(player: Player, ctx: ContextoPartida, seed: number): MatchResult {
   const rng = criarRng(seed);
 
-  const fRota = forcaRota(player);
+  const fRota = forcaRota(player, ctx.bonusAtributos);
   const fCampeao = (maestria(player, ctx.championId) + ctx.forcaMetaCampeao) / 2;
   const base =
     SIMULACAO.pesoRota * fRota +

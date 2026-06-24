@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import DraftBoard, { type JogarInfo } from "@/components/DraftBoard";
 import Partida from "@/components/Partida";
 import ResultadoPartida from "@/components/ResultadoPartida";
+import { bonusEquipamentos } from "@/engine/economia";
 import type { MatchResult } from "@/engine/types";
 import { useCareer } from "@/store/careerStore";
 
@@ -78,6 +79,7 @@ export default function DraftPage() {
             forcaMetaCampeao: info.forcaMetaCampeao,
             comp: info.comp,
             compInimigo: info.compInimigo,
+            bonusAtributos: bonusEquipamentos(career.equipamentos),
           }}
           icone={info.icone}
           onFim={aoFim}

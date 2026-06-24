@@ -7,7 +7,7 @@
 - [x] 3  Draft (pick & ban)
 - [x] 4  Motor de partida + resultado
 - [x] 5  Loop semanal + atividades
-- [ ] 6  Economia + equipamentos
+- [x] 6  Economia + equipamentos
 - [ ] 7  Reputação + transferências
 - [ ] 8  Ligas + campeonatos
 - [ ] 9  Auto Patch + win rates reais
@@ -97,6 +97,16 @@
   vira temporada após 26. Soloq custa energia.
 - **UI** (`components/PainelSemana.tsx` no dashboard): barra de energia + atividades com
   pickers (atributo / traço) + avançar semana. "Jogar" bloqueado sem energia.
+
+### Fase 6 (economia + equipamentos)
+- **Motor** (`data/economia.ts`, `engine/economia.ts`, +`economia.test.ts`): salário
+  semanal + bônus por vitória (do contrato, ou base stub sem time); **coach** (assinatura:
+  upkeep + XP/sem), **sessão mental/nutri** (+moral/energia), **bootcamp Coreia** (caro,
+  +semanas, +XP geral). `processarSemanaEconomia` roda no avançar semana; bônus de vitória
+  no `aplicarPartida`.
+- **Crafting de periféricos:** `upgradeEquip` (headset/mouse/cadeira/monitor, até nível 5),
+  cada nível dá bônus de atributo que **entra na partida** (`forcaRota` + `bonusAtributos`).
+- **UI:** `components/Loja.tsx` + `app/loja/page.tsx`; link "💰 Loja" no dashboard.
 
 ## Como rodar
 

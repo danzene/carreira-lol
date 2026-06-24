@@ -8,7 +8,15 @@ import {
   streaming as streamingEngine,
   treinar as treinarEngine,
 } from "@/engine/loop";
-import type { AtributoKey, CareerState, MatchResult, Player, TraitId } from "@/engine/types";
+import {
+  alternarCoach as alternarCoachEngine,
+  bonusVitoria,
+  bootcampCoreia,
+  processarSemanaEconomia,
+  sessaoMental as sessaoMentalEngine,
+  upgradeEquip as upgradeEquipEngine,
+} from "@/engine/economia";
+import type { AtributoKey, CareerState, Equip, MatchResult, Player, TraitId } from "@/engine/types";
 import {
   apagarSlot,
   definirSlotAtual,
@@ -32,6 +40,10 @@ interface CareerStore {
   streaming: () => boolean;
   alteracaoMental: (traco: TraitId) => boolean;
   avancarSemana: (modo?: "normal" | "descanso") => void;
+  bootcamp: () => boolean;
+  alternarCoach: () => void;
+  sessaoMental: () => boolean;
+  upgradeEquip: (tipo: Equip["tipo"]) => boolean;
   apagar: (slotId: string) => void;
   sair: () => void;
 }
@@ -66,7 +78,8 @@ export const useCareer = create<CareerStore>((set, get) => ({
   aplicarPartida: (resultado) => {
     const { career, slotId } = get();
     if (!career) return;
-    const novo = gastarEnergiaSoloq(aplicarResultado(career, resultado));
+    let novo = gastarEnergiaSoloq(aplicarResultado(career, resultado));
+    if (resultado.vitoria) novo = { ...novo, dinheiro: novo.dinheiro + bonusVitoria(career) };
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
   },
@@ -104,9 +117,47 @@ export const useCareer = create<CareerStore>((set, get) => ({
   avancarSemana: (modo = "normal") => {
     const { career, slotId } = get();
     if (!career) return;
-    const novo = avancarSemanaEngine(career, modo);
+    const novo = processarSemanaEconomia(avancarSemanaEngine(career, modo));
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
+  },
+
+  bootcamp: () => {
+    const { career, slotId } = get();
+    if (!career) return false;
+    const novo = bootcampCoreia(career);
+    if (!novo) return false;
+    set({ career: novo });
+    if (slotId) salvarSlot(slotId, novo);
+    return true;
+  },
+
+  alternarCoach: () => {
+    const { career, slotId } = get();
+    if (!career) return;
+    const novo = alternarCoachEngine(career);
+    set({ career: novo });
+    if (slotId) salvarSlot(slotId, novo);
+  },
+
+  sessaoMental: () => {
+    const { career, slotId } = get();
+    if (!career) return false;
+    const novo = sessaoMentalEngine(career);
+    if (!novo) return false;
+    set({ career: novo });
+    if (slotId) salvarSlot(slotId, novo);
+    return true;
+  },
+
+  upgradeEquip: (tipo) => {
+    const { career, slotId } = get();
+    if (!career) return false;
+    const novo = upgradeEquipEngine(career, tipo);
+    if (!novo) return false;
+    set({ career: novo });
+    if (slotId) salvarSlot(slotId, novo);
+    return true;
   },
 
   apagar: (slotId) => {

@@ -125,4 +125,5 @@ export interface CareerState {
   inbox: Offer[];
   patchVigente: number; // win rates mudam a cada split
   energiaEm?: number; // timestamp (ms) da regen de energia em tempo real (infra)
+  coachAtivo?: boolean; // assinatura de coach (XP passivo semanal, custa upkeep)
 }

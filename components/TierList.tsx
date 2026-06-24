@@ -8,17 +8,24 @@ import { alteracoesDoPatch, aplicarPatch, versaoPatch } from "@/engine/patch";
 import type { ChampionDef, Role } from "@/engine/types";
 import { buscarCampeoes, type Campeao } from "@/lib/ddragon";
 import { useCareer } from "@/store/careerStore";
+import IconeRota from "./IconeRota";
 
-const TIERS: { nome: string; min: number; cor: string }[] = [
-  { nome: "S", min: 60, cor: "text-rosa" },
-  { nome: "A", min: 55, cor: "text-ciano" },
-  { nome: "B", min: 50, cor: "text-texto" },
-  { nome: "C", min: 45, cor: "text-suave" },
-  { nome: "D", min: 0, cor: "text-borda" },
+const TIERS: { nome: string; cor: string }[] = [
+  { nome: "S", cor: "text-rosa" },
+  { nome: "A", cor: "text-ciano" },
+  { nome: "B", cor: "text-texto" },
+  { nome: "C", cor: "text-suave" },
+  { nome: "D", cor: "text-borda" },
 ];
 
-function tierDe(forca: number): string {
-  for (const t of TIERS) if (forca >= t.min) return t.nome;
+// Tier RELATIVO à rota: o melhor da rota é S, independente do valor absoluto da meta.
+function tierPorRank(i: number, total: number): string {
+  if (total <= 0) return "D";
+  const p = i / total;
+  if (p < 0.08) return "S";
+  if (p < 0.25) return "A";
+  if (p < 0.5) return "B";
+  if (p < 0.78) return "C";
   return "D";
 }
 
@@ -62,6 +69,11 @@ export default function TierList() {
     () => banco.filter((c) => c.rolesValidas.includes(rota)).sort((a, b) => b.forcaMetaBase - a.forcaMetaBase),
     [banco, rota],
   );
+  const porTier = useMemo(() => {
+    const g: Record<string, ChampionDef[]> = { S: [], A: [], B: [], C: [], D: [] };
+    daRota.forEach((c, i) => g[tierPorRank(i, daRota.length)].push(c));
+    return g;
+  }, [daRota]);
 
   if (carregando) return <p className="py-8 text-center text-sm text-suave">Carregando campeões…</p>;
 
@@ -80,14 +92,14 @@ export default function TierList() {
               rota === r.chave ? "border-rosa bg-rosa/10 text-texto" : "border-borda text-suave hover:border-suave"
             }`}
           >
-            <span className="text-lg">{r.emoji}</span>
+            <IconeRota rota={r.chave} className="h-5 w-5" />
             <span className="text-[10px]">{r.nome}</span>
           </button>
         ))}
       </div>
 
       {TIERS.map((t) => {
-        const champs = daRota.filter((c) => tierDe(c.forcaMetaBase) === t.nome);
+        const champs = porTier[t.nome];
         if (champs.length === 0) return null;
         return (
           <div key={t.nome} className="border-2 border-borda bg-painel p-3">

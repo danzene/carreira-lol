@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ATRIBUTOS, NACIONALIDADES, ROTAS, TRACOS } from "@/data/config";
 import { nomeDificuldade } from "@/data/opcoes";
 import { timeDe } from "@/data/times";
+import IconeRota from "./IconeRota";
 import { buscarCampeoes, type Campeao } from "@/lib/ddragon";
 import type { CareerState, TraitId } from "@/engine/types";
 import BarraAtributo from "./BarraAtributo";
@@ -50,8 +51,8 @@ export default function PlayerCard({ career }: { career: CareerState }) {
               {career.opcoes?.fearless ? " · ⚔️ Fearless" : ""}
             </span>
           </div>
-          <div className="flex flex-col items-end">
-            <span className="text-3xl">{rota?.emoji}</span>
+          <div className="flex flex-col items-end gap-1">
+            <IconeRota rota={player.rota} className="h-8 w-8 text-ciano" />
             <span className="font-pixel text-[8px] text-suave">{rota?.nome}</span>
           </div>
         </div>

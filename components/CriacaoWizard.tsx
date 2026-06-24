@@ -14,6 +14,7 @@ import {
 import type { Attributes, Dificuldade, OpcoesCarreira, Role, TraitId } from "@/engine/types";
 import { useCareer } from "@/store/careerStore";
 import EditorAtributos from "./EditorAtributos";
+import IconeRota from "./IconeRota";
 import SeletorCampeoes from "./SeletorCampeoes";
 import SeletorTraco from "./SeletorTraco";
 
@@ -108,7 +109,7 @@ export default function CriacaoWizard() {
                     rota === r.chave ? "border-rosa bg-rosa/10 text-texto" : "border-borda text-suave hover:border-suave"
                   }`}
                 >
-                  <span className="text-xl">{r.emoji}</span>
+                  <IconeRota rota={r.chave} className="h-6 w-6" />
                   <span className="text-[10px]">{r.nome}</span>
                 </button>
               ))}

@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { criarCareerState } from "@/engine/player";
-import type { CareerState, Player } from "@/engine/types";
+import { aplicarResultado } from "@/engine/simularPartida";
+import type { CareerState, MatchResult, Player } from "@/engine/types";
 import {
   apagarSlot,
   definirSlotAtual,
@@ -19,6 +20,7 @@ interface CareerStore {
   iniciarCarreira: (player: Player) => string;
   carregar: (slotId: string) => boolean;
   recarregarAtual: () => boolean;
+  aplicarPartida: (resultado: MatchResult) => void;
   apagar: (slotId: string) => void;
   sair: () => void;
 }
@@ -48,6 +50,14 @@ export const useCareer = create<CareerStore>((set, get) => ({
     const atual = lerSlotAtual();
     if (!atual) return false;
     return get().carregar(atual);
+  },
+
+  aplicarPartida: (resultado) => {
+    const { career, slotId } = get();
+    if (!career) return;
+    const novo = aplicarResultado(career, resultado);
+    set({ career: novo });
+    if (slotId) salvarSlot(slotId, novo);
   },
 
   apagar: (slotId) => {

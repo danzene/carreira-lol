@@ -5,7 +5,7 @@
 - [x] 1  Criação de jogador + dashboard + save
 - [x] 2  Banco de campeões
 - [x] 3  Draft (pick & ban)
-- [ ] 4  Motor de partida + resultado
+- [x] 4  Motor de partida + resultado
 - [ ] 5  Loop semanal + atividades
 - [ ] 6  Economia + equipamentos
 - [ ] 7  Reputação + transferências
@@ -76,6 +76,17 @@
   sobrescreve as rotas/força sintéticas com esses dados quando presentes.
 - Rodar (na raiz, com o CSV no Desktop): `node scripts/processar-oe.mjs` →
   depois `git add data/champions-oe.json && git commit && git push`.
+
+### Fase 4 (motor de partida + resultado)
+- **Motor puro** (`engine/simularPartida.ts`, `engine/elo.ts`, `data/simulacao.ts`,
+  +`simularPartida.test.ts`): `simularPartida(player, ctx, seed)` usa a equação do
+  CLAUDE (forcaRota + forcaCampeao[maestria+meta] + forcaTime + **forcaComp do draft**),
+  com **traços** (TILTAVEL↑variância, FRIO↓, CLUTCH em desvantagem...) e ruído por
+  consistência/mental. Gera nota 0–10 (alta até em derrota), KDA, cs/min, XP, LP e um
+  `log` narrado. `aplicarResultado` aplica elo/LP, XP e histórico.
+- **Fluxo** (`app/draft/page.tsx`): draft → **JOGAR PARTIDA** → `components/Partida.tsx`
+  (auto-battle: timeline + log revelado) → `components/ResultadoPartida.tsx`. Ação
+  `aplicarPartida` no store persiste. Dashboard: "⚔️ Jogar Partida".
 
 ## Como rodar
 

@@ -43,7 +43,7 @@ export default function DashboardPage() {
           href="/draft"
           className="border-2 border-rosa bg-rosa/10 px-4 py-3 text-center font-pixel text-[10px] text-rosa transition hover:bg-rosa hover:text-fundo"
         >
-          ⚔️ TREINAR DRAFT
+          ⚔️ JOGAR PARTIDA
         </Link>
         <Link
           href="/campeoes"
@@ -53,7 +53,7 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      <p className="text-center font-pixel text-[8px] text-borda">PRÓXIMA FASE · MOTOR DE PARTIDA</p>
+      <p className="text-center font-pixel text-[8px] text-borda">PRÓXIMA FASE · LOOP SEMANAL</p>
       <p className="text-center text-xs">
         <Link href="/" className="text-ciano hover:underline">
           Início

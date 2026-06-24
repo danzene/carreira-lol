@@ -16,7 +16,25 @@ import {
 import { buscarCampeoes, type Campeao } from "@/lib/ddragon";
 import type { ChampionDef, Role } from "@/engine/types";
 
-export default function DraftBoard({ comfort, reputacao }: { comfort: string[]; reputacao: number }) {
+export interface JogarInfo {
+  championId: string;
+  forcaMetaCampeao: number;
+  comp: number;
+  compInimigo: number;
+  icone?: string;
+}
+
+export default function DraftBoard({
+  comfort,
+  reputacao,
+  rota,
+  onJogar,
+}: {
+  comfort: string[];
+  reputacao: number;
+  rota: Role;
+  onJogar: (info: JogarInfo) => void;
+}) {
   const [campeoes, setCampeoes] = useState<Campeao[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [estado, setEstado] = useState<EstadoDraft>(() => iniciarDraft());
@@ -73,6 +91,18 @@ export default function DraftBoard({ comfort, reputacao }: { comfort: string[]; 
     setEstado((e) => aplicarEscolha(e, id));
   }
 
+  function jogar() {
+    if (!fc) return;
+    const seu = atribuirRoles(estado.picks.azul, defMap).find((s) => s.role === rota)?.id ?? estado.picks.azul[0] ?? "";
+    onJogar({
+      championId: seu,
+      forcaMetaCampeao: defMap[seu]?.forcaMetaBase ?? 50,
+      comp: fc.azul,
+      compInimigo: fc.vermelho,
+      icone: campMap[seu]?.icone,
+    });
+  }
+
   if (carregando) return <p className="py-8 text-center text-sm text-suave">Carregando campeões…</p>;
 
   return (
@@ -124,7 +154,13 @@ export default function DraftBoard({ comfort, reputacao }: { comfort: string[]; 
                 ? "O inimigo saiu melhor no draft. 🟥"
                 : "Draft equilibrado."}
           </p>
-          <p className="mt-1 text-center text-[10px] text-suave">A partida em si vem na Fase 4.</p>
+          <button
+            type="button"
+            onClick={jogar}
+            className="mt-4 w-full border-2 border-ciano bg-ciano/10 py-3 font-pixel text-[10px] text-ciano transition hover:bg-ciano hover:text-fundo"
+          >
+            ▶ JOGAR PARTIDA
+          </button>
         </div>
       )}
 

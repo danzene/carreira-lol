@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { construirBanco } from "@/engine/champions";
+import { aplicarPatch } from "@/engine/patch";
 import {
   aplicarEscolha,
   disponivel,
@@ -28,11 +29,13 @@ export default function DraftBoard({
   comfort,
   reputacao,
   rota,
+  patch = 1,
   onJogar,
 }: {
   comfort: string[];
   reputacao: number;
   rota: Role;
+  patch?: number;
   onJogar: (info: JogarInfo) => void;
 }) {
   const [campeoes, setCampeoes] = useState<Campeao[]>([]);
@@ -49,7 +52,7 @@ export default function DraftBoard({
       .catch(() => setCarregando(false));
   }, []);
 
-  const banco = useMemo(() => construirBanco(campeoes), [campeoes]);
+  const banco = useMemo(() => aplicarPatch(construirBanco(campeoes), patch), [campeoes, patch]);
   const campMap = useMemo(() => {
     const m: Record<string, Campeao> = {};
     for (const c of campeoes) m[c.id] = c;

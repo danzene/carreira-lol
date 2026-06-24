@@ -198,10 +198,15 @@ força do time adversário pesa. Engine em `engine/liga.ts`; UI em `app/liga/pag
 **Pendências do usuário:** dar `git push` das Fases 7/8 (deploy); rodar `npm run test`/`dev`;
 o `champions-oe.json` precisa estar commitado pra valer no deploy.
 
-**PRÓXIMA FASE A DESENVOLVER → Fase 9 — Auto Patch + win rates reais:**
-- A meta muda a cada split (patch) alterando `forcaMetaBase` dos campeões; win rate via API
-  Route do Next (chave da Riot em `.env.local`); tela de "patch notes".
-- Pronto quando: ao virar o split, a tier list muda e o jogador precisa adaptar a pool.
+**Fase 9 — parte 1 FEITA (Auto Patch / meta dinâmica):** a cada **2 semanas** muda o
+`patchVigente` e `engine/patch.ts` aplica buffs/nerfs determinísticos na `forcaMetaBase`
+(NUNCA altera rotas). DraftBoard + TierList aplicam o patch (picks/bans da IA e tier list
+mudam); página `app/patch/page.tsx` mostra as patch notes; banner "🧪 PATCH" no dashboard.
+
+**PRÓXIMA FASE A DESENVOLVER → Fase 9 — parte 2 (win rates reais via Riot API):**
+- Win rate ao vivo via API Route do Next (chave da Riot em `.env.local`) para alimentar/ajustar
+  a `forcaMetaBase`; tela de "patch notes" pode citar o win rate real.
+- Pronto quando: a força da meta reflete dados reais, não só o shuffle fictício.
 
 **Fases seguintes (roadmap):**
 - **9 — Auto Patch + win rates reais (Riot API):** a meta muda a cada split; win rate via

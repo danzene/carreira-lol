@@ -7,6 +7,7 @@ import PlayerCard from "@/components/PlayerCard";
 import PainelSemana from "@/components/PainelSemana";
 import { timeDe } from "@/data/times";
 import { proximoConfrontoJogador } from "@/engine/liga";
+import { versaoPatch } from "@/engine/patch";
 import type { CareerState } from "@/engine/types";
 import { useCareer } from "@/store/careerStore";
 
@@ -50,6 +51,13 @@ export default function DashboardPage() {
       <PlayerCard career={career} />
 
       <LigaBanner career={career} />
+
+      <Link
+        href="/patch"
+        className="border-2 border-borda bg-painel px-4 py-3 text-center font-pixel text-[10px] text-ciano transition hover:border-ciano"
+      >
+        🧪 PATCH {versaoPatch(career.patchVigente)} · VER MUDANÇAS
+      </Link>
 
       <div className="grid grid-cols-3 gap-2">
         <Link

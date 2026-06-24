@@ -1,4 +1,5 @@
 import { LOOP } from "@/data/loop";
+import { PATCH } from "@/data/patch";
 import { bonusInstalacoes } from "./transferencias";
 import type { AtributoKey, CareerState, TraitId } from "./types";
 
@@ -86,5 +87,9 @@ export function avancarSemana(career: CareerState, modo: "normal" | "descanso" =
     temporada += 1;
   }
 
-  return { ...career, semanaAtual, temporada, player: { ...career.player, energia, moral } };
+  // Auto Patch: meta muda a cada PATCH.semanasPorPatch semanas (corridas).
+  const semanaGlobal = (temporada - 1) * LOOP.semanasPorTemporada + semanaAtual;
+  const patchVigente = Math.floor((semanaGlobal - 1) / PATCH.semanasPorPatch) + 1;
+
+  return { ...career, semanaAtual, temporada, patchVigente, player: { ...career.player, energia, moral } };
 }

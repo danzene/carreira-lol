@@ -135,6 +135,14 @@
   chaveamento dos playoffs, tela de encerramento); banner "🏆 LIGA" no dashboard; `/draft?oficial=1`
   joga a partida oficial.
 
+### Fase 9 — parte 1 (Auto Patch / meta dinâmica) ✅
+- A meta muda a cada **2 semanas**: `engine/patch.ts` aplica buffs/nerfs determinísticos na
+  `forcaMetaBase` (NUNCA mexe nas rotas). `data/patch.ts` (constantes); `avancarSemana` define
+  `patchVigente` pela semana corrida. **DraftBoard e TierList aplicam o patch** → picks/bans da IA,
+  tier list e força nas partidas mudam por patch. Banner "🧪 PATCH 25.N" no dashboard e página
+  `app/patch/page.tsx` (patch notes fictícias com buffs/nerfs). +`engine/patch.test.ts`.
+- **Falta da Fase 9:** win rates reais via Riot API (a base de roles/força já vem do Oracle's Elixir).
+
 ## Como rodar
 
 > Pré-requisito: Node 18+ instalado na máquina.

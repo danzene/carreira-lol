@@ -87,6 +87,7 @@ function DraftFlow() {
           comfort={career.player.pool.map((p) => p.championId)}
           reputacao={career.player.reputacao}
           rota={career.player.rota}
+          patch={career.patchVigente}
           onJogar={aoJogar}
         />
       )}

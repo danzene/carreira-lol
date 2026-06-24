@@ -3,8 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { ROTAS } from "@/data/config";
 import { construirBanco } from "@/engine/champions";
+import { aplicarPatch, versaoPatch } from "@/engine/patch";
 import type { ChampionDef, Role } from "@/engine/types";
 import { buscarCampeoes, type Campeao } from "@/lib/ddragon";
+import { useCareer } from "@/store/careerStore";
 
 const TIERS: { nome: string; min: number; cor: string }[] = [
   { nome: "S", min: 60, cor: "text-rosa" },
@@ -20,6 +22,7 @@ function tierDe(forca: number): string {
 }
 
 export default function TierList() {
+  const patch = useCareer((s) => s.career?.patchVigente ?? 1);
   const [campeoes, setCampeoes] = useState<Campeao[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [rota, setRota] = useState<Role>("MID");
@@ -34,7 +37,7 @@ export default function TierList() {
       .catch(() => setCarregando(false));
   }, []);
 
-  const banco = useMemo(() => construirBanco(campeoes), [campeoes]);
+  const banco = useMemo(() => aplicarPatch(construirBanco(campeoes), patch), [campeoes, patch]);
   const campMap = useMemo(() => {
     const m: Record<string, Campeao> = {};
     for (const c of campeoes) m[c.id] = c;
@@ -50,6 +53,7 @@ export default function TierList() {
 
   return (
     <div className="flex flex-col gap-4">
+      <p className="text-center font-pixel text-[8px] text-ciano">META · PATCH {versaoPatch(patch)}</p>
       <div className="grid grid-cols-5 gap-2">
         {ROTAS.map((r) => (
           <button

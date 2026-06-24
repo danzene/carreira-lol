@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { NACIONALIDADES, ROTAS } from "@/data/config";
+import { DIFICULDADES, OPCOES_PADRAO } from "@/data/opcoes";
 import {
   atributosIniciais,
   criarPlayer,
@@ -10,13 +11,13 @@ import {
   validarCriacao,
   type FormularioCriacao,
 } from "@/engine/player";
-import type { Attributes, Role, TraitId } from "@/engine/types";
+import type { Attributes, Dificuldade, OpcoesCarreira, Role, TraitId } from "@/engine/types";
 import { useCareer } from "@/store/careerStore";
 import EditorAtributos from "./EditorAtributos";
 import SeletorCampeoes from "./SeletorCampeoes";
 import SeletorTraco from "./SeletorTraco";
 
-const PASSOS = ["Identidade", "Atributos", "Traço", "Campeões"] as const;
+const PASSOS = ["Identidade", "Atributos", "Traço", "Campeões", "Ajustes"] as const;
 
 export default function CriacaoWizard() {
   const router = useRouter();
@@ -29,6 +30,7 @@ export default function CriacaoWizard() {
   const [atributos, setAtributos] = useState<Attributes>(atributosIniciais());
   const [traco, setTraco] = useState<TraitId | null>(null);
   const [campeoes, setCampeoes] = useState<string[]>([]);
+  const [opcoes, setOpcoes] = useState<OpcoesCarreira>(OPCOES_PADRAO);
 
   const form: FormularioCriacao = { nome, atributos, traco, campeoes };
   const erros = validarCriacao(form);
@@ -40,11 +42,13 @@ export default function CriacaoWizard() {
         ? pontosRestantes(atributos) === 0
         : passo === 2
           ? traco !== null
-          : true;
+          : passo === 3
+            ? campeoes.length === 3
+            : true;
 
   function finalizar() {
     if (erros.length > 0 || !traco) return;
-    iniciarCarreira(criarPlayer({ nome, nacionalidade, rota, atributos, traco, campeoes }));
+    iniciarCarreira(criarPlayer({ nome, nacionalidade, rota, atributos, traco, campeoes }), opcoes);
     router.push("/dashboard");
   }
 
@@ -117,6 +121,42 @@ export default function CriacaoWizard() {
       {passo === 2 && <SeletorTraco selecionado={traco} onChange={setTraco} />}
       {passo === 3 && <SeletorCampeoes selecionados={campeoes} onChange={setCampeoes} />}
 
+      {passo === 4 && (
+        <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-2">
+            <span className="text-sm text-suave">Dificuldade</span>
+            <div className="grid grid-cols-3 gap-2">
+              {DIFICULDADES.map((d) => (
+                <button
+                  key={d.id}
+                  type="button"
+                  onClick={() => setOpcoes((o) => ({ ...o, dificuldade: d.id as Dificuldade }))}
+                  className={`flex flex-col gap-1 border-2 p-3 text-left transition ${
+                    opcoes.dificuldade === d.id ? "border-rosa bg-rosa/10 text-texto" : "border-borda text-suave hover:border-suave"
+                  }`}
+                >
+                  <span className="font-pixel text-[10px]">{d.nome}</span>
+                  <span className="text-[10px] leading-tight text-suave">{d.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <Alternar
+            ativo={opcoes.esconderAtributos}
+            onToggle={() => setOpcoes((o) => ({ ...o, esconderAtributos: !o.esconderAtributos }))}
+            titulo="🙈 Esconder atributos"
+            desc="Modo imersão: o dashboard não mostra os números exatos dos atributos."
+          />
+          <Alternar
+            ativo={opcoes.fearless}
+            onToggle={() => setOpcoes((o) => ({ ...o, fearless: !o.fearless }))}
+            titulo="⚔️ Fearless"
+            desc="Campeões usados nas últimas partidas ficam indisponíveis no draft."
+          />
+        </div>
+      )}
+
       <footer className="flex items-center justify-between gap-3 pt-2">
         <button
           type="button"
@@ -155,5 +195,35 @@ export default function CriacaoWizard() {
         </ul>
       )}
     </div>
+  );
+}
+
+function Alternar({
+  ativo,
+  onToggle,
+  titulo,
+  desc,
+}: {
+  ativo: boolean;
+  onToggle: () => void;
+  titulo: string;
+  desc: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className={`flex items-center justify-between gap-3 border-2 p-3 text-left transition ${
+        ativo ? "border-ciano bg-ciano/10" : "border-borda hover:border-suave"
+      }`}
+    >
+      <span className="flex flex-col gap-0.5">
+        <span className={`text-sm ${ativo ? "text-texto" : "text-suave"}`}>{titulo}</span>
+        <span className="text-[10px] leading-tight text-suave">{desc}</span>
+      </span>
+      <span className={`h-5 w-9 shrink-0 border-2 ${ativo ? "border-ciano bg-ciano/30" : "border-borda"} relative`}>
+        <span className={`absolute top-0.5 h-3 w-3 transition-all ${ativo ? "left-4 bg-ciano" : "left-0.5 bg-suave"}`} />
+      </span>
+    </button>
   );
 }

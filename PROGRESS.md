@@ -12,7 +12,7 @@
 - [x] 8  Ligas + campeonatos
 - [x] 9  Auto Patch (meta realista)
 - [x] 10 Auto-battle pixel animado
-- [ ] 11 Opções de novo jogo + event matches
+- [~] 11 Opções de novo jogo (feito) + event matches (pendente)
 - [ ] 12 Polimento
 
 ## Decisões tomadas
@@ -163,6 +163,21 @@
 - **Integração:** `DraftBoard` passa os 10 campeões (`timeAzul`/`timeVermelho`) →
   `Partida` simula o resultado, gera o roteiro e renderiza o `BatalhaCanvas`; ao terminar,
   botão **VER RESULTADO**. Vale tanto pra soloq quanto pra partida oficial.
+
+### Fase 11 — parte 1 (opções de nova carreira) ✅
+- **Tipos** (`engine/types.ts`): `Dificuldade`, `OpcoesCarreira` + `opcoes?` no `CareerState`
+  (opcional = saves antigos viram Normal). **Constantes** em `data/opcoes.ts` (`MODIFICADORES`,
+  `DIFICULDADES`, `mod()`, `OPCOES_PADRAO`, `FEARLESS_JANELA`) + `engine/opcoes.test.ts`.
+- **Dificuldade** (Fácil/Normal/Difícil) aplicada nos motores: salário/bônus (`economia`),
+  XP por partida (`simularPartida.aplicarResultado`), energia por semana (`loop.avancarSemana`)
+  e **força do inimigo** na partida (`ContextoPartida.bonusInimigo`).
+- **Esconder atributos:** `BarraAtributo` aceita `esconder` (mostra "?" e barra neutra);
+  `PlayerCard` repassa e exibe a dificuldade/modos no cabeçalho.
+- **Fearless:** o draft tira de jogo os campeões usados nas últimas `FEARLESS_JANELA` partidas
+  (`DraftBoard.proibidos`, alimentado pelo histórico no `app/draft/page.tsx`).
+- **UI:** novo passo **"Ajustes"** no `CriacaoWizard` (dificuldade + 2 toggles); `iniciarCarreira`
+  e `criarCareerState` agora recebem `opcoes`.
+- **Pendente da Fase 11:** partidas-evento (showmatch/duelo/convite).
 
 ## Como rodar
 

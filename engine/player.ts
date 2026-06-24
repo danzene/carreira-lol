@@ -1,5 +1,6 @@
 import { CRIACAO, INICIO } from "@/data/config";
-import type { Attributes, CareerState, ChampionMastery, Player, Role, TraitId } from "./types";
+import { OPCOES_PADRAO } from "@/data/opcoes";
+import type { Attributes, CareerState, ChampionMastery, OpcoesCarreira, Player, Role, TraitId } from "./types";
 
 // Criação de jogador (lógica PURA). Recebe dados → devolve estado.
 
@@ -87,7 +88,7 @@ export function criarPlayer(input: CriarPlayerInput): Player {
   };
 }
 
-export function criarCareerState(player: Player): CareerState {
+export function criarCareerState(player: Player, opcoes: OpcoesCarreira = OPCOES_PADRAO): CareerState {
   return {
     player,
     dinheiro: INICIO.dinheiro,
@@ -99,5 +100,6 @@ export function criarCareerState(player: Player): CareerState {
     historicoPartidas: [],
     inbox: [],
     patchVigente: 1,
+    opcoes,
   };
 }

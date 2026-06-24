@@ -1,5 +1,6 @@
 import { ECONOMIA, EQUIP_INFO, EQUIP_MAX_NIVEL } from "@/data/economia";
 import { LOOP } from "@/data/loop";
+import { mod } from "@/data/opcoes";
 import type { Attributes, AtributoKey, CareerState, Equip } from "./types";
 
 // Economia (PURO): salário, bônus, coach e crafting de periféricos.
@@ -18,11 +19,13 @@ function somaXpTodos(attrs: Attributes, porAtributo: number): Attributes {
 }
 
 export function salarioSemanal(career: CareerState): number {
-  return career.contratoAtual?.salarioSemanal ?? ECONOMIA.rendaBaseSemanal;
+  const base = career.contratoAtual?.salarioSemanal ?? ECONOMIA.rendaBaseSemanal;
+  return Math.round(base * mod(career.opcoes).dinheiro);
 }
 
 export function bonusVitoria(career: CareerState): number {
-  return career.contratoAtual?.bonusPorVitoria ?? ECONOMIA.bonusBaseVitoria;
+  const base = career.contratoAtual?.bonusPorVitoria ?? ECONOMIA.bonusBaseVitoria;
+  return Math.round(base * mod(career.opcoes).dinheiro);
 }
 
 // Soma os bônus de atributo de todos os periféricos.

@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import DraftBoard, { type JogarInfo } from "@/components/DraftBoard";
 import Partida from "@/components/Partida";
 import ResultadoPartida from "@/components/ResultadoPartida";
+import { FEARLESS_JANELA, mod } from "@/data/opcoes";
 import { timeDe } from "@/data/times";
 import { bonusEquipamentos } from "@/engine/economia";
 import { forcaTimeDe, proximoConfrontoJogador } from "@/engine/liga";
@@ -32,6 +33,12 @@ function DraftFlow() {
   }, [career, recarregarAtual, router]);
 
   const adversarioId = oficial && career ? proximoConfrontoJogador(career.liga) : null;
+
+  // Fearless: campeões usados nas últimas partidas ficam fora do draft.
+  const proibidos = useMemo(
+    () => (career?.opcoes?.fearless ? career.historicoPartidas.slice(0, FEARLESS_JANELA).map((m) => m.championId) : []),
+    [career],
+  );
 
   // Modo oficial sem partida pendente → volta pra liga.
   useEffect(() => {
@@ -88,6 +95,7 @@ function DraftFlow() {
           reputacao={career.player.reputacao}
           rota={career.player.rota}
           patch={career.patchVigente}
+          proibidos={proibidos}
           onJogar={aoJogar}
         />
       )}
@@ -103,6 +111,7 @@ function DraftFlow() {
             bonusAtributos: bonusEquipamentos(career.equipamentos),
             forcaTimeAliado: oficial && career.contratoAtual ? forcaTimeDe(career.contratoAtual.timeId) : undefined,
             forcaTimeInimigo: oficial && adversarioId ? forcaTimeDe(adversarioId) : undefined,
+            bonusInimigo: mod(career.opcoes).forcaInimigo,
           }}
           times={{ azul: info.timeAzul, vermelho: info.timeVermelho }}
           onFim={aoFim}

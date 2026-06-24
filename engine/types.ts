@@ -113,6 +113,15 @@ export interface MatchResult {
   log: string[]; // narração da batalha p/ o viewer
 }
 
+// ----- Opções de nova carreira (Fase 11) -----
+export type Dificuldade = "FACIL" | "NORMAL" | "DIFICIL";
+
+export interface OpcoesCarreira {
+  dificuldade: Dificuldade;
+  esconderAtributos: boolean; // modo imersão: esconde os números dos atributos
+  fearless: boolean; // não dá pra repetir campeões jogados recentemente
+}
+
 // ----- Liga / campeonatos (Fase 8) -----
 export type FaseLiga = "REGULAR" | "PLAYOFFS" | "ENCERRADA";
 
@@ -167,6 +176,7 @@ export interface CareerState {
   historicoPartidas: MatchResult[];
   inbox: Offer[];
   patchVigente: number; // win rates mudam a cada split
+  opcoes?: OpcoesCarreira; // dificuldade + modos (Fase 11); ausente em saves antigos = Normal
   liga?: LigaState; // temporada/campeonato do time atual (Fase 8)
   energiaEm?: number; // timestamp (ms) da regen de energia em tempo real (infra)
   coachAtivo?: boolean; // assinatura de coach (XP passivo semanal, custa upkeep)

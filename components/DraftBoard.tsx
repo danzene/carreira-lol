@@ -38,12 +38,14 @@ export default function DraftBoard({
   reputacao,
   rota,
   patch = 1,
+  proibidos = [],
   onJogar,
 }: {
   comfort: string[];
   reputacao: number;
   rota: Role;
   patch?: number;
+  proibidos?: string[];
   onJogar: (info: JogarInfo) => void;
 }) {
   const [campeoes, setCampeoes] = useState<Campeao[]>([]);
@@ -60,7 +62,10 @@ export default function DraftBoard({
       .catch(() => setCarregando(false));
   }, []);
 
-  const banco = useMemo(() => aplicarPatch(construirBanco(campeoes), patch), [campeoes, patch]);
+  const banco = useMemo(() => {
+    const b = aplicarPatch(construirBanco(campeoes), patch);
+    return proibidos.length ? b.filter((c) => !proibidos.includes(c.id)) : b;
+  }, [campeoes, patch, proibidos]);
   const campMap = useMemo(() => {
     const m: Record<string, Campeao> = {};
     for (const c of campeoes) m[c.id] = c;

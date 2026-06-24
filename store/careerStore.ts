@@ -28,7 +28,7 @@ import {
   garantirLiga,
   registrarResultadoJogador,
 } from "@/engine/liga";
-import type { AtributoKey, CareerState, Equip, MatchResult, Player, TraitId } from "@/engine/types";
+import type { AtributoKey, CareerState, Equip, MatchResult, OpcoesCarreira, Player, TraitId } from "@/engine/types";
 import {
   apagarSlot,
   definirSlotAtual,
@@ -44,7 +44,7 @@ import {
 interface CareerStore {
   career: CareerState | null;
   slotId: string | null;
-  iniciarCarreira: (player: Player) => string;
+  iniciarCarreira: (player: Player, opcoes: OpcoesCarreira) => string;
   carregar: (slotId: string) => boolean;
   recarregarAtual: () => boolean;
   aplicarPartida: (resultado: MatchResult) => void;
@@ -70,8 +70,8 @@ export const useCareer = create<CareerStore>((set, get) => ({
   career: null,
   slotId: null,
 
-  iniciarCarreira: (player) => {
-    const career = criarCareerState(player);
+  iniciarCarreira: (player, opcoes) => {
+    const career = criarCareerState(player, opcoes);
     const slotId = gerarId();
     salvarSlot(slotId, career);
     definirSlotAtual(slotId);

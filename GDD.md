@@ -213,10 +213,15 @@ partículas, screen shake, kill feed, placar, retratos do draft, torres caindo e
 Nexus. Roteiro determinístico em `engine/batalha.ts` (a partir do `MatchResult`); layout em
 `data/batalha.ts`. Botões velocidade/Pular; ao fim, "Ver resultado".
 
-**PRÓXIMA FASE A DESENVOLVER → Fase 11 — Opções de novo jogo + event matches:**
-- Opções ao criar carreira (ex.: Fearless, esconder atributos, dificuldade) e "event matches"
-  (partidas especiais com regras/recompensas próprias).
-- Pronto quando: dá pra começar carreiras com modificadores e disputar partidas-evento.
+**Fase 11 — parte 1 FEITA (opções de nova carreira):** passo "Ajustes" na criação com
+**Dificuldade** (Fácil/Normal/Difícil → XP, dinheiro, energia e força do inimigo via
+`data/opcoes.ts` `mod()`), **Esconder Atributos** (BarraAtributo mostra "?") e **Fearless**
+(draft exclui campeões usados nas últimas partidas). `opcoes?` no `CareerState`.
+
+**PRÓXIMA FASE A DESENVOLVER → Fase 11 — parte 2 (partidas-evento):**
+- Showmatches/duelos/convites que aparecem no dashboard, com regras e recompensas próprias
+  (dinheiro/reputação), jogados com o auto-battle.
+- Pronto quando: dá pra aceitar e disputar uma partida-evento por uma recompensa especial.
 
 **Fases seguintes (roadmap):**
 - **9 — Auto Patch + win rates reais (Riot API):** a meta muda a cada split; win rate via

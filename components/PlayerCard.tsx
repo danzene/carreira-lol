@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ATRIBUTOS, NACIONALIDADES, ROTAS, TRACOS } from "@/data/config";
+import { nomeDificuldade } from "@/data/opcoes";
 import { timeDe } from "@/data/times";
 import { buscarCampeoes, type Campeao } from "@/lib/ddragon";
 import type { CareerState, TraitId } from "@/engine/types";
@@ -43,6 +44,11 @@ export default function PlayerCard({ career }: { career: CareerState }) {
             <span className="mt-0.5 text-[11px] text-ciano">
               {career.contratoAtual ? (timeDe(career.contratoAtual.timeId)?.nome ?? career.contratoAtual.timeId) : "Sem time (agente livre)"}
             </span>
+            <span className="mt-0.5 text-[10px] text-suave">
+              {nomeDificuldade(career.opcoes)}
+              {career.opcoes?.esconderAtributos ? " · 🙈" : ""}
+              {career.opcoes?.fearless ? " · ⚔️ Fearless" : ""}
+            </span>
           </div>
           <div className="flex flex-col items-end">
             <span className="text-3xl">{rota?.emoji}</span>
@@ -80,7 +86,12 @@ export default function PlayerCard({ career }: { career: CareerState }) {
         <h2 className="mb-3 font-pixel text-[10px] text-suave">ATRIBUTOS</h2>
         <div className="flex flex-col gap-2.5">
           {ATRIBUTOS.map((a) => (
-            <BarraAtributo key={a.chave} nome={a.nome} valor={player.atributos[a.chave]} />
+            <BarraAtributo
+              key={a.chave}
+              nome={a.nome}
+              valor={player.atributos[a.chave]}
+              esconder={career.opcoes?.esconderAtributos}
+            />
           ))}
         </div>
       </div>

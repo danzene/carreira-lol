@@ -1,3 +1,4 @@
+import { mod } from "@/data/opcoes";
 import { PESOS_ROTA, RANK, SIMULACAO } from "@/data/simulacao";
 import { aplicarResultadoRank, eloDeMmr } from "./elo";
 import { criarRng, entre, type Rng } from "./rng";
@@ -13,6 +14,7 @@ export interface ContextoPartida {
   bonusAtributos?: Partial<Attributes>; // bônus de periféricos (Fase 6)
   forcaTimeAliado?: number; // força do seu time (partida oficial; senão usa a base)
   forcaTimeInimigo?: number; // força do time adversário (partida oficial)
+  bonusInimigo?: number; // dificuldade (Fase 11): força extra do inimigo
 }
 
 function clamp(v: number, min: number, max: number): number {
@@ -107,9 +109,13 @@ export function simularPartida(player: Player, ctx: ContextoPartida, seed: numbe
   const amp = (SIMULACAO.ruidoMax - (SIMULACAO.ruidoMax - SIMULACAO.ruidoMin) * (estab / 100)) * ruidoMult;
   const forcaFinal = clamp(base + tForca + entre(rng, -amp, amp), 0, 100);
 
-  // vitória: vantagem do draft + sua aresta individual + força relativa dos times
+  // vitória: vantagem do draft + sua aresta individual + força relativa dos times − dificuldade
   const vantagem =
-    ctx.comp - ctx.compInimigo + (forcaFinal - 50) * 0.5 + (fTimeAliado - fTimeInimigo) * SIMULACAO.pesoForcaTimeVitoria;
+    ctx.comp -
+    ctx.compInimigo +
+    (forcaFinal - 50) * 0.5 +
+    (fTimeAliado - fTimeInimigo) * SIMULACAO.pesoForcaTimeVitoria -
+    (ctx.bonusInimigo ?? 0);
   const vitoria = rng() < 1 / (1 + Math.exp(-SIMULACAO.sensibilidadeVitoria * vantagem));
 
   const nota = clamp(
@@ -147,6 +153,16 @@ function aplicarXp(attrs: Attributes, xp: Partial<Attributes>): Attributes {
   return novo;
 }
 
+// Escala o XP pela dificuldade (Fase 11).
+function escalarXp(xp: Partial<Attributes>, fator: number): Partial<Attributes> {
+  if (fator === 1) return xp;
+  const out: Partial<Attributes> = {};
+  (Object.keys(xp) as AtributoKey[]).forEach((k) => {
+    out[k] = (xp[k] ?? 0) * fator;
+  });
+  return out;
+}
+
 export function aplicarResultado(career: CareerState, resultado: MatchResult): CareerState {
   const { player } = career;
   const novoMmr = Math.max(RANK.mmrBase, player.rankSoloq.mmr + (resultado.lpDelta ?? 0));
@@ -156,7 +172,7 @@ export function aplicarResultado(career: CareerState, resultado: MatchResult): C
     player: {
       ...player,
       rankSoloq: { elo, lp, mmr: novoMmr },
-      atributos: aplicarXp(player.atributos, resultado.xpGanho),
+      atributos: aplicarXp(player.atributos, escalarXp(resultado.xpGanho, mod(career.opcoes).xp)),
       reputacao: clamp(
         Math.round((player.reputacao + (resultado.notaPerformance - 5) * SIMULACAO.repPorNota) * 10) / 10,
         0,

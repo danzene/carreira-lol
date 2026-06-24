@@ -91,9 +91,10 @@
 ### Fase 5 (loop semanal + atividades)
 - **Motor** (`data/loop.ts`, `engine/loop.ts`, +`loop.test.ts`): energia por semana;
   atividades `treinar` (focado/especial), `streaming` (+$/+rep), `alteracaoMental`
-  (ganha traço, até 3), `descansar` (+energia/moral), `avancarSemana` (recupera energia,
-  moral pela forma, vira temporada após 26). Soloq custa energia (`gastarEnergiaSoloq`
-  no `aplicarPartida`).
+  (ganha traço, até 3). **Energia só recupera ao avançar a semana** (`avancarSemana`
+  normal = +55; `descanso` = energia ao máx + moral) — sem descanso grátis no meio da
+  semana (corrige o exploit de treinar/descansar infinito). Moral oscila pela forma;
+  vira temporada após 26. Soloq custa energia.
 - **UI** (`components/PainelSemana.tsx` no dashboard): barra de energia + atividades com
   pickers (atributo / traço) + avançar semana. "Jogar" bloqueado sem energia.
 

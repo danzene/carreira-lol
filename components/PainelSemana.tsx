@@ -13,7 +13,6 @@ export default function PainelSemana({ career }: { career: CareerState }) {
   const treinar = useCareer((s) => s.treinar);
   const streaming = useCareer((s) => s.streaming);
   const alteracaoMental = useCareer((s) => s.alteracaoMental);
-  const descansar = useCareer((s) => s.descansar);
   const avancarSemana = useCareer((s) => s.avancarSemana);
 
   const [painel, setPainel] = useState<Painel>(null);
@@ -77,7 +76,6 @@ export default function PainelSemana({ career }: { career: CareerState }) {
         <Atividade rotulo="🔥 ESPECIAL" sub={`−${LOOP.custoEspecial}`} disabled={energia < LOOP.custoEspecial} onClick={() => setPainel((p) => (p === "especial" ? null : "especial"))} />
         <Atividade rotulo="📺 STREAM" sub={`−${LOOP.custoStream} +$`} disabled={energia < LOOP.custoStream} onClick={live} />
         <Atividade rotulo="🧠 MENTAL" sub={`−${LOOP.custoAlteracao}`} disabled={energia < LOOP.custoAlteracao} onClick={() => setPainel((p) => (p === "mental" ? null : "mental"))} />
-        <Atividade rotulo="😴 DESCANSAR" sub="+en/moral" onClick={descansar} />
       </div>
 
       {(painel === "focado" || painel === "especial") && (
@@ -126,17 +124,31 @@ export default function PainelSemana({ career }: { career: CareerState }) {
 
       {aviso && <p className="mt-2 text-xs text-amber-400">{aviso}</p>}
 
-      <button
-        type="button"
-        onClick={() => {
-          avancarSemana();
-          setAviso(null);
-          setPainel(null);
-        }}
-        className="mt-4 w-full border-2 border-ciano bg-ciano/10 py-3 font-pixel text-[10px] text-ciano transition hover:bg-ciano hover:text-fundo"
-      >
-        ⏭️ AVANÇAR SEMANA
-      </button>
+      <p className="mt-3 text-center text-[10px] text-borda">A energia só recupera quando o tempo passa.</p>
+      <div className="mt-1 grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            avancarSemana("normal");
+            setAviso(null);
+            setPainel(null);
+          }}
+          className="border-2 border-ciano bg-ciano/10 py-3 font-pixel text-[10px] text-ciano transition hover:bg-ciano hover:text-fundo"
+        >
+          ⏭️ AVANÇAR SEMANA
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            avancarSemana("descanso");
+            setAviso(null);
+            setPainel(null);
+          }}
+          className="border-2 border-borda bg-fundo/40 py-3 font-pixel text-[10px] text-suave transition hover:border-suave"
+        >
+          😴 DESCANSAR A SEMANA
+        </button>
+      </div>
     </div>
   );
 }

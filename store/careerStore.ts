@@ -4,7 +4,6 @@ import { aplicarResultado } from "@/engine/simularPartida";
 import {
   alteracaoMental as alteracaoMentalEngine,
   avancarSemana as avancarSemanaEngine,
-  descansar as descansarEngine,
   gastarEnergiaSoloq,
   streaming as streamingEngine,
   treinar as treinarEngine,
@@ -32,8 +31,7 @@ interface CareerStore {
   treinar: (atributo: AtributoKey, especial?: boolean) => boolean;
   streaming: () => boolean;
   alteracaoMental: (traco: TraitId) => boolean;
-  descansar: () => void;
-  avancarSemana: () => void;
+  avancarSemana: (modo?: "normal" | "descanso") => void;
   apagar: (slotId: string) => void;
   sair: () => void;
 }
@@ -103,18 +101,10 @@ export const useCareer = create<CareerStore>((set, get) => ({
     return true;
   },
 
-  descansar: () => {
+  avancarSemana: (modo = "normal") => {
     const { career, slotId } = get();
     if (!career) return;
-    const novo = descansarEngine(career);
-    set({ career: novo });
-    if (slotId) salvarSlot(slotId, novo);
-  },
-
-  avancarSemana: () => {
-    const { career, slotId } = get();
-    if (!career) return;
-    const novo = avancarSemanaEngine(career);
+    const novo = avancarSemanaEngine(career, modo);
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
   },

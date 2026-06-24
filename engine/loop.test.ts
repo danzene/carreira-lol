@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { LOOP } from "@/data/loop";
 import { atributosIniciais, criarCareerState, criarPlayer } from "./player";
-import { alteracaoMental, avancarSemana, descansar, streaming, treinar } from "./loop";
+import { alteracaoMental, avancarSemana, streaming, treinar } from "./loop";
 import type { CareerState } from "./types";
 
 function carreira(): CareerState {
@@ -51,13 +51,14 @@ describe("loop semanal", () => {
     expect(alteracaoMental(novo, "CLUTCH")).toBeNull(); // já tem
   });
 
-  it("descansar recupera energia e moral", () => {
+  it("descansar a semana recupera energia ao máximo e sobe a moral", () => {
     const c = carreira();
     c.player.energia = 20;
     c.player.moral = 50;
-    const novo = descansar(c);
-    expect(novo.player.energia).toBeGreaterThan(20);
+    const novo = avancarSemana(c, "descanso");
+    expect(novo.player.energia).toBe(100);
     expect(novo.player.moral).toBeGreaterThan(50);
+    expect(novo.semanaAtual).toBe(c.semanaAtual + 1);
   });
 
   it("avançar semana incrementa a semana e recupera energia; vira a temporada", () => {

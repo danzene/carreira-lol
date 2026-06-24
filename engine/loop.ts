@@ -57,17 +57,6 @@ export function alteracaoMental(career: CareerState, traco: TraitId): CareerStat
   };
 }
 
-export function descansar(career: CareerState): CareerState {
-  return {
-    ...career,
-    player: {
-      ...career.player,
-      energia: clamp(career.player.energia + LOOP.descansoEnergia, 0, 100),
-      moral: clamp(career.player.moral + LOOP.descansoMoral, 0, 100),
-    },
-  };
-}
-
 export function gastarEnergiaSoloq(career: CareerState): CareerState {
   return {
     ...career,
@@ -81,10 +70,12 @@ export function formaRecente(career: CareerState): number {
   return ult.reduce((acc, m) => acc + m.notaPerformance, 0) / ult.length;
 }
 
-export function avancarSemana(career: CareerState): CareerState {
+// Única forma de recuperar energia: o tempo passar. "descanso" recupera tudo + moral.
+export function avancarSemana(career: CareerState, modo: "normal" | "descanso" = "normal"): CareerState {
   const drift = (formaRecente(career) - 5) * LOOP.moralPorForma;
-  const moral = clamp(Math.round((career.player.moral + drift) * 10) / 10, 0, 100);
-  const energia = clamp(career.player.energia + LOOP.recuperaEnergiaSemana, 0, 100);
+  const bonus = modo === "descanso" ? LOOP.moralDescanso : 0;
+  const moral = clamp(Math.round((career.player.moral + drift + bonus) * 10) / 10, 0, 100);
+  const energia = modo === "descanso" ? 100 : clamp(career.player.energia + LOOP.recuperaEnergiaSemana, 0, 100);
 
   let semanaAtual = career.semanaAtual + 1;
   let temporada = career.temporada;

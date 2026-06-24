@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import PlayerCard from "@/components/PlayerCard";
+import PainelSemana from "@/components/PainelSemana";
 import { useCareer } from "@/store/careerStore";
 
 export default function DashboardPage() {
@@ -36,24 +37,18 @@ export default function DashboardPage() {
         </button>
       </header>
 
+      <PainelSemana career={career} />
+
       <PlayerCard career={career} />
 
-      <div className="grid grid-cols-2 gap-2">
-        <Link
-          href="/draft"
-          className="border-2 border-rosa bg-rosa/10 px-4 py-3 text-center font-pixel text-[10px] text-rosa transition hover:bg-rosa hover:text-fundo"
-        >
-          ⚔️ JOGAR PARTIDA
-        </Link>
-        <Link
-          href="/campeoes"
-          className="border-2 border-borda bg-painel px-4 py-3 text-center font-pixel text-[10px] text-ciano transition hover:border-ciano"
-        >
-          📋 TIER LIST
-        </Link>
-      </div>
+      <Link
+        href="/campeoes"
+        className="border-2 border-borda bg-painel px-4 py-3 text-center font-pixel text-[10px] text-ciano transition hover:border-ciano"
+      >
+        📋 TIER LIST
+      </Link>
 
-      <p className="text-center font-pixel text-[8px] text-borda">PRÓXIMA FASE · LOOP SEMANAL</p>
+      <p className="text-center font-pixel text-[8px] text-borda">PRÓXIMA FASE · ECONOMIA + EQUIPAMENTOS</p>
       <p className="text-center text-xs">
         <Link href="/" className="text-ciano hover:underline">
           Início

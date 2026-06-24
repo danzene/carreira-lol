@@ -1,7 +1,15 @@
 import { create } from "zustand";
 import { criarCareerState } from "@/engine/player";
 import { aplicarResultado } from "@/engine/simularPartida";
-import type { CareerState, MatchResult, Player } from "@/engine/types";
+import {
+  alteracaoMental as alteracaoMentalEngine,
+  avancarSemana as avancarSemanaEngine,
+  descansar as descansarEngine,
+  gastarEnergiaSoloq,
+  streaming as streamingEngine,
+  treinar as treinarEngine,
+} from "@/engine/loop";
+import type { AtributoKey, CareerState, MatchResult, Player, TraitId } from "@/engine/types";
 import {
   apagarSlot,
   definirSlotAtual,
@@ -21,6 +29,11 @@ interface CareerStore {
   carregar: (slotId: string) => boolean;
   recarregarAtual: () => boolean;
   aplicarPartida: (resultado: MatchResult) => void;
+  treinar: (atributo: AtributoKey, especial?: boolean) => boolean;
+  streaming: () => boolean;
+  alteracaoMental: (traco: TraitId) => boolean;
+  descansar: () => void;
+  avancarSemana: () => void;
   apagar: (slotId: string) => void;
   sair: () => void;
 }
@@ -55,7 +68,53 @@ export const useCareer = create<CareerStore>((set, get) => ({
   aplicarPartida: (resultado) => {
     const { career, slotId } = get();
     if (!career) return;
-    const novo = aplicarResultado(career, resultado);
+    const novo = gastarEnergiaSoloq(aplicarResultado(career, resultado));
+    set({ career: novo });
+    if (slotId) salvarSlot(slotId, novo);
+  },
+
+  treinar: (atributo, especial = false) => {
+    const { career, slotId } = get();
+    if (!career) return false;
+    const novo = treinarEngine(career, atributo, especial);
+    if (!novo) return false;
+    set({ career: novo });
+    if (slotId) salvarSlot(slotId, novo);
+    return true;
+  },
+
+  streaming: () => {
+    const { career, slotId } = get();
+    if (!career) return false;
+    const novo = streamingEngine(career);
+    if (!novo) return false;
+    set({ career: novo });
+    if (slotId) salvarSlot(slotId, novo);
+    return true;
+  },
+
+  alteracaoMental: (traco) => {
+    const { career, slotId } = get();
+    if (!career) return false;
+    const novo = alteracaoMentalEngine(career, traco);
+    if (!novo) return false;
+    set({ career: novo });
+    if (slotId) salvarSlot(slotId, novo);
+    return true;
+  },
+
+  descansar: () => {
+    const { career, slotId } = get();
+    if (!career) return;
+    const novo = descansarEngine(career);
+    set({ career: novo });
+    if (slotId) salvarSlot(slotId, novo);
+  },
+
+  avancarSemana: () => {
+    const { career, slotId } = get();
+    if (!career) return;
+    const novo = avancarSemanaEngine(career);
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
   },

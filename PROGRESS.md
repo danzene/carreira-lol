@@ -6,7 +6,7 @@
 - [x] 2  Banco de campeões
 - [x] 3  Draft (pick & ban)
 - [x] 4  Motor de partida + resultado
-- [ ] 5  Loop semanal + atividades
+- [x] 5  Loop semanal + atividades
 - [ ] 6  Economia + equipamentos
 - [ ] 7  Reputação + transferências
 - [ ] 8  Ligas + campeonatos
@@ -87,6 +87,15 @@
 - **Fluxo** (`app/draft/page.tsx`): draft → **JOGAR PARTIDA** → `components/Partida.tsx`
   (auto-battle: timeline + log revelado) → `components/ResultadoPartida.tsx`. Ação
   `aplicarPartida` no store persiste. Dashboard: "⚔️ Jogar Partida".
+
+### Fase 5 (loop semanal + atividades)
+- **Motor** (`data/loop.ts`, `engine/loop.ts`, +`loop.test.ts`): energia por semana;
+  atividades `treinar` (focado/especial), `streaming` (+$/+rep), `alteracaoMental`
+  (ganha traço, até 3), `descansar` (+energia/moral), `avancarSemana` (recupera energia,
+  moral pela forma, vira temporada após 26). Soloq custa energia (`gastarEnergiaSoloq`
+  no `aplicarPartida`).
+- **UI** (`components/PainelSemana.tsx` no dashboard): barra de energia + atividades com
+  pickers (atributo / traço) + avançar semana. "Jogar" bloqueado sem energia.
 
 ## Como rodar
 

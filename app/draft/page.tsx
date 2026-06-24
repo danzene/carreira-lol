@@ -19,10 +19,12 @@ function DraftFlow() {
   const router = useRouter();
   const params = useSearchParams();
   const oficial = params.get("oficial") === "1";
+  const evento = params.get("evento") === "1";
   const career = useCareer((s) => s.career);
   const recarregarAtual = useCareer((s) => s.recarregarAtual);
   const aplicarPartida = useCareer((s) => s.aplicarPartida);
   const aplicarPartidaOficial = useCareer((s) => s.aplicarPartidaOficial);
+  const aplicarPartidaEvento = useCareer((s) => s.aplicarPartidaEvento);
 
   const [fase, setFase] = useState<Fase>("draft");
   const [info, setInfo] = useState<JogarInfo | null>(null);
@@ -47,6 +49,11 @@ function DraftFlow() {
     }
   }, [oficial, career, fase, router]);
 
+  // Modo evento sem evento ativo → volta pro dashboard.
+  useEffect(() => {
+    if (evento && career && fase === "draft" && !career.eventoAtual) router.replace("/dashboard");
+  }, [evento, career, fase, router]);
+
   if (!career) {
     return <main className="flex min-h-screen items-center justify-center text-sm text-suave">Carregando…</main>;
   }
@@ -58,7 +65,8 @@ function DraftFlow() {
     setFase("partida");
   }
   function aoFim(r: MatchResult) {
-    if (oficial) aplicarPartidaOficial(r);
+    if (evento) aplicarPartidaEvento(r);
+    else if (oficial) aplicarPartidaOficial(r);
     else aplicarPartida(r);
     setResultado(r);
     setFase("resultado");
@@ -70,7 +78,15 @@ function DraftFlow() {
   }
 
   const titulo =
-    fase === "draft" ? (oficial ? "PARTIDA OFICIAL" : "DRAFT") : fase === "partida" ? "PARTIDA" : "RESULTADO";
+    fase === "draft"
+      ? evento
+        ? "PARTIDA-EVENTO"
+        : oficial
+          ? "PARTIDA OFICIAL"
+          : "DRAFT"
+      : fase === "partida"
+        ? "PARTIDA"
+        : "RESULTADO";
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-5 px-4 py-6">
@@ -78,7 +94,11 @@ function DraftFlow() {
         <div>
           <h1 className="font-pixel text-sm text-ciano">{titulo}</h1>
           <p className="mt-1 text-[10px] text-suave">
-            {oficial && adversario ? `vs ${adversario.nome}` : "Draft → auto-battle → progressão"}
+            {evento && career.eventoAtual
+              ? career.eventoAtual.nome
+              : oficial && adversario
+                ? `vs ${adversario.nome}`
+                : "Draft → auto-battle → progressão"}
           </p>
         </div>
         <Link
@@ -111,7 +131,7 @@ function DraftFlow() {
             bonusAtributos: bonusEquipamentos(career.equipamentos),
             forcaTimeAliado: oficial && career.contratoAtual ? forcaTimeDe(career.contratoAtual.timeId) : undefined,
             forcaTimeInimigo: oficial && adversarioId ? forcaTimeDe(adversarioId) : undefined,
-            bonusInimigo: mod(career.opcoes).forcaInimigo,
+            bonusInimigo: mod(career.opcoes).forcaInimigo + (evento && career.eventoAtual ? career.eventoAtual.bonusInimigo : 0),
           }}
           times={{ azul: info.timeAzul, vermelho: info.timeVermelho }}
           onFim={aoFim}
@@ -122,7 +142,14 @@ function DraftFlow() {
         <div className="flex flex-col gap-4">
           <ResultadoPartida resultado={resultado} icone={info?.icone} elo={career.player.rankSoloq.elo} />
           <div className="flex justify-center gap-3">
-            {oficial ? (
+            {evento ? (
+              <Link
+                href="/dashboard"
+                className="border-2 border-amber-300 bg-amber-300/10 px-6 py-2 font-pixel text-[10px] text-amber-300 transition hover:bg-amber-300 hover:text-fundo"
+              >
+                VOLTAR
+              </Link>
+            ) : oficial ? (
               <Link
                 href="/liga"
                 className="border-2 border-rosa bg-rosa/10 px-6 py-2 font-pixel text-[10px] text-rosa transition hover:bg-rosa hover:text-fundo"

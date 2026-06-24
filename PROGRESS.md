@@ -12,7 +12,7 @@
 - [x] 8  Ligas + campeonatos
 - [x] 9  Auto Patch (meta realista)
 - [x] 10 Auto-battle pixel animado
-- [~] 11 Opções de novo jogo (feito) + event matches (pendente)
+- [x] 11 Opções de novo jogo + event matches
 - [ ] 12 Polimento
 
 ## Decisões tomadas
@@ -177,7 +177,15 @@
   (`DraftBoard.proibidos`, alimentado pelo histórico no `app/draft/page.tsx`).
 - **UI:** novo passo **"Ajustes"** no `CriacaoWizard` (dificuldade + 2 toggles); `iniciarCarreira`
   e `criarCareerState` agora recebem `opcoes`.
-- **Pendente da Fase 11:** partidas-evento (showmatch/duelo/convite).
+### Fase 11 — parte 2 (partidas-evento) ✅
+- **Dados** (`data/eventos.ts`): 3 modelos (Showmatch, Duelo de Mídia, Convite Internacional)
+  com `bonusInimigo`, prêmios em $/reputação e `repMin` (o convite só vem com reputação alta).
+- **Motor** (`engine/eventos.ts`, +`eventos.test.ts`): `gerarEvento` (chance por semana, conforme
+  reputação; não sobrescreve um pendente) e `premioEvento` (vitória = prêmio cheio, derrota = 40%).
+- **Tipo** `EventoAtivo` + `eventoAtual?` no `CareerState`. `avancarSemana` pode gerar um evento;
+  `aplicarPartidaEvento` paga o prêmio, gasta energia e limpa o evento (não mexe no elo).
+- **UI:** banner **⭐ EVENTO** no dashboard → `/draft?evento=1` (modo evento no fluxo do draft,
+  com o `bonusInimigo` do evento + dificuldade). Jogado no auto-battle como qualquer partida.
 
 ## Como rodar
 

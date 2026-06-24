@@ -28,6 +28,7 @@ import {
   garantirLiga,
   registrarResultadoJogador,
 } from "@/engine/liga";
+import { gerarEvento, premioEvento } from "@/engine/eventos";
 import type { AtributoKey, CareerState, Equip, MatchResult, OpcoesCarreira, Player, TraitId } from "@/engine/types";
 import {
   apagarSlot,
@@ -60,6 +61,7 @@ interface CareerStore {
   recusarOferta: (timeId: string) => void;
   contraproposta: (timeId: string) => boolean;
   aplicarPartidaOficial: (resultado: MatchResult) => void;
+  aplicarPartidaEvento: (resultado: MatchResult) => void;
   sincronizarLiga: () => void;
   encerrarTemporadaLiga: () => void;
   apagar: (slotId: string) => void;
@@ -138,6 +140,8 @@ export const useCareer = create<CareerStore>((set, get) => ({
     let novo = processarSemanaEconomia(avancarSemanaEngine(career, modo));
     const seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
     novo = adicionarOfertas(novo, gerarOfertas(novo, seed));
+    const evento = gerarEvento(novo, (seed ^ 0x55aa) >>> 0);
+    if (evento) novo = { ...novo, eventoAtual: evento };
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
   },
@@ -215,6 +219,25 @@ export const useCareer = create<CareerStore>((set, get) => ({
     if (resultado.vitoria) novo = { ...novo, dinheiro: novo.dinheiro + bonusVitoria(career) };
     const seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
     novo = registrarResultadoJogador(novo, resultado.vitoria, seed);
+    set({ career: novo });
+    if (slotId) salvarSlot(slotId, novo);
+  },
+
+  aplicarPartidaEvento: (resultado) => {
+    const { career, slotId } = get();
+    if (!career || !career.eventoAtual) return;
+    const premio = premioEvento(career.eventoAtual, resultado.vitoria);
+    const semRank = { ...resultado, lpDelta: 0 }; // evento não mexe no elo
+    let novo = gastarEnergiaSoloq(aplicarResultado(career, semRank));
+    novo = {
+      ...novo,
+      dinheiro: novo.dinheiro + premio.dinheiro,
+      player: {
+        ...novo.player,
+        reputacao: Math.min(100, Math.round((novo.player.reputacao + premio.reputacao) * 10) / 10),
+      },
+      eventoAtual: undefined,
+    };
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
   },

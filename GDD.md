@@ -218,10 +218,14 @@ Nexus. Roteiro determinístico em `engine/batalha.ts` (a partir do `MatchResult`
 `data/opcoes.ts` `mod()`), **Esconder Atributos** (BarraAtributo mostra "?") e **Fearless**
 (draft exclui campeões usados nas últimas partidas). `opcoes?` no `CareerState`.
 
-**PRÓXIMA FASE A DESENVOLVER → Fase 11 — parte 2 (partidas-evento):**
-- Showmatches/duelos/convites que aparecem no dashboard, com regras e recompensas próprias
-  (dinheiro/reputação), jogados com o auto-battle.
-- Pronto quando: dá pra aceitar e disputar uma partida-evento por uma recompensa especial.
+**Fase 11 — parte 2 FEITA (partidas-evento):** showmatch/duelo/convite surgem no dashboard
+(banner ⭐ EVENTO), com `bonusInimigo` e prêmios próprios; jogados via `/draft?evento=1` no
+auto-battle. Motor em `engine/eventos.ts` + `data/eventos.ts`; `eventoAtual?` no `CareerState`.
+
+**PRÓXIMA FASE A DESENVOLVER → Fase 12 — Polimento:**
+- Balanceamento fino, eventos aleatórios de carreira, conquistas/marcos, áudio chiptune,
+  e pelos cantos que faltam (religar login/cloud save opcional, telas de fim de temporada, etc.).
+- Pronto quando: o jogo parece "redondo" de ponta a ponta.
 
 **Fases seguintes (roadmap):**
 - **9 — Auto Patch + win rates reais (Riot API):** a meta muda a cada split; win rate via
@@ -232,5 +236,5 @@ Nexus. Roteiro determinístico em `engine/batalha.ts` (a partir do `MatchResult`
 - **12 — Polimento** (balanceamento, eventos aleatórios, conquistas, áudio chiptune).
 
 **Como retomar:** abrir a sessão na pasta `Carreira LoL`, ler `CLAUDE.md` + `PROGRESS.md` +
-este GDD, e iniciar a **Fase 11** seguindo o protocolo (listar arquivos antes de codar,
-parar pra aprovação no fim). Responder em PT-BR.
+este GDD, e iniciar a **Fase 12 (polimento)** seguindo o protocolo (listar arquivos antes de
+codar, parar pra aprovação no fim). Responder em PT-BR.

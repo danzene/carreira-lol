@@ -52,6 +52,15 @@ export default function DashboardPage() {
 
       <LigaBanner career={career} />
 
+      {career.eventoAtual && (
+        <Link
+          href="/draft?evento=1"
+          className="border-2 border-amber-300 bg-amber-300/10 px-4 py-3 text-center font-pixel text-[10px] text-amber-300 transition hover:bg-amber-300 hover:text-fundo"
+        >
+          ⭐ EVENTO: {career.eventoAtual.nome}
+        </Link>
+      )}
+
       <Link
         href="/patch"
         className="border-2 border-borda bg-painel px-4 py-3 text-center font-pixel text-[10px] text-ciano transition hover:border-ciano"

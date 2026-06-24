@@ -122,6 +122,16 @@ export interface OpcoesCarreira {
   fearless: boolean; // não dá pra repetir campeões jogados recentemente
 }
 
+// ----- Partidas-evento (Fase 11 p2) -----
+export interface EventoAtivo {
+  tipo: string; // id do modelo
+  nome: string;
+  desc: string;
+  bonusInimigo: number; // força extra do adversário
+  premioDinheiro: number;
+  premioReputacao: number;
+}
+
 // ----- Liga / campeonatos (Fase 8) -----
 export type FaseLiga = "REGULAR" | "PLAYOFFS" | "ENCERRADA";
 
@@ -177,6 +187,7 @@ export interface CareerState {
   inbox: Offer[];
   patchVigente: number; // win rates mudam a cada split
   opcoes?: OpcoesCarreira; // dificuldade + modos (Fase 11); ausente em saves antigos = Normal
+  eventoAtual?: EventoAtivo; // partida-evento disponível (Fase 11 p2)
   liga?: LigaState; // temporada/campeonato do time atual (Fase 8)
   energiaEm?: number; // timestamp (ms) da regen de energia em tempo real (infra)
   coachAtivo?: boolean; // assinatura de coach (XP passivo semanal, custa upkeep)

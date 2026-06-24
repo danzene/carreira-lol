@@ -185,10 +185,11 @@ historicoPartidas, **inbox**, **patchVigente**, energiaEm?, **coachAtivo?**).
 
 ## 5. PRÓXIMOS PASSOS
 
-**Estado atual:** Fases **0 a 8 CONCLUÍDAS** (setup pixel; criação+dashboard+save; banco de
+**Estado atual:** Fases **0 a 9 CONCLUÍDAS** (setup pixel; criação+dashboard+save; banco de
 campeões + tier list; draft pick&ban; motor de partida + resultado; loop semanal; economia
-+ equipamentos; reputação + transferências; **ligas + campeonatos**). Mais a integração de
-**dados reais (Oracle's Elixir)** e a **correção do balanceamento** do loop.
++ equipamentos; reputação + transferências; **ligas + campeonatos**; **Auto Patch / meta
+realista**). Mais a integração de **dados reais (Oracle's Elixir)** e a **correção do
+balanceamento** do loop.
 
 **Fase 8 (ligas) — resumo:** com contrato você disputa a liga do seu tier (6 times,
 todos-contra-todos) → **playoffs top 4** → premiação ($/reputação) → **promoção/rebaixamento**.
@@ -198,15 +199,17 @@ força do time adversário pesa. Engine em `engine/liga.ts`; UI em `app/liga/pag
 **Pendências do usuário:** dar `git push` das Fases 7/8 (deploy); rodar `npm run test`/`dev`;
 o `champions-oe.json` precisa estar commitado pra valer no deploy.
 
-**Fase 9 — parte 1 FEITA (Auto Patch / meta dinâmica):** a cada **2 semanas** muda o
-`patchVigente` e `engine/patch.ts` aplica buffs/nerfs determinísticos na `forcaMetaBase`
-(NUNCA altera rotas). DraftBoard + TierList aplicam o patch (picks/bans da IA e tier list
-mudam); página `app/patch/page.tsx` mostra as patch notes; banner "🧪 PATCH" no dashboard.
+**Fase 9 FEITA (Auto Patch / meta realista):** a cada **2 semanas** muda o `patchVigente` e
+`engine/patch.ts` balanceia como a Riot — ancora na força real (Oracle's Elixir) e **nerfa os
+mais fortes / buffa os mais fracos** (cumulativo, determinístico, NUNCA altera rotas). DraftBoard
++ TierList aplicam o patch (picks/bans da IA e tier list mudam); `app/patch/page.tsx` mostra as
+patch notes; banner "🧪 PATCH" no dashboard.
+> Nota: "win rate ao vivo via Riot API" foi descartado de propósito — a API oficial da Riot NÃO
+> expõe win rate de campeão (só via scraping de op.gg/u.gg, contra os ToS). A âncora é o OE (real).
 
-**PRÓXIMA FASE A DESENVOLVER → Fase 9 — parte 2 (win rates reais via Riot API):**
-- Win rate ao vivo via API Route do Next (chave da Riot em `.env.local`) para alimentar/ajustar
-  a `forcaMetaBase`; tela de "patch notes" pode citar o win rate real.
-- Pronto quando: a força da meta reflete dados reais, não só o shuffle fictício.
+**PRÓXIMA FASE A DESENVOLVER → Fase 10 — Auto-battle pixel art animado:**
+- Sprites por classe, animação da batalha dirigida pelo `log` do motor (`MatchResult.log`).
+- Pronto quando: a partida vira uma cena pixel animada em vez de só texto revelado.
 
 **Fases seguintes (roadmap):**
 - **9 — Auto Patch + win rates reais (Riot API):** a meta muda a cada split; win rate via
@@ -217,5 +220,5 @@ mudam); página `app/patch/page.tsx` mostra as patch notes; banner "🧪 PATCH" 
 - **12 — Polimento** (balanceamento, eventos aleatórios, conquistas, áudio chiptune).
 
 **Como retomar:** abrir a sessão na pasta `Carreira LoL`, ler `CLAUDE.md` + `PROGRESS.md` +
-este GDD, e iniciar a **Fase 9** seguindo o protocolo (listar arquivos antes de codar,
+este GDD, e iniciar a **Fase 10** seguindo o protocolo (listar arquivos antes de codar,
 parar pra aprovação no fim). Responder em PT-BR.

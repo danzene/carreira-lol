@@ -10,7 +10,7 @@
 - [x] 6  Economia + equipamentos
 - [x] 7  Reputação + transferências
 - [x] 8  Ligas + campeonatos
-- [ ] 9  Auto Patch + win rates reais
+- [x] 9  Auto Patch (meta realista)
 - [ ] 10 Auto-battle pixel animado
 - [ ] 11 Opções de novo jogo + event matches
 - [ ] 12 Polimento
@@ -135,13 +135,17 @@
   chaveamento dos playoffs, tela de encerramento); banner "🏆 LIGA" no dashboard; `/draft?oficial=1`
   joga a partida oficial.
 
-### Fase 9 — parte 1 (Auto Patch / meta dinâmica) ✅
-- A meta muda a cada **2 semanas**: `engine/patch.ts` aplica buffs/nerfs determinísticos na
-  `forcaMetaBase` (NUNCA mexe nas rotas). `data/patch.ts` (constantes); `avancarSemana` define
-  `patchVigente` pela semana corrida. **DraftBoard e TierList aplicam o patch** → picks/bans da IA,
-  tier list e força nas partidas mudam por patch. Banner "🧪 PATCH 25.N" no dashboard e página
-  `app/patch/page.tsx` (patch notes fictícias com buffs/nerfs). +`engine/patch.test.ts`.
-- **Falta da Fase 9:** win rates reais via Riot API (a base de roles/força já vem do Oracle's Elixir).
+### Fase 9 (Auto Patch / meta realista) ✅
+- A meta muda a cada **2 semanas** (`patchVigente` definido em `avancarSemana`). `engine/patch.ts`
+  balanceia **como a Riot**: ancora levemente na força real (Oracle's Elixir) e a cada patch
+  **nerfa os campeões mais fortes e buffa os mais fracos** (terço superior/inferior), cumulativo e
+  determinístico por patch. **NUNCA mexe nas rotas (rolesValidas).**
+- **DraftBoard e TierList aplicam o patch** → picks/bans da IA, tier list e força nas partidas
+  mudam a cada patch. Banner "🧪 PATCH 25.N" no dashboard; `app/patch/page.tsx` mostra as patch
+  notes (buffs 🔼 / nerfs 🔽). `data/patch.ts` (constantes) + `engine/patch.test.ts`.
+- **Decisão:** "win rate ao vivo via Riot API" foi descartado — a API oficial da Riot **não expõe
+  win rate de campeão** (só sites tipo op.gg, via scraping/ToS). Usamos os dados reais do
+  Oracle's Elixir como âncora, que é a fonte confiável e legal.
 
 ## Como rodar
 

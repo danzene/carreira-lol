@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { BATALHA, LANES, type Lane, type Ponto, pontoNaRota, posicaoCasa } from "@/data/batalha";
 import type { Combatente, RoteiroBatalha } from "@/engine/batalha";
 import type { Role } from "@/engine/types";
@@ -128,6 +128,18 @@ export default function BatalhaCanvas({
     if (el) el.scrollTop = el.scrollHeight;
   }, [linhas]);
 
+  // HUD nítido (DOM): retratos estáticos + placar/tempo/mortos dinâmicos via estado React.
+  const roster = useMemo(() => {
+    const mk = (time: "azul" | "vermelho") =>
+      roteiro.combatentes.filter((c) => c.time === time).map((c) => ({ id: c.id, ehVoce: c.ehVoce, icone: iconePorId[c.id] }));
+    return { azul: mk("azul"), vermelho: mk("vermelho") };
+  }, [roteiro, iconePorId]);
+  const [marcador, setMarcador] = useState<{ placar: { azul: number; vermelho: number }; minuto: number; mortos: string[] }>({
+    placar: { azul: 0, vermelho: 0 },
+    minuto: 0,
+    mortos: [],
+  });
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -139,20 +151,11 @@ export default function BatalhaCanvas({
 
     const W = BATALHA.largura;
     const H = BATALHA.altura;
-    const hud = BATALHA.hud;
+    const hud = 0; // HUD agora é DOM; o canvas usa a altura toda pro mapa
     const m = 8;
     const pfW = W - 2 * m;
     const pfH = H - hud - 2 * m;
     const S = (n: Ponto): [number, number] => [m + n.x * pfW, hud + m + n.y * pfH];
-
-    // ---- preload de ícones (retratos) ----
-    const imgs = new Map<string, HTMLImageElement>();
-    for (const [id, url] of Object.entries(iconePorId)) {
-      if (!url) continue;
-      const im = new Image();
-      im.src = url;
-      imgs.set(id, im);
-    }
 
     // ---- estado inicial ----
     const champs: ChampRT[] = roteiro.combatentes.map((comb, idx) => {
@@ -200,6 +203,16 @@ export default function BatalhaCanvas({
     const champPorId = new Map(est.champs.map((c) => [c.comb.id, c]));
     const vivos = (time?: "azul" | "vermelho") =>
       est.champs.filter((c) => c.estado !== "morto" && (!time || c.comb.time === time));
+
+    // Espelha o estado pro HUD em DOM (chamado só em eventos/mortes — barato).
+    function sincronizar() {
+      setMarcador({
+        placar: { azul: est.placar.azul, vermelho: est.placar.vermelho },
+        minuto: est.minuto,
+        mortos: est.champs.filter((c) => c.estado === "morto").map((c) => c.comb.id),
+      });
+    }
+    sincronizar();
 
     function narrar(txt: string, lado: "azul" | "vermelho" | "neutro") {
       setLinhas((prev) => [...prev, { txt, lado, minuto: est.minuto }].slice(-40));
@@ -328,11 +341,13 @@ export default function BatalhaCanvas({
 
     function atualizar(dt: number) {
       if (!est.fim) est.clock += dt;
+      let mudou = false;
 
       // eventos
       while (est.idx < roteiro.eventos.length && roteiro.eventos[est.idx].t <= est.clock) {
         processar(roteiro.eventos[est.idx]);
         est.idx++;
+        mudou = true;
       }
       if (est.foco.ativo && est.clock > est.foco.ate) est.foco.ativo = false;
       est.shake = Math.max(0, est.shake - dt * 6);
@@ -345,6 +360,7 @@ export default function BatalhaCanvas({
             c.hp = 1;
             c.x = c.casa.x;
             c.y = c.casa.y;
+            mudou = true;
           } else {
             continue;
           }
@@ -423,6 +439,8 @@ export default function BatalhaCanvas({
         }
         return f.vida > 0;
       });
+
+      if (mudou) sincronizar();
 
       if (!est.fim && est.clock >= roteiro.duracao) {
         est.fim = true;
@@ -617,38 +635,6 @@ export default function BatalhaCanvas({
       }
     }
 
-    function desenharHUD() {
-      r(0, 0, W, hud, COR.painel);
-      r(0, hud - 1, W, 1, COR.borda);
-      const azuis = est.champs.filter((c) => c.comb.time === "azul");
-      const verms = est.champs.filter((c) => c.comb.time === "vermelho");
-      azuis.forEach((c, i) => retrato(c, 4 + i * 17, 3));
-      verms.forEach((c, i) => retrato(c, W - 19 - i * 17, 3));
-      // placar + tempo
-      texto(`${est.placar.azul}`, W / 2 - 14, 6, COR.azul, 9, true);
-      texto("-", W / 2, 6, COR.suave, 9, true);
-      texto(`${est.placar.vermelho}`, W / 2 + 14, 6, COR.vermelho, 9, true);
-      texto(`${est.minuto}:00`, W / 2, 18, COR.texto, 6, true);
-    }
-
-    function retrato(c: ChampRT, x: number, y: number) {
-      const im = imgs.get(c.comb.id);
-      const cc = corDe(c.comb.time);
-      if (im && im.complete && im.naturalWidth > 0) ctx!.drawImage(im, x, y, 15, 15);
-      else r(x, y, 15, 15, cc.escuro);
-      // borda
-      ctx!.strokeStyle = c.comb.ehVoce ? COR.ouro : cc.corpo;
-      ctx!.lineWidth = 1;
-      ctx!.strokeRect(x + 0.5, y + 0.5, 14, 14);
-      if (c.estado === "morto") {
-        r(x, y, 15, 15, "rgba(0,0,0,0.55)");
-        texto("✕", x + 7.5, y + 4, COR.vermelho, 8, true);
-      }
-      // vida
-      r(x, y + 16, 15, 2, "#2a1320");
-      r(x, y + 16, 15 * c.hp, 2, c.hp > 0.4 ? "#46d36a" : COR.vermelho);
-    }
-
     function desenharFim() {
       const venceu = roteiro.vitoria;
       r(0, hud, W, H - hud, "rgba(11,6,23,0.62)");
@@ -666,7 +652,6 @@ export default function BatalhaCanvas({
       [...est.champs].sort((a, b) => a.y - b.y).forEach(desenharChamp);
       desenharEfeitos();
       ctx!.restore();
-      desenharHUD();
       if (est.fim) desenharFim();
     }
 
@@ -688,7 +673,7 @@ export default function BatalhaCanvas({
     };
 
     return () => cancelAnimationFrame(raf);
-  }, [roteiro, iconePorId]);
+  }, [roteiro]);
 
   function pular() {
     const c = canvasRef.current as (HTMLCanvasElement & { __pular?: () => void }) | null;
@@ -702,6 +687,28 @@ export default function BatalhaCanvas({
 
   return (
     <div className="flex flex-col gap-2">
+      {/* HUD nítido em DOM (retratos reais + placar + tempo) */}
+      <div className="flex items-center justify-between gap-1 border-2 border-borda bg-painel px-2 py-1.5">
+        <div className="flex gap-1">
+          {roster.azul.map((c) => (
+            <Retrato key={c.id} icone={c.icone} ehVoce={c.ehVoce} morto={marcador.mortos.includes(c.id)} lado="azul" />
+          ))}
+        </div>
+        <div className="flex shrink-0 flex-col items-center px-1">
+          <div className="font-pixel text-base leading-none">
+            <span className="text-ciano">{marcador.placar.azul}</span>
+            <span className="px-1.5 text-suave">-</span>
+            <span className="text-rosa">{marcador.placar.vermelho}</span>
+          </div>
+          <div className="mt-1 font-pixel text-[10px] text-suave">{`${marcador.minuto}:00`}</div>
+        </div>
+        <div className="flex gap-1">
+          {roster.vermelho.map((c) => (
+            <Retrato key={c.id} icone={c.icone} ehVoce={c.ehVoce} morto={marcador.mortos.includes(c.id)} lado="vermelho" />
+          ))}
+        </div>
+      </div>
+
       <canvas
         ref={canvasRef}
         width={BATALHA.largura}
@@ -740,6 +747,34 @@ export default function BatalhaCanvas({
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+function Retrato({
+  icone,
+  ehVoce,
+  morto,
+  lado,
+}: {
+  icone?: string;
+  ehVoce: boolean;
+  morto: boolean;
+  lado: "azul" | "vermelho";
+}) {
+  const borda = ehVoce ? "border-amber-300" : lado === "azul" ? "border-ciano" : "border-rosa";
+  return (
+    <div className="flex flex-col items-center gap-0.5">
+      <div className={`relative h-7 w-7 border-2 sm:h-9 sm:w-9 ${borda}`}>
+        {icone ? (
+          <img src={icone} alt="" className={`h-full w-full object-cover ${morto ? "opacity-40 grayscale" : ""}`} />
+        ) : (
+          <div className={`h-full w-full ${lado === "azul" ? "bg-ciano/30" : "bg-rosa/30"}`} />
+        )}
+        {ehVoce && <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-[9px] leading-none text-amber-300">★</span>}
+        {morto && <span className="absolute inset-0 flex items-center justify-center font-pixel text-[10px] text-rosa">✕</span>}
+      </div>
+      <div className="h-1 w-7 bg-rosa/30 sm:w-9">{!morto && <div className="h-full w-full bg-emerald-400" />}</div>
     </div>
   );
 }

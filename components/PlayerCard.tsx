@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ATRIBUTOS, NACIONALIDADES, ROTAS, TRACOS } from "@/data/config";
+import { timeDe } from "@/data/times";
 import { buscarCampeoes, type Campeao } from "@/lib/ddragon";
 import type { CareerState, TraitId } from "@/engine/types";
 import BarraAtributo from "./BarraAtributo";
@@ -38,6 +39,9 @@ export default function PlayerCard({ career }: { career: CareerState }) {
             <span className="font-pixel text-base text-texto">{player.nome}</span>
             <span className="mt-1 text-xs text-suave">
               {nac?.bandeira} {player.nacionalidade} · {player.idade} anos
+            </span>
+            <span className="mt-0.5 text-[11px] text-ciano">
+              {career.contratoAtual ? (timeDe(career.contratoAtual.timeId)?.nome ?? career.contratoAtual.timeId) : "Sem time (agente livre)"}
             </span>
           </div>
           <div className="flex flex-col items-end">

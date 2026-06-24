@@ -16,6 +16,13 @@ import {
   sessaoMental as sessaoMentalEngine,
   upgradeEquip as upgradeEquipEngine,
 } from "@/engine/economia";
+import {
+  adicionarOfertas,
+  assinarContrato as assinarContratoEngine,
+  contraproposta as contrapropostaEngine,
+  gerarOfertas,
+  recusarOferta as recusarOfertaEngine,
+} from "@/engine/transferencias";
 import type { AtributoKey, CareerState, Equip, MatchResult, Player, TraitId } from "@/engine/types";
 import {
   apagarSlot,
@@ -44,6 +51,9 @@ interface CareerStore {
   alternarCoach: () => void;
   sessaoMental: () => boolean;
   upgradeEquip: (tipo: Equip["tipo"]) => boolean;
+  assinarContrato: (timeId: string) => void;
+  recusarOferta: (timeId: string) => void;
+  contraproposta: (timeId: string) => boolean;
   apagar: (slotId: string) => void;
   sair: () => void;
 }
@@ -117,7 +127,9 @@ export const useCareer = create<CareerStore>((set, get) => ({
   avancarSemana: (modo = "normal") => {
     const { career, slotId } = get();
     if (!career) return;
-    const novo = processarSemanaEconomia(avancarSemanaEngine(career, modo));
+    let novo = processarSemanaEconomia(avancarSemanaEngine(career, modo));
+    const seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
+    novo = adicionarOfertas(novo, gerarOfertas(novo, seed));
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
   },
@@ -158,6 +170,31 @@ export const useCareer = create<CareerStore>((set, get) => ({
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
     return true;
+  },
+
+  assinarContrato: (timeId) => {
+    const { career, slotId } = get();
+    if (!career) return;
+    const novo = assinarContratoEngine(career, timeId);
+    set({ career: novo });
+    if (slotId) salvarSlot(slotId, novo);
+  },
+
+  recusarOferta: (timeId) => {
+    const { career, slotId } = get();
+    if (!career) return;
+    const novo = recusarOfertaEngine(career, timeId);
+    set({ career: novo });
+    if (slotId) salvarSlot(slotId, novo);
+  },
+
+  contraproposta: (timeId) => {
+    const { career, slotId } = get();
+    if (!career) return false;
+    const { career: novo, aceita } = contrapropostaEngine(career, timeId);
+    set({ career: novo });
+    if (slotId) salvarSlot(slotId, novo);
+    return aceita;
   },
 
   apagar: (slotId) => {

@@ -8,7 +8,7 @@
 - [x] 4  Motor de partida + resultado
 - [x] 5  Loop semanal + atividades
 - [x] 6  Economia + equipamentos
-- [ ] 7  Reputação + transferências
+- [x] 7  Reputação + transferências
 - [ ] 8  Ligas + campeonatos
 - [ ] 9  Auto Patch + win rates reais
 - [ ] 10 Auto-battle pixel animado
@@ -107,6 +107,17 @@
 - **Crafting de periféricos:** `upgradeEquip` (headset/mouse/cadeira/monitor, até nível 5),
   cada nível dá bônus de atributo que **entra na partida** (`forcaRota` + `bonusAtributos`).
 - **UI:** `components/Loja.tsx` + `app/loja/page.tsx`; link "💰 Loja" no dashboard.
+
+### Fase 7 (reputação + transferências + contratos)
+- **Times** (`data/times.ts`): fictícios por tier, com `prestigio` e `instalacoes`.
+- **Motor** (`engine/transferencias.ts`, +`transferencias.test.ts`): `gerarOfertas`
+  (conforme reputação), `assinarContrato` (muda tier/salário, limpa inbox),
+  `recusarOferta`, `contraproposta` (+25% se reputação ≥ prestígio, senão o time retira),
+  `bonusInstalacoes` (treino mais rápido). **Reputação sobe pela nota** (em
+  `aplicarResultado`, `repPorNota`). Instalações aceleram `treinar`.
+- **Loop:** `avancarSemana` gera ofertas na inbox. Salário/bônus reais quando há contrato.
+- **UI:** `components/Inbox.tsx` + `app/propostas/page.tsx` (assinar/recusar/contrapor);
+  link "📨" no dashboard (com contagem); PlayerCard mostra o time atual.
 
 ## Como rodar
 

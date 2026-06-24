@@ -1,4 +1,5 @@
 import { LOOP } from "@/data/loop";
+import { bonusInstalacoes } from "./transferencias";
 import type { AtributoKey, CareerState, TraitId } from "./types";
 
 // Loop semanal (PURO): energia, atividades e avanço de tempo.
@@ -15,8 +16,9 @@ export function temEnergia(career: CareerState, custo: number): boolean {
 // Treino focado (especial=false) ou especial (boost maior, custo maior).
 export function treinar(career: CareerState, atributo: AtributoKey, especial = false): CareerState | null {
   const custo = especial ? LOOP.custoEspecial : LOOP.custoTreino;
-  const ganho = especial ? LOOP.ganhoEspecial : LOOP.ganhoTreino;
   if (career.player.energia < custo) return null;
+  // instalações do time aceleram o treino
+  const ganho = (especial ? LOOP.ganhoEspecial : LOOP.ganhoTreino) * (1 + bonusInstalacoes(career));
   return {
     ...career,
     player: {

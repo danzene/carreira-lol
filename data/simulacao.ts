@@ -24,6 +24,7 @@ export const SIMULACAO = {
   notaPorPonto: 0.1, // por ponto de forcaFinal acima de 50
   notaRuido: 0.8,
   xpPorPartida: 0.5,
+  repPorNota: 0.5, // reputação += (nota - 5) * isto por partida
 } as const;
 
 export const ELO_LADDER = [

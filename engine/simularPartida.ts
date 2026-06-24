@@ -152,6 +152,11 @@ export function aplicarResultado(career: CareerState, resultado: MatchResult): C
       ...player,
       rankSoloq: { elo, lp, mmr: novoMmr },
       atributos: aplicarXp(player.atributos, resultado.xpGanho),
+      reputacao: clamp(
+        Math.round((player.reputacao + (resultado.notaPerformance - 5) * SIMULACAO.repPorNota) * 10) / 10,
+        0,
+        100,
+      ),
     },
     historicoPartidas: [resultado, ...career.historicoPartidas].slice(0, 50),
   };

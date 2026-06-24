@@ -41,22 +41,32 @@ export default function DashboardPage() {
 
       <PlayerCard career={career} />
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-3 gap-2">
         <Link
           href="/loja"
-          className="border-2 border-borda bg-painel px-4 py-3 text-center font-pixel text-[10px] text-ciano transition hover:border-ciano"
+          className="border-2 border-borda bg-painel px-2 py-3 text-center font-pixel text-[10px] text-ciano transition hover:border-ciano"
         >
           💰 LOJA
         </Link>
         <Link
-          href="/campeoes"
-          className="border-2 border-borda bg-painel px-4 py-3 text-center font-pixel text-[10px] text-ciano transition hover:border-ciano"
+          href="/propostas"
+          className={`border-2 px-2 py-3 text-center font-pixel text-[10px] transition ${
+            career.inbox.length > 0
+              ? "border-ciano bg-ciano/10 text-ciano"
+              : "border-borda bg-painel text-ciano hover:border-ciano"
+          }`}
         >
-          📋 TIER LIST
+          📨 {career.inbox.length > 0 ? `(${career.inbox.length})` : "INBOX"}
+        </Link>
+        <Link
+          href="/campeoes"
+          className="border-2 border-borda bg-painel px-2 py-3 text-center font-pixel text-[10px] text-ciano transition hover:border-ciano"
+        >
+          📋 TIER
         </Link>
       </div>
 
-      <p className="text-center font-pixel text-[8px] text-borda">PRÓXIMA FASE · REPUTAÇÃO + TRANSFERÊNCIAS</p>
+      <p className="text-center font-pixel text-[8px] text-borda">PRÓXIMA FASE · LIGAS + CAMPEONATOS</p>
       <p className="text-center text-xs">
         <Link href="/" className="text-ciano hover:underline">
           Início

@@ -58,6 +58,16 @@ export default function DashboardPage() {
 
       <LigaBanner career={career} />
 
+      {career.torneioAtual && (
+        <Link
+          href="/torneio"
+          className="border-2 border-amber-300 bg-amber-300/10 px-4 py-3 text-center font-pixel text-[10px] text-amber-300 transition hover:bg-amber-300 hover:text-fundo"
+        >
+          🌍 {career.torneioAtual.nome.toUpperCase()} ·{" "}
+          {career.torneioAtual.bracket.fase === "ENCERRADA" ? "RESULTADO" : "JOGAR"}
+        </Link>
+      )}
+
       {career.eventoAtual && (
         <Link
           href="/draft?evento=1"

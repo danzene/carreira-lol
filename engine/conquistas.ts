@@ -26,7 +26,8 @@ export const CONQUISTAS: Conquista[] = [
   { id: "rep100", nome: "Lenda", emoji: "🌟", desc: "Chegue a 100 de reputação.", checar: (c) => c.player.reputacao >= 100 },
   { id: "tier1", nome: "Elite nacional", emoji: "🏆", desc: "Jogue no Tier 1.", checar: (c) => c.tierAtual === "TIER1" || c.tierAtual === "INTERNACIONAL" },
   { id: "campeao", nome: "Campeão da liga", emoji: "🏅", desc: "Vença os playoffs de uma liga.", checar: (c) => c.liga?.fase === "ENCERRADA" && c.liga.colocacaoFinal === 1 },
-  { id: "mundial", nome: "Campeão Mundial", emoji: "🌍", desc: "Vença o Mundial (Internacional).", checar: (c) => c.liga?.fase === "ENCERRADA" && c.liga.colocacaoFinal === 1 && c.liga.tier === "INTERNACIONAL" },
+  { id: "msi", nome: "Campeão do MSI", emoji: "🌐", desc: "Vença o MSI.", checar: (c) => (c.titulosInternacionais ?? []).includes("MSI") },
+  { id: "mundial", nome: "Campeão Mundial", emoji: "🌍", desc: "Vença o Worlds.", checar: (c) => (c.titulosInternacionais ?? []).includes("WORLDS") },
   { id: "rico", nome: "Patrimônio", emoji: "💰", desc: "Acumule $10.000.", checar: (c) => c.dinheiro >= 10000 },
   { id: "veterano", nome: "Veterano", emoji: "🎖️", desc: "Jogue 50 partidas.", checar: (c) => hist(c).length >= 50 },
 ];

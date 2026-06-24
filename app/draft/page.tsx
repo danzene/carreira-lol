@@ -10,6 +10,7 @@ import { FEARLESS_JANELA, mod } from "@/data/opcoes";
 import { timeDe } from "@/data/times";
 import { bonusEquipamentos } from "@/engine/economia";
 import { forcaTimeDe, proximoConfrontoJogador } from "@/engine/liga";
+import { proximoConfrontoTorneio } from "@/engine/internacional";
 import type { MatchResult } from "@/engine/types";
 import { useCareer } from "@/store/careerStore";
 
@@ -20,11 +21,13 @@ function DraftFlow() {
   const params = useSearchParams();
   const oficial = params.get("oficial") === "1";
   const evento = params.get("evento") === "1";
+  const internacional = params.get("internacional") === "1";
   const career = useCareer((s) => s.career);
   const recarregarAtual = useCareer((s) => s.recarregarAtual);
   const aplicarPartida = useCareer((s) => s.aplicarPartida);
   const aplicarPartidaOficial = useCareer((s) => s.aplicarPartidaOficial);
   const aplicarPartidaEvento = useCareer((s) => s.aplicarPartidaEvento);
+  const aplicarPartidaTorneio = useCareer((s) => s.aplicarPartidaTorneio);
 
   const [fase, setFase] = useState<Fase>("draft");
   const [info, setInfo] = useState<JogarInfo | null>(null);
@@ -34,7 +37,9 @@ function DraftFlow() {
     if (!career && !recarregarAtual()) router.replace("/");
   }, [career, recarregarAtual, router]);
 
-  const adversarioId = oficial && career ? proximoConfrontoJogador(career.liga) : null;
+  const advOficial = oficial && career ? proximoConfrontoJogador(career.liga) : null;
+  const advTorneio = internacional && career ? proximoConfrontoTorneio(career.torneioAtual) : null;
+  const adversarioId = advOficial ?? advTorneio;
 
   // Fearless: campeões usados nas últimas partidas ficam fora do draft.
   const proibidos = useMemo(
@@ -54,6 +59,13 @@ function DraftFlow() {
     if (evento && career && fase === "draft" && !career.eventoAtual) router.replace("/dashboard");
   }, [evento, career, fase, router]);
 
+  // Modo internacional sem torneio/partida pendente → volta pro dashboard.
+  useEffect(() => {
+    if (internacional && career && fase === "draft" && !proximoConfrontoTorneio(career.torneioAtual)) {
+      router.replace("/dashboard");
+    }
+  }, [internacional, career, fase, router]);
+
   if (!career) {
     return <main className="flex min-h-screen items-center justify-center text-sm text-suave">Carregando…</main>;
   }
@@ -65,7 +77,8 @@ function DraftFlow() {
     setFase("partida");
   }
   function aoFim(r: MatchResult) {
-    if (evento) aplicarPartidaEvento(r);
+    if (internacional) aplicarPartidaTorneio(r);
+    else if (evento) aplicarPartidaEvento(r);
     else if (oficial) aplicarPartidaOficial(r);
     else aplicarPartida(r);
     setResultado(r);
@@ -79,11 +92,13 @@ function DraftFlow() {
 
   const titulo =
     fase === "draft"
-      ? evento
-        ? "PARTIDA-EVENTO"
-        : oficial
-          ? "PARTIDA OFICIAL"
-          : "DRAFT"
+      ? internacional
+        ? (career.torneioAtual?.nome ?? "INTERNACIONAL").toUpperCase()
+        : evento
+          ? "PARTIDA-EVENTO"
+          : oficial
+            ? "PARTIDA OFICIAL"
+            : "DRAFT"
       : fase === "partida"
         ? "PARTIDA"
         : "RESULTADO";
@@ -94,15 +109,17 @@ function DraftFlow() {
         <div>
           <h1 className="font-pixel text-sm text-ciano">{titulo}</h1>
           <p className="mt-1 text-[10px] text-suave">
-            {evento && career.eventoAtual
-              ? career.eventoAtual.nome
-              : oficial && adversario
-                ? `vs ${adversario.nome}`
-                : "Draft → auto-battle → progressão"}
+            {internacional && adversario
+              ? `vs ${adversario.nome}`
+              : evento && career.eventoAtual
+                ? career.eventoAtual.nome
+                : oficial && adversario
+                  ? `vs ${adversario.nome}`
+                  : "Draft → auto-battle → progressão"}
           </p>
         </div>
         <Link
-          href={oficial ? "/liga" : "/dashboard"}
+          href={oficial ? "/liga" : internacional ? "/torneio" : "/dashboard"}
           className="border-2 border-borda px-3 py-1.5 text-[10px] text-suave transition hover:text-texto"
         >
           Voltar
@@ -129,8 +146,8 @@ function DraftFlow() {
             comp: info.comp,
             compInimigo: info.compInimigo,
             bonusAtributos: bonusEquipamentos(career.equipamentos),
-            forcaTimeAliado: oficial && career.contratoAtual ? forcaTimeDe(career.contratoAtual.timeId) : undefined,
-            forcaTimeInimigo: oficial && adversarioId ? forcaTimeDe(adversarioId) : undefined,
+            forcaTimeAliado: (oficial || internacional) && career.contratoAtual ? forcaTimeDe(career.contratoAtual.timeId) : undefined,
+            forcaTimeInimigo: adversarioId ? forcaTimeDe(adversarioId) : undefined,
             bonusInimigo: mod(career.opcoes).forcaInimigo + (evento && career.eventoAtual ? career.eventoAtual.bonusInimigo : 0),
           }}
           times={{ azul: info.timeAzul, vermelho: info.timeVermelho }}
@@ -142,7 +159,14 @@ function DraftFlow() {
         <div className="flex flex-col gap-4">
           <ResultadoPartida resultado={resultado} icone={info?.icone} elo={career.player.rankSoloq.elo} />
           <div className="flex justify-center gap-3">
-            {evento ? (
+            {internacional ? (
+              <Link
+                href="/torneio"
+                className="border-2 border-amber-300 bg-amber-300/10 px-6 py-2 font-pixel text-[10px] text-amber-300 transition hover:bg-amber-300 hover:text-fundo"
+              >
+                VOLTAR AO TORNEIO
+              </Link>
+            ) : evento ? (
               <Link
                 href="/dashboard"
                 className="border-2 border-amber-300 bg-amber-300/10 px-6 py-2 font-pixel text-[10px] text-amber-300 transition hover:bg-amber-300 hover:text-fundo"

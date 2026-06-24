@@ -31,6 +31,7 @@ import {
 import { gerarEvento, premioEvento } from "@/engine/eventos";
 import { verificarConquistas } from "@/engine/conquistas";
 import { sortearAcontecimento } from "@/engine/acontecimentos";
+import { avancarTorneio, criarTorneio, premioTorneio } from "@/engine/internacional";
 import type { AtributoKey, CareerState, Equip, MatchResult, OpcoesCarreira, Player, TraitId } from "@/engine/types";
 import {
   apagarSlot,
@@ -78,6 +79,8 @@ interface CareerStore {
   contraproposta: (timeId: string) => boolean;
   aplicarPartidaOficial: (resultado: MatchResult) => void;
   aplicarPartidaEvento: (resultado: MatchResult) => void;
+  aplicarPartidaTorneio: (resultado: MatchResult) => void;
+  encerrarTorneioInternacional: () => void;
   sincronizarLiga: () => void;
   encerrarTemporadaLiga: () => void;
   apagar: (slotId: string) => void;
@@ -302,10 +305,51 @@ export const useCareer = create<CareerStore>((set, get) => ({
     const { career, slotId } = get();
     if (!career) return;
     const colocacao = career.liga?.colocacaoFinal ?? 99;
+    const eraTier1Campeao = career.liga?.tier === "TIER1" && colocacao === 1;
     const seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
     let novo = encerrarTemporadaEngine(career, seed);
     // ir bem no campeonato coloca você nos holofotes: surto de propostas.
     if (colocacao <= 2) novo = adicionarOfertas(novo, gerarOfertas(novo, (seed ^ 0x77) >>> 0));
+    // campeão da liga profissional → vaga no torneio internacional (MSI/Worlds).
+    if (eraTier1Campeao && !novo.torneioAtual) {
+      const tipo = career.temporada % 2 === 1 ? "MSI" : "WORLDS";
+      novo = { ...novo, torneioAtual: criarTorneio(tipo, novo) };
+    }
+    set({ career: novo });
+    if (slotId) salvarSlot(slotId, novo);
+  },
+
+  aplicarPartidaTorneio: (resultado) => {
+    const { career, slotId } = get();
+    if (!career || !career.torneioAtual) return;
+    const semRank = { ...resultado, lpDelta: 0 }; // torneio não mexe no elo
+    let novo = gastarEnergiaSoloq(aplicarResultado(career, semRank));
+    if (resultado.vitoria) novo = { ...novo, dinheiro: novo.dinheiro + bonusVitoria(career) };
+    const seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
+    novo = avancarTorneio(novo, resultado.vitoria, seed);
+    novo = verificarConquistas(novo).career;
+    set({ career: novo });
+    if (slotId) salvarSlot(slotId, novo);
+  },
+
+  encerrarTorneioInternacional: () => {
+    const { career, slotId } = get();
+    const t = career?.torneioAtual;
+    if (!career || !t || t.bracket.fase !== "ENCERRADA") return;
+    const col = t.bracket.colocacaoFinal ?? 99;
+    const pr = premioTorneio(t.tipo, col);
+    const titulos = col === 1 ? [...(career.titulosInternacionais ?? []), t.tipo] : career.titulosInternacionais;
+    let novo: CareerState = {
+      ...career,
+      dinheiro: career.dinheiro + pr.dinheiro,
+      player: {
+        ...career.player,
+        reputacao: Math.min(100, Math.round((career.player.reputacao + pr.reputacao) * 10) / 10),
+      },
+      titulosInternacionais: titulos,
+      torneioAtual: undefined,
+    };
+    novo = verificarConquistas(novo).career;
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
   },

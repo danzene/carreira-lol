@@ -224,7 +224,18 @@
   sua região; `forcaTimeDe` soma a `forca` da região (LCK/LPL mais fortes); ofertas no profissional
   só vêm da **sua região**. TIER1 é o teto doméstico (vencer = vaga internacional, Parte 2).
 - **UI:** página da liga mostra o nome real (CBLOL/LCK…). +`engine/regioes.test.ts`.
-- **Parte 2 (próxima):** MSI e Worlds (classificação + fase de grupos + mata-mata internacional).
+### Circuito mundial — Parte 2 (MSI + Worlds)
+- **Reaproveita o motor de liga:** `engine/liga.ts` exporta `montarBracket` (grupo+mata-mata) e
+  `avancarLiga` (avança um bracket qualquer). A liga doméstica e os torneios usam o mesmo código.
+- **Motor** (`engine/internacional.ts`, +test): `criarTorneio(tipo, career)` monta um bracket de 6
+  (você + 5 — no MSI os campeões de cada outra região; no Worlds os mais fortes do mundo),
+  `avancarTorneio`, `proximoConfrontoTorneio`, `premioTorneio`. Constantes em `data/internacional.ts`.
+- **Tipo** `TorneioInternacional` + `torneioAtual?` e `titulosInternacionais?` no `CareerState`.
+- **Classificação:** ser **campeão da sua liga (TIER1)** dá vaga; **split ímpar → MSI**, **par → Worlds**
+  (no `encerrarTemporadaLiga`). Joga via `/draft?internacional=1` (modo internacional no draft);
+  a força da sua região e do adversário pesam. Ao fim, **coleta o prêmio** na página do torneio.
+- **UI:** `app/torneio/page.tsx` (grupos + mata-mata + coletar), banner "🌍" no dashboard.
+- **Conquistas:** 🌐 Campeão do MSI e 🌍 Campeão Mundial (Worlds), via `titulosInternacionais`.
 
 ## Como rodar
 

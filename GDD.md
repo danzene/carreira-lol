@@ -227,9 +227,14 @@ auto-battle. Motor em `engine/eventos.ts` + `data/eventos.ts`; `eventoAtual?` no
 (`engine/acontecimentos.ts`), **resumo da semana** (modal ao avançar) e **histórico de
 partidas** no dashboard. As 13 fases (0–12) estão concluídas.
 
+**Pós-v1.0 já implementado:** progressão estilo Punch Club (decay de atributos, maestria por jogo,
+visibilidade por elo); animações pixel por ação (treino/especial/stream/mental); **circuito mundial
+real** — regiões com ligas reais (CBLOL/LCK/LEC/LCS/LPL no `data/regioes.ts`), e **MSI + Worlds**
+(`engine/internacional.ts`, página `app/torneio/page.tsx`): campeão da liga se classifica → bracket
+internacional (grupos + mata-mata) → títulos MSI/Worlds. Ver `PROGRESS.md` (Circuito mundial p1/p2).
+
 **Ideias de pós-lançamento (opcionais):** áudio chiptune; religar login/cloud save (Supabase,
-infra já existe); win rates reais via Riot API (parte 2 da Fase 9); aposentadoria por idade;
-mais conquistas/eventos; balanceamento conforme feedback de jogo.
+infra já existe); win rates reais via Riot API; aposentadoria por idade; balanceamento por feedback.
 
 **Fases seguintes (roadmap):**
 - **9 — Auto Patch + win rates reais (Riot API):** a meta muda a cada split; win rate via

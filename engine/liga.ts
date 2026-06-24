@@ -54,14 +54,10 @@ function roundRobin(ids: string[]): [string, string][][] {
   return rodadas;
 }
 
-// Monta a temporada do tier: VOCE + 5 rivais do tier, calendário todos-contra-todos.
-export function gerarTemporada(tier: Tier, meuTimeId: string, seed: number, regiaoId?: string): LigaState {
-  const rng = criarRng(seed);
-  // No profissional (TIER1) a liga é a da sua região; nos tiers de base, genérica.
-  const times = tier === "TIER1" && regiaoId ? timesDaRegiao(regiaoId) : timesDoTier(tier);
-  const pool = times.map((t) => t.id).filter((id) => id !== meuTimeId);
-  const rivais = embaralhar(pool, rng).slice(0, 5);
-  const ids = [VOCE, ...rivais];
+// Monta um bracket (VOCE + até 5 rivais): grupo todos-contra-todos. Reutilizado por
+// liga doméstica E torneios internacionais (MSI/Worlds).
+export function montarBracket(rivais: string[], tier: Tier): LigaState {
+  const ids = [VOCE, ...rivais.slice(0, 5)];
   const classificacao: TimeClassificacao[] = ids.map((timeId) => ({ timeId, vitorias: 0, derrotas: 0 }));
   const calendario: RodadaLiga[] = roundRobin(ids).map((pares) => {
     const meu = pares.find((p) => p[0] === VOCE || p[1] === VOCE)!;
@@ -70,6 +66,14 @@ export function gerarTemporada(tier: Tier, meuTimeId: string, seed: number, regi
     return { adversarioId, outros, jogada: false };
   });
   return { tier, participantes: ids, classificacao, calendario, rodadaAtual: 0, fase: "REGULAR" };
+}
+
+// Monta a temporada do tier: VOCE + 5 rivais (da região no TIER1), todos-contra-todos.
+export function gerarTemporada(tier: Tier, meuTimeId: string, seed: number, regiaoId?: string): LigaState {
+  const rng = criarRng(seed);
+  const times = tier === "TIER1" && regiaoId ? timesDaRegiao(regiaoId) : timesDoTier(tier);
+  const pool = times.map((t) => t.id).filter((id) => id !== meuTimeId);
+  return montarBracket(embaralhar(pool, rng).slice(0, 5), tier);
 }
 
 export function ordenarClassificacao(liga: LigaState): TimeClassificacao[] {
@@ -166,30 +170,35 @@ function registrarPlayoff(liga: LigaState, venceu: boolean, rng: Rng): void {
   }
 }
 
-// Registra o resultado da partida OFICIAL do jogador e simula o resto da rodada.
-export function registrarResultadoJogador(career: CareerState, vitoria: boolean, seed: number): CareerState {
-  if (!career.liga) return career;
+// Avança um bracket (liga OU torneio) com o resultado do jogador + simula o resto.
+export function avancarLiga(liga: LigaState, vitoria: boolean, seed: number): LigaState {
   const rng = criarRng(seed);
-  const liga = clonar(career.liga);
+  const novo = clonar(liga);
 
-  if (liga.fase === "REGULAR") {
-    const rodada = liga.calendario[liga.rodadaAtual];
-    if (!rodada || rodada.jogada) return career;
-    aplicarVD(liga.classificacao, VOCE, vitoria);
-    aplicarVD(liga.classificacao, rodada.adversarioId, !vitoria);
+  if (novo.fase === "REGULAR") {
+    const rodada = novo.calendario[novo.rodadaAtual];
+    if (!rodada || rodada.jogada) return novo;
+    aplicarVD(novo.classificacao, VOCE, vitoria);
+    aplicarVD(novo.classificacao, rodada.adversarioId, !vitoria);
     for (const c of rodada.outros) {
       const venc = simularConfrontoIA(c.casaId, c.foraId, rng);
-      aplicarVD(liga.classificacao, c.casaId, venc === c.casaId);
-      aplicarVD(liga.classificacao, c.foraId, venc === c.foraId);
+      aplicarVD(novo.classificacao, c.casaId, venc === c.casaId);
+      aplicarVD(novo.classificacao, c.foraId, venc === c.foraId);
     }
     rodada.jogada = true;
-    liga.rodadaAtual += 1;
-    if (liga.rodadaAtual >= liga.calendario.length) iniciarPlayoffs(liga, rng);
-  } else if (liga.fase === "PLAYOFFS") {
-    registrarPlayoff(liga, vitoria, rng);
+    novo.rodadaAtual += 1;
+    if (novo.rodadaAtual >= novo.calendario.length) iniciarPlayoffs(novo, rng);
+  } else if (novo.fase === "PLAYOFFS") {
+    registrarPlayoff(novo, vitoria, rng);
   }
 
-  return { ...career, liga };
+  return novo;
+}
+
+// Registra o resultado da partida OFICIAL do jogador (liga doméstica).
+export function registrarResultadoJogador(career: CareerState, vitoria: boolean, seed: number): CareerState {
+  if (!career.liga) return career;
+  return { ...career, liga: avancarLiga(career.liga, vitoria, seed) };
 }
 
 // Garante que exista uma liga quando há contrato (e limpa liga órfã sem contrato).

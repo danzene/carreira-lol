@@ -175,6 +175,13 @@ export interface LigaState {
   campeao?: string;
 }
 
+// Torneio internacional (MSI / Worlds) — usa o mesmo bracket da liga (grupo + mata-mata).
+export interface TorneioInternacional {
+  tipo: "MSI" | "WORLDS";
+  nome: string;
+  bracket: LigaState;
+}
+
 export interface CareerState {
   player: Player;
   dinheiro: number;
@@ -189,6 +196,8 @@ export interface CareerState {
   opcoes?: OpcoesCarreira; // dificuldade + modos (Fase 11); ausente em saves antigos = Normal
   eventoAtual?: EventoAtivo; // partida-evento disponível (Fase 11 p2)
   conquistas?: string[]; // ids de conquistas desbloqueadas (Fase 12)
+  torneioAtual?: TorneioInternacional; // MSI/Worlds em disputa (circuito mundial p2)
+  titulosInternacionais?: string[]; // "MSI" | "WORLDS" conquistados
   liga?: LigaState; // temporada/campeonato do time atual (Fase 8)
   energiaEm?: number; // timestamp (ms) da regen de energia em tempo real (infra)
   coachAtivo?: boolean; // assinatura de coach (XP passivo semanal, custa upkeep)

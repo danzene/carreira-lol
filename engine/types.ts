@@ -113,6 +113,49 @@ export interface MatchResult {
   log: string[]; // narração da batalha p/ o viewer
 }
 
+// ----- Liga / campeonatos (Fase 8) -----
+export type FaseLiga = "REGULAR" | "PLAYOFFS" | "ENCERRADA";
+
+export interface TimeClassificacao {
+  timeId: string; // "VOCE" representa o jogador
+  vitorias: number;
+  derrotas: number;
+}
+
+export interface ConfrontoIA {
+  casaId: string;
+  foraId: string;
+}
+
+export interface RodadaLiga {
+  adversarioId: string; // oponente do jogador nesta rodada
+  outros: ConfrontoIA[]; // confrontos IA x IA da mesma rodada
+  jogada: boolean;
+}
+
+export interface ConfrontoPO {
+  aId: string;
+  bId: string;
+  vencedorId?: string;
+}
+
+export interface PlayoffState {
+  sf: ConfrontoPO[]; // 2 semifinais (1º×4º, 2º×3º)
+  final?: ConfrontoPO;
+}
+
+export interface LigaState {
+  tier: Tier;
+  participantes: string[]; // timeIds, inclui "VOCE"
+  classificacao: TimeClassificacao[];
+  calendario: RodadaLiga[];
+  rodadaAtual: number;
+  fase: FaseLiga;
+  playoff?: PlayoffState;
+  colocacaoFinal?: number; // posição final do jogador quando ENCERRADA
+  campeao?: string;
+}
+
 export interface CareerState {
   player: Player;
   dinheiro: number;
@@ -124,6 +167,7 @@ export interface CareerState {
   historicoPartidas: MatchResult[];
   inbox: Offer[];
   patchVigente: number; // win rates mudam a cada split
+  liga?: LigaState; // temporada/campeonato do time atual (Fase 8)
   energiaEm?: number; // timestamp (ms) da regen de energia em tempo real (infra)
   coachAtivo?: boolean; // assinatura de coach (XP passivo semanal, custa upkeep)
 }

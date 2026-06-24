@@ -25,6 +25,7 @@ export const SIMULACAO = {
   notaRuido: 0.8,
   xpPorPartida: 0.5,
   repPorNota: 0.5, // reputação += (nota - 5) * isto por partida
+  pesoForcaTimeVitoria: 0.6, // o quanto a diferença de força dos times pesa na vitória (oficial)
 } as const;
 
 export const ELO_LADDER = [

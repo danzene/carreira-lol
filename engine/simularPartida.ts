@@ -11,6 +11,8 @@ export interface ContextoPartida {
   comp: number; // forcaComp do seu time (resultado do draft)
   compInimigo: number; // forcaComp do inimigo
   bonusAtributos?: Partial<Attributes>; // bônus de periféricos (Fase 6)
+  forcaTimeAliado?: number; // força do seu time (partida oficial; senão usa a base)
+  forcaTimeInimigo?: number; // força do time adversário (partida oficial)
 }
 
 function clamp(v: number, min: number, max: number): number {
@@ -92,10 +94,12 @@ export function simularPartida(player: Player, ctx: ContextoPartida, seed: numbe
 
   const fRota = forcaRota(player, ctx.bonusAtributos);
   const fCampeao = (maestria(player, ctx.championId) + ctx.forcaMetaCampeao) / 2;
+  const fTimeAliado = ctx.forcaTimeAliado ?? SIMULACAO.forcaTimeBase;
+  const fTimeInimigo = ctx.forcaTimeInimigo ?? SIMULACAO.forcaTimeBase;
   const base =
     SIMULACAO.pesoRota * fRota +
     SIMULACAO.pesoCampeao * fCampeao +
-    SIMULACAO.pesoTime * SIMULACAO.forcaTimeBase +
+    SIMULACAO.pesoTime * fTimeAliado +
     SIMULACAO.pesoComp * ctx.comp;
 
   const estab = (player.atributos.consistencia + player.atributos.mental) / 2;
@@ -103,8 +107,9 @@ export function simularPartida(player: Player, ctx: ContextoPartida, seed: numbe
   const amp = (SIMULACAO.ruidoMax - (SIMULACAO.ruidoMax - SIMULACAO.ruidoMin) * (estab / 100)) * ruidoMult;
   const forcaFinal = clamp(base + tForca + entre(rng, -amp, amp), 0, 100);
 
-  // vitória: vantagem do draft + sua aresta individual
-  const vantagem = ctx.comp - ctx.compInimigo + (forcaFinal - 50) * 0.5;
+  // vitória: vantagem do draft + sua aresta individual + força relativa dos times
+  const vantagem =
+    ctx.comp - ctx.compInimigo + (forcaFinal - 50) * 0.5 + (fTimeAliado - fTimeInimigo) * SIMULACAO.pesoForcaTimeVitoria;
   const vitoria = rng() < 1 / (1 + Math.exp(-SIMULACAO.sensibilidadeVitoria * vantagem));
 
   const nota = clamp(

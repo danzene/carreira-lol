@@ -23,6 +23,11 @@ import {
   gerarOfertas,
   recusarOferta as recusarOfertaEngine,
 } from "@/engine/transferencias";
+import {
+  encerrarTemporada as encerrarTemporadaEngine,
+  garantirLiga,
+  registrarResultadoJogador,
+} from "@/engine/liga";
 import type { AtributoKey, CareerState, Equip, MatchResult, Player, TraitId } from "@/engine/types";
 import {
   apagarSlot,
@@ -54,6 +59,9 @@ interface CareerStore {
   assinarContrato: (timeId: string) => void;
   recusarOferta: (timeId: string) => void;
   contraproposta: (timeId: string) => boolean;
+  aplicarPartidaOficial: (resultado: MatchResult) => void;
+  sincronizarLiga: () => void;
+  encerrarTemporadaLiga: () => void;
   apagar: (slotId: string) => void;
   sair: () => void;
 }
@@ -175,7 +183,9 @@ export const useCareer = create<CareerStore>((set, get) => ({
   assinarContrato: (timeId) => {
     const { career, slotId } = get();
     if (!career) return;
-    const novo = assinarContratoEngine(career, timeId);
+    const seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
+    let novo = assinarContratoEngine(career, timeId);
+    novo = garantirLiga({ ...novo, liga: undefined }, seed); // nova temporada no novo tier
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
   },
@@ -195,6 +205,37 @@ export const useCareer = create<CareerStore>((set, get) => ({
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
     return aceita;
+  },
+
+  aplicarPartidaOficial: (resultado) => {
+    const { career, slotId } = get();
+    if (!career) return;
+    const semRank = { ...resultado, lpDelta: 0 }; // partida oficial não mexe no elo de soloq
+    let novo = gastarEnergiaSoloq(aplicarResultado(career, semRank));
+    if (resultado.vitoria) novo = { ...novo, dinheiro: novo.dinheiro + bonusVitoria(career) };
+    const seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
+    novo = registrarResultadoJogador(novo, resultado.vitoria, seed);
+    set({ career: novo });
+    if (slotId) salvarSlot(slotId, novo);
+  },
+
+  sincronizarLiga: () => {
+    const { career, slotId } = get();
+    if (!career) return;
+    const seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
+    const novo = garantirLiga(career, seed);
+    if (novo === career) return;
+    set({ career: novo });
+    if (slotId) salvarSlot(slotId, novo);
+  },
+
+  encerrarTemporadaLiga: () => {
+    const { career, slotId } = get();
+    if (!career) return;
+    const seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
+    const novo = encerrarTemporadaEngine(career, seed);
+    set({ career: novo });
+    if (slotId) salvarSlot(slotId, novo);
   },
 
   apagar: (slotId) => {

@@ -9,7 +9,7 @@
 - [x] 5  Loop semanal + atividades
 - [x] 6  Economia + equipamentos
 - [x] 7  Reputação + transferências
-- [ ] 8  Ligas + campeonatos
+- [x] 8  Ligas + campeonatos
 - [ ] 9  Auto Patch + win rates reais
 - [ ] 10 Auto-battle pixel animado
 - [ ] 11 Opções de novo jogo + event matches
@@ -118,6 +118,22 @@
 - **Loop:** `avancarSemana` gera ofertas na inbox. Salário/bônus reais quando há contrato.
 - **UI:** `components/Inbox.tsx` + `app/propostas/page.tsx` (assinar/recusar/contrapor);
   link "📨" no dashboard (com contagem); PlayerCard mostra o time atual.
+
+### Fase 8 (ligas + campeonatos)
+- **Times** (`data/times.ts`): 6 por tier (24 no total) para formar ligas reais. SOLOQ sem liga.
+- **Constantes** (`data/liga.ts`): premiação em $/reputação por colocação e tier, `ORDEM_TIER`, `VOCE`.
+- **Motor** (`engine/liga.ts`, +`liga.test.ts`): `gerarTemporada` (todos-contra-todos, método do
+  círculo), `registrarResultadoJogador` (registra sua partida oficial + simula o resto da rodada IA),
+  `proximoConfrontoJogador`, **playoffs top 4** (semis + final), promoção/rebaixamento de tier,
+  `premio`, `encerrarTemporada` (premiação + sobe/desce + gera a próxima). `forcaTimeDe` (prestígio
+  vira força). **INTERNACIONAL = Mundial 🌍.**
+- **Partida oficial:** força do time aliado/adversário entra no motor (`simularPartida` +
+  `pesoForcaTimeVitoria`); não mexe no elo de soloq, mas dá XP/reputação/$ e conta na tabela.
+- **Store:** `aplicarPartidaOficial`, `sincronizarLiga`, `encerrarTemporadaLiga`; `assinarContrato`
+  agora gera a temporada do novo tier.
+- **UI:** `components/TabelaLiga.tsx` + `app/liga/page.tsx` (tabela, próximo confronto,
+  chaveamento dos playoffs, tela de encerramento); banner "🏆 LIGA" no dashboard; `/draft?oficial=1`
+  joga a partida oficial.
 
 ## Como rodar
 

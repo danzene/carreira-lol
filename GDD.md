@@ -185,20 +185,23 @@ historicoPartidas, **inbox**, **patchVigente**, energiaEm?, **coachAtivo?**).
 
 ## 5. PRÓXIMOS PASSOS
 
-**Estado atual:** Fases **0 a 7 CONCLUÍDAS** (setup pixel; criação+dashboard+save; banco de
+**Estado atual:** Fases **0 a 8 CONCLUÍDAS** (setup pixel; criação+dashboard+save; banco de
 campeões + tier list; draft pick&ban; motor de partida + resultado; loop semanal; economia
-+ equipamentos; reputação + transferências). Mais a integração de **dados reais (Oracle's
-Elixir)** e a **correção do balanceamento** do loop (energia só recupera com o tempo).
++ equipamentos; reputação + transferências; **ligas + campeonatos**). Mais a integração de
+**dados reais (Oracle's Elixir)** e a **correção do balanceamento** do loop.
 
-**Pendências do usuário:** dar `git push` da Fase 7 (deploy); rodar `npm run test`/`dev`;
+**Fase 8 (ligas) — resumo:** com contrato você disputa a liga do seu tier (6 times,
+todos-contra-todos) → **playoffs top 4** → premiação ($/reputação) → **promoção/rebaixamento**.
+**INTERNACIONAL = Mundial 🌍.** Partidas oficiais são jogadas por você (`/draft?oficial=1`) e a
+força do time adversário pesa. Engine em `engine/liga.ts`; UI em `app/liga/page.tsx`.
+
+**Pendências do usuário:** dar `git push` das Fases 7/8 (deploy); rodar `npm run test`/`dev`;
 o `champions-oe.json` precisa estar commitado pra valer no deploy.
 
-**PRÓXIMA FASE A DESENVOLVER → Fase 8 — Ligas + campeonatos:**
-- Ligas Amadora → Mundial; **calendário de partidas oficiais** (temporada regular +
-  playoffs) com o seu time; premiação em **dinheiro/reputação**; **promoção/rebaixamento**
-  de tier; acesso ao **Internacional/Mundial** ao vencer no Tier 1.
-- Fora do escopo da 8: win rate real (Fase 9) e battle pixel animado (Fase 10).
-- Pronto quando: dá pra **jogar uma temporada inteira** com o time e ganhar título.
+**PRÓXIMA FASE A DESENVOLVER → Fase 9 — Auto Patch + win rates reais:**
+- A meta muda a cada split (patch) alterando `forcaMetaBase` dos campeões; win rate via API
+  Route do Next (chave da Riot em `.env.local`); tela de "patch notes".
+- Pronto quando: ao virar o split, a tier list muda e o jogador precisa adaptar a pool.
 
 **Fases seguintes (roadmap):**
 - **9 — Auto Patch + win rates reais (Riot API):** a meta muda a cada split; win rate via
@@ -209,5 +212,5 @@ o `champions-oe.json` precisa estar commitado pra valer no deploy.
 - **12 — Polimento** (balanceamento, eventos aleatórios, conquistas, áudio chiptune).
 
 **Como retomar:** abrir a sessão na pasta `Carreira LoL`, ler `CLAUDE.md` + `PROGRESS.md` +
-este GDD, e iniciar a **Fase 8** seguindo o protocolo (listar arquivos antes de codar,
+este GDD, e iniciar a **Fase 9** seguindo o protocolo (listar arquivos antes de codar,
 parar pra aprovação no fim). Responder em PT-BR.

@@ -13,7 +13,7 @@
 - [x] 9  Auto Patch (meta realista)
 - [x] 10 Auto-battle pixel animado
 - [x] 11 Opções de novo jogo + event matches
-- [ ] 12 Polimento
+- [x] 12 Polimento
 
 ## Decisões tomadas
 
@@ -186,6 +186,20 @@
   `aplicarPartidaEvento` paga o prêmio, gasta energia e limpa o evento (não mexe no elo).
 - **UI:** banner **⭐ EVENTO** no dashboard → `/draft?evento=1` (modo evento no fluxo do draft,
   com o `bonusInimigo` do evento + dificuldade). Jogado no auto-battle como qualquer partida.
+
+### Fase 12 (polimento) ✅ — jogo completo (v1.0)
+- **Conquistas/marcos** (`engine/conquistas.ts`, +test): ~14 conquistas derivadas do estado
+  (estreia, primeira vitória, Diamante, campeão da liga, Mundial, 100 rep, etc.). `conquistas?`
+  no `CareerState`; `verificarConquistas` roda após partidas/contratos. Página `app/conquistas/page.tsx`
+  (desbloqueadas × bloqueadas) + atalho 🏅 no dashboard.
+- **Eventos aleatórios de carreira** (`data/acontecimentos.ts` + `engine/acontecimentos.ts`, +test):
+  ao avançar a semana, chance de um acontecimento (viral/+rep, resfriado/−energia, patrocínio/+$, etc.)
+  com efeito em energia/moral/dinheiro/reputação.
+- **Resumo da semana** (`components/ResumoSemanaModal.tsx`): modal ao avançar mostrando caixa,
+  novas propostas, novo patch, evento, acontecimento e conquistas. Store guarda `ultimoResumo`
+  (transitório) + `limparResumo`; `avancarSemana` monta o resumo.
+- **Histórico de partidas** (`components/HistoricoPartidas.tsx`): últimas 5 no dashboard
+  (V/D, campeão, KDA, nota).
 
 ## Como rodar
 

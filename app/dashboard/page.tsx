@@ -5,6 +5,8 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import PlayerCard from "@/components/PlayerCard";
 import PainelSemana from "@/components/PainelSemana";
+import HistoricoPartidas from "@/components/HistoricoPartidas";
+import ResumoSemanaModal from "@/components/ResumoSemanaModal";
 import { timeDe } from "@/data/times";
 import { proximoConfrontoJogador } from "@/engine/liga";
 import { versaoPatch } from "@/engine/patch";
@@ -16,6 +18,8 @@ export default function DashboardPage() {
   const career = useCareer((s) => s.career);
   const recarregarAtual = useCareer((s) => s.recarregarAtual);
   const sincronizarLiga = useCareer((s) => s.sincronizarLiga);
+  const ultimoResumo = useCareer((s) => s.ultimoResumo);
+  const limparResumo = useCareer((s) => s.limparResumo);
   const sair = useCareer((s) => s.sair);
 
   useEffect(() => {
@@ -50,6 +54,8 @@ export default function DashboardPage() {
 
       <PlayerCard career={career} />
 
+      <HistoricoPartidas partidas={career.historicoPartidas} />
+
       <LigaBanner career={career} />
 
       {career.eventoAtual && (
@@ -68,7 +74,7 @@ export default function DashboardPage() {
         🧪 PATCH {versaoPatch(career.patchVigente)} · VER MUDANÇAS
       </Link>
 
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 gap-2">
         <Link
           href="/loja"
           className="border-2 border-borda bg-painel px-2 py-3 text-center font-pixel text-[10px] text-ciano transition hover:border-ciano"
@@ -91,14 +97,22 @@ export default function DashboardPage() {
         >
           📋 TIER
         </Link>
+        <Link
+          href="/conquistas"
+          className="border-2 border-borda bg-painel px-2 py-3 text-center font-pixel text-[10px] text-ciano transition hover:border-ciano"
+        >
+          🏅 CONQUISTAS
+        </Link>
       </div>
 
-      <p className="text-center font-pixel text-[8px] text-borda">PRÓXIMA FASE · OPÇÕES + EVENT MATCHES</p>
+      <p className="text-center font-pixel text-[8px] text-borda">CARREIRA LoL · v1.0 🏁</p>
       <p className="text-center text-xs">
         <Link href="/" className="text-ciano hover:underline">
           Início
         </Link>
       </p>
+
+      {ultimoResumo && <ResumoSemanaModal resumo={ultimoResumo} onFechar={limparResumo} />}
     </main>
   );
 }

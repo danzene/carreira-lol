@@ -222,10 +222,14 @@ Nexus. Roteiro determinístico em `engine/batalha.ts` (a partir do `MatchResult`
 (banner ⭐ EVENTO), com `bonusInimigo` e prêmios próprios; jogados via `/draft?evento=1` no
 auto-battle. Motor em `engine/eventos.ts` + `data/eventos.ts`; `eventoAtual?` no `CareerState`.
 
-**PRÓXIMA FASE A DESENVOLVER → Fase 12 — Polimento:**
-- Balanceamento fino, eventos aleatórios de carreira, conquistas/marcos, áudio chiptune,
-  e pelos cantos que faltam (religar login/cloud save opcional, telas de fim de temporada, etc.).
-- Pronto quando: o jogo parece "redondo" de ponta a ponta.
+**Fase 12 FEITA (polimento) — jogo completo (v1.0):** conquistas/marcos
+(`engine/conquistas.ts` + página `/conquistas`), eventos aleatórios de carreira
+(`engine/acontecimentos.ts`), **resumo da semana** (modal ao avançar) e **histórico de
+partidas** no dashboard. As 13 fases (0–12) estão concluídas.
+
+**Ideias de pós-lançamento (opcionais):** áudio chiptune; religar login/cloud save (Supabase,
+infra já existe); win rates reais via Riot API (parte 2 da Fase 9); aposentadoria por idade;
+mais conquistas/eventos; balanceamento conforme feedback de jogo.
 
 **Fases seguintes (roadmap):**
 - **9 — Auto Patch + win rates reais (Riot API):** a meta muda a cada split; win rate via

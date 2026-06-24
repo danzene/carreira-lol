@@ -188,6 +188,7 @@ export interface CareerState {
   patchVigente: number; // win rates mudam a cada split
   opcoes?: OpcoesCarreira; // dificuldade + modos (Fase 11); ausente em saves antigos = Normal
   eventoAtual?: EventoAtivo; // partida-evento disponível (Fase 11 p2)
+  conquistas?: string[]; // ids de conquistas desbloqueadas (Fase 12)
   liga?: LigaState; // temporada/campeonato do time atual (Fase 8)
   energiaEm?: number; // timestamp (ms) da regen de energia em tempo real (infra)
   coachAtivo?: boolean; // assinatura de coach (XP passivo semanal, custa upkeep)

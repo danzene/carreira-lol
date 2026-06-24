@@ -29,6 +29,8 @@ import {
   registrarResultadoJogador,
 } from "@/engine/liga";
 import { gerarEvento, premioEvento } from "@/engine/eventos";
+import { verificarConquistas } from "@/engine/conquistas";
+import { sortearAcontecimento } from "@/engine/acontecimentos";
 import type { AtributoKey, CareerState, Equip, MatchResult, OpcoesCarreira, Player, TraitId } from "@/engine/types";
 import {
   apagarSlot,
@@ -40,11 +42,24 @@ import {
 } from "./saves";
 
 // Estado global da carreira atual + integração com os slots (localStorage).
-// Fase 1: só guarda/carrega; as ações de jogo entram nas fases seguintes.
+
+// Resumo do que aconteceu ao avançar a semana (Fase 12) — transitório, não salvo.
+export interface ResumoSemana {
+  semana: number;
+  temporada: number;
+  viradaTemporada: boolean;
+  dinheiroDelta: number;
+  novasPropostas: number;
+  eventoNovo?: string;
+  patchNovo?: number;
+  acontecimento?: string;
+  conquistas: string[];
+}
 
 interface CareerStore {
   career: CareerState | null;
   slotId: string | null;
+  ultimoResumo: ResumoSemana | null;
   iniciarCarreira: (player: Player, opcoes: OpcoesCarreira) => string;
   carregar: (slotId: string) => boolean;
   recarregarAtual: () => boolean;
@@ -53,6 +68,7 @@ interface CareerStore {
   streaming: () => boolean;
   alteracaoMental: (traco: TraitId) => boolean;
   avancarSemana: (modo?: "normal" | "descanso") => void;
+  limparResumo: () => void;
   bootcamp: () => boolean;
   alternarCoach: () => void;
   sessaoMental: () => boolean;
@@ -71,6 +87,7 @@ interface CareerStore {
 export const useCareer = create<CareerStore>((set, get) => ({
   career: null,
   slotId: null,
+  ultimoResumo: null,
 
   iniciarCarreira: (player, opcoes) => {
     const career = criarCareerState(player, opcoes);
@@ -100,6 +117,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
     if (!career) return;
     let novo = gastarEnergiaSoloq(aplicarResultado(career, resultado));
     if (resultado.vitoria) novo = { ...novo, dinheiro: novo.dinheiro + bonusVitoria(career) };
+    novo = verificarConquistas(novo).career;
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
   },
@@ -135,16 +153,41 @@ export const useCareer = create<CareerStore>((set, get) => ({
   },
 
   avancarSemana: (modo = "normal") => {
-    const { career, slotId } = get();
-    if (!career) return;
-    let novo = processarSemanaEconomia(avancarSemanaEngine(career, modo));
+    const { career: antes, slotId } = get();
+    if (!antes) return;
     const seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
+    let novo = processarSemanaEconomia(avancarSemanaEngine(antes, modo));
+
+    const inboxAntes = novo.inbox.length;
     novo = adicionarOfertas(novo, gerarOfertas(novo, seed));
-    const evento = gerarEvento(novo, (seed ^ 0x55aa) >>> 0);
+    const novasPropostas = novo.inbox.length - inboxAntes;
+
+    const evento = antes.eventoAtual ? null : gerarEvento(novo, (seed ^ 0x55aa) >>> 0);
     if (evento) novo = { ...novo, eventoAtual: evento };
-    set({ career: novo });
+
+    const ac = sortearAcontecimento(novo, (seed ^ 0x1234) >>> 0);
+    if (ac) novo = ac.career;
+
+    const conq = verificarConquistas(novo);
+    novo = conq.career;
+
+    const resumo: ResumoSemana = {
+      semana: novo.semanaAtual,
+      temporada: novo.temporada,
+      viradaTemporada: novo.temporada > antes.temporada,
+      dinheiroDelta: novo.dinheiro - antes.dinheiro,
+      novasPropostas,
+      eventoNovo: evento?.nome,
+      patchNovo: novo.patchVigente !== antes.patchVigente ? novo.patchVigente : undefined,
+      acontecimento: ac?.acontecimento.texto,
+      conquistas: conq.novas.map((c) => c.nome),
+    };
+
+    set({ career: novo, ultimoResumo: resumo });
     if (slotId) salvarSlot(slotId, novo);
   },
+
+  limparResumo: () => set({ ultimoResumo: null }),
 
   bootcamp: () => {
     const { career, slotId } = get();
@@ -190,6 +233,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
     const seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
     let novo = assinarContratoEngine(career, timeId);
     novo = garantirLiga({ ...novo, liga: undefined }, seed); // nova temporada no novo tier
+    novo = verificarConquistas(novo).career;
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
   },
@@ -219,6 +263,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
     if (resultado.vitoria) novo = { ...novo, dinheiro: novo.dinheiro + bonusVitoria(career) };
     const seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
     novo = registrarResultadoJogador(novo, resultado.vitoria, seed);
+    novo = verificarConquistas(novo).career;
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
   },
@@ -238,6 +283,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
       },
       eventoAtual: undefined,
     };
+    novo = verificarConquistas(novo).career;
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
   },

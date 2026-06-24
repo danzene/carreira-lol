@@ -1,4 +1,16 @@
-import { GACHA, LENDAS, RARIDADES, SUBSTATS, defSub, infoRaridade, modeloLenda, type Raridade } from "@/data/gacha";
+import {
+  GACHA,
+  LENDAS,
+  RARIDADES,
+  SINERGIA,
+  SUBSTATS,
+  defSub,
+  infoRaridade,
+  modeloLenda,
+  type Estilo,
+  type ModeloLenda,
+  type Raridade,
+} from "@/data/gacha";
 import { criarRng, entre, type Rng } from "./rng";
 import type { Attributes, AtributoKey, CareerState, LendaPossuida, SubstatValor } from "./types";
 
@@ -26,11 +38,18 @@ function rolarSubstats(r: Raridade, rng: Rng): SubstatValor[] {
 }
 
 function sortearRaridade(rng: Rng, pity: number): Raridade {
-  if (pity + 1 >= GACHA.pity5) return 5;
   const x = rng();
-  if (x < RARIDADES[0].chance) return 5;
-  if (x < RARIDADES[0].chance + RARIDADES[1].chance) return 4;
-  return 3;
+  let acc = 0;
+  let r: Raridade = 3;
+  for (const info of RARIDADES) {
+    acc += info.chance;
+    if (x < acc) {
+      r = info.n;
+      break;
+    }
+  }
+  if (r < 5 && pity + 1 >= GACHA.pity5) return 5; // pity garante 5★
+  return r;
 }
 
 function lendaAleatoria(r: Raridade, rng: Rng): string {
@@ -60,7 +79,7 @@ function puxarUma(lendas: LendaPossuida[], rng: Rng, pity: number): { resultado:
     novo = true;
     novas = [...lendas, { id, nivel: 1, substats }];
   }
-  return { resultado: { id, raridade: r, novo, nivel, substats }, lendas: novas, pity: r === 5 ? 0 : pity + 1 };
+  return { resultado: { id, raridade: r, novo, nivel, substats }, lendas: novas, pity: r >= 5 ? 0 : pity + 1 };
 }
 
 export function puxar(career: CareerState, qtd: number, seed: number): { career: CareerState; resultados: ResultadoPuxada[] } | null {
@@ -117,10 +136,40 @@ export function efeitoLendas(career: CareerState): EfeitoLendas {
     aplicarChave(ef, modelo.passivo.chave, modelo.passivo.valor * escala);
     for (const s of possuida.substats) aplicarChave(ef, s.chave, s.valor);
   }
+
+  // ---- sinergias (combos de cartas equipadas) ----
+  const equip = (career.lendasEquipadas ?? []).map((id) => modeloLenda(id)).filter((m): m is ModeloLenda => Boolean(m));
+  const contagem: Record<string, number> = {};
+  for (const m of equip) contagem[m.estilo] = (contagem[m.estilo] ?? 0) + 1;
+  for (const [estilo, n] of Object.entries(contagem)) {
+    if (n >= 2) aplicarChave(ef, SINERGIA[estilo as Estilo].chave, SINERGIA[estilo as Estilo].valor * (n - 1));
+  }
+  if (equip.length >= GACHA.slots) {
+    for (const def of SUBSTATS) if (def.tipo === "atributo") aplicarChave(ef, def.chave, 2); // entrosamento
+  }
+  if (Object.keys(contagem).length >= GACHA.slots) aplicarChave(ef, "xp", 8); // versátil
+
   (Object.keys(ef.atributos) as AtributoKey[]).forEach((k) => {
     ef.atributos[k] = Math.round((ef.atributos[k] ?? 0) * 10) / 10;
   });
   ef.reducaoDecaimento = Math.min(0.8, ef.reducaoDecaimento);
   ef.bonusComp = Math.round(ef.bonusComp);
   return ef;
+}
+
+// Rótulos das sinergias ativas (pra exibir na UI).
+export function sinergiasAtivas(career: CareerState): string[] {
+  const equip = (career.lendasEquipadas ?? []).map((id) => modeloLenda(id)).filter((m): m is ModeloLenda => Boolean(m));
+  const contagem: Record<string, number> = {};
+  for (const m of equip) contagem[m.estilo] = (contagem[m.estilo] ?? 0) + 1;
+  const out: string[] = [];
+  for (const [estilo, n] of Object.entries(contagem)) {
+    if (n >= 2) {
+      const s = SINERGIA[estilo as Estilo];
+      out.push(`${estilo} ×${n}: +${s.valor * (n - 1)} ${defSub(s.chave)?.rotulo ?? s.chave}`);
+    }
+  }
+  if (equip.length >= GACHA.slots) out.push("Trio completo: +2 em tudo");
+  if (Object.keys(contagem).length >= GACHA.slots) out.push("Versátil: +8% XP");
+  return out;
 }

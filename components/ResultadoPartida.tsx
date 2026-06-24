@@ -2,6 +2,7 @@
 
 import { type ReactNode } from "react";
 import { ATRIBUTOS } from "@/data/config";
+import { GACHA } from "@/data/gacha";
 import type { AtributoKey, MatchResult } from "@/engine/types";
 
 function corNota(n: number): string {
@@ -23,6 +24,7 @@ export default function ResultadoPartida({
   const xpEntries = Object.entries(resultado.xpGanho) as [AtributoKey, number][];
   const nomeAtr = (k: AtributoKey) => ATRIBUTOS.find((a) => a.chave === k)?.nome ?? k;
   const lp = resultado.lpDelta ?? 0;
+  const scoutGanho = resultado.vitoria ? GACHA.porVitoria : GACHA.porDerrota;
 
   return (
     <div className="flex flex-col gap-3">
@@ -62,6 +64,10 @@ export default function ResultadoPartida({
         <Caixa rotulo="ELO">
           <span className="font-pixel text-sm text-texto">{elo}</span>
         </Caixa>
+      </div>
+
+      <div className="flex items-center justify-center gap-2 border-2 border-rosa/40 bg-rosa/5 py-2 text-sm text-rosa">
+        🎰 Scout <span className="font-pixel">+{scoutGanho} ⭐</span>
       </div>
 
       {xpEntries.length > 0 && (

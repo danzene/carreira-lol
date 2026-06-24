@@ -24,3 +24,18 @@ img,
 canvas {
   image-rendering: pixelated;
 }
+
+/* Carta Mítica — brilho animado (6★ do gacha) */
+@keyframes brilhoMitico {
+  0%,
+  100% {
+    box-shadow: 0 0 4px #ffe14d, 0 0 10px rgba(255, 225, 77, 0.27);
+  }
+  50% {
+    box-shadow: 0 0 12px #ff2d7e, 0 0 22px rgba(25, 230, 224, 0.67);
+  }
+}
+.carta-mitica {
+  animation: brilhoMitico 1.8s ease-in-out infinite;
+  border-color: #ffe14d !important;
+}

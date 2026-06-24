@@ -239,8 +239,9 @@ export const useCareer = create<CareerStore>((set, get) => ({
     const seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
     const r = puxar(career, qtd, seed);
     if (!r) return null;
-    set({ career: r.career });
-    if (slotId) salvarSlot(slotId, r.career);
+    const novo = verificarConquistas(r.career).career;
+    set({ career: novo });
+    if (slotId) salvarSlot(slotId, novo);
     return r.resultados;
   },
 

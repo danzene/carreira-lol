@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import RetratoLenda from "@/components/RetratoLenda";
 import { defSub, infoRaridade, modeloLenda } from "@/data/gacha";
 import type { ResultadoPuxada } from "@/engine/gacha";
 
@@ -149,25 +150,36 @@ export default function AnimacaoGacha({ resultados, onFechar }: { resultados: Re
               const m = modeloLenda(res.id);
               const info = infoRaridade(res.raridade);
               return (
-                <div key={i} className="border-2 bg-fundo/40 p-2" style={{ borderColor: info.cor }}>
-                  <div className="flex items-center justify-between">
-                    <span className="font-pixel text-[9px]" style={{ color: info.cor }}>
+                <div
+                  key={i}
+                  className={`overflow-hidden border-2 bg-fundo/40 ${res.raridade === 6 ? "carta-mitica" : ""}`}
+                  style={{ borderColor: info.cor }}
+                >
+                  <div className="relative">
+                    {m ? (
+                      <RetratoLenda tema={m.tema} cor={info.cor} paleta={m.paleta} className="block aspect-[8/9] w-full" />
+                    ) : (
+                      <div className="aspect-[8/9] w-full bg-fundo" />
+                    )}
+                    <span className="absolute left-1 top-1 font-pixel text-[8px]" style={{ color: info.cor }}>
                       {"★".repeat(res.raridade)}
                     </span>
                     {res.novo ? (
-                      <span className="text-[8px] text-amber-300">NOVO!</span>
+                      <span className="absolute right-1 top-1 bg-amber-300 px-1 text-[7px] font-bold text-fundo">NOVO</span>
                     ) : (
-                      <span className="text-[8px] text-suave">Nv.{res.nivel}</span>
+                      <span className="absolute right-1 top-1 bg-painel px-1 text-[7px] text-suave">Nv.{res.nivel}</span>
                     )}
                   </div>
-                  <p className="mt-1 truncate text-xs text-texto">{m?.nome ?? res.id}</p>
-                  <p className="truncate text-[9px] text-suave">{m?.titulo}</p>
-                  <div className="mt-1 flex flex-wrap gap-1">
-                    {res.substats.map((s, j) => (
-                      <span key={j} className="border border-borda px-1 text-[8px] text-ciano">
-                        {defSub(s.chave)?.rotulo ?? s.chave} +{s.valor}
-                      </span>
-                    ))}
+                  <div className="p-1.5">
+                    <p className="truncate text-[11px] text-texto">{m?.nome ?? res.id}</p>
+                    <p className="truncate text-[8px] text-suave">{m?.titulo}</p>
+                    <div className="mt-0.5 flex flex-wrap gap-0.5">
+                      {res.substats.map((s, j) => (
+                        <span key={j} className="border border-borda px-0.5 text-[7px] text-ciano">
+                          {defSub(s.chave)?.rotulo ?? s.chave}+{s.valor}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </div>
               );

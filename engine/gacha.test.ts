@@ -32,9 +32,9 @@ describe("scout gacha", () => {
     expect(puxar(carreira(10), 1, 1)).toBeNull();
   });
 
-  it("pity garante 5★ e reseta", () => {
+  it("pity garante 5★+ e reseta", () => {
     const r = puxar({ ...carreira(1000), pity: GACHA.pity5 - 1 }, 1, 5);
-    expect(r?.resultados[0].raridade).toBe(5);
+    expect(r?.resultados[0].raridade ?? 0).toBeGreaterThanOrEqual(5);
     expect(r?.career.pity).toBe(0);
   });
 
@@ -44,5 +44,18 @@ describe("scout gacha", () => {
     const ef = efeitoLendas(c);
     expect(ef.atributos.mecanica ?? 0).toBeGreaterThanOrEqual(5); // passivo +5 mecânica
     expect(ef.atributos.macro ?? 0).toBe(3); // substat
+  });
+
+  it("sinergia: 2 do mesmo estilo dão bônus extra", () => {
+    const c: CareerState = {
+      ...carreira(),
+      lendas: [
+        { id: "rei_mid", nivel: 1, substats: [] }, // Mecânico, passivo +7 mecânica
+        { id: "mao_tesoura", nivel: 1, substats: [] }, // Mecânico, passivo +5 mecânica
+      ],
+      lendasEquipadas: ["rei_mid", "mao_tesoura"],
+    };
+    const ef = efeitoLendas(c);
+    expect(ef.atributos.mecanica ?? 0).toBeGreaterThan(12); // 7+5 + sinergia Mecânico
   });
 });

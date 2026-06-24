@@ -14,6 +14,7 @@ import {
   type EstadoDraft,
 } from "@/engine/draft";
 import { buscarCampeoes, type Campeao } from "@/lib/ddragon";
+import type { ChampionDef, Role } from "@/engine/types";
 
 export default function DraftBoard({ comfort, reputacao }: { comfort: string[]; reputacao: number }) {
   const [campeoes, setCampeoes] = useState<Campeao[]>([]);
@@ -36,6 +37,11 @@ export default function DraftBoard({ comfort, reputacao }: { comfort: string[]; 
     for (const c of campeoes) m[c.id] = c;
     return m;
   }, [campeoes]);
+  const defMap = useMemo(() => {
+    const m: Record<string, ChampionDef> = {};
+    for (const d of banco) m[d.id] = d;
+    return m;
+  }, [banco]);
 
   const passo = passoAtual(estado);
   const fim = draftCompleto(estado);
@@ -88,6 +94,7 @@ export default function DraftBoard({ comfort, reputacao }: { comfort: string[]; 
           bans={estado.bans.azul}
           picks={estado.picks.azul}
           campMap={campMap}
+          defMap={defMap}
           comfort={comfort}
           ativo={!fim && passo?.time === "azul"}
           fase={passo?.fase}
@@ -98,6 +105,7 @@ export default function DraftBoard({ comfort, reputacao }: { comfort: string[]; 
           bans={estado.bans.vermelho}
           picks={estado.picks.vermelho}
           campMap={campMap}
+          defMap={defMap}
           comfort={[]}
           ativo={!fim && passo?.time === "vermelho"}
           fase={passo?.fase}
@@ -167,12 +175,32 @@ export default function DraftBoard({ comfort, reputacao }: { comfort: string[]; 
   );
 }
 
+const ROTULO_ROLE: Record<Role, string> = { TOP: "TOP", JUNGLE: "JG", MID: "MID", ADC: "ADC", SUPPORT: "SUP" };
+
+// Distribui os picks nas 5 rotas (Top→Sup), por gulosidade nas rolesValidas.
+function atribuirRoles(ids: string[], defMap: Record<string, ChampionDef>): { role: Role; id: string | null }[] {
+  const ordem: Role[] = ["TOP", "JUNGLE", "MID", "ADC", "SUPPORT"];
+  const slot: Record<Role, string | null> = { TOP: null, JUNGLE: null, MID: null, ADC: null, SUPPORT: null };
+  const sobra: string[] = [];
+  for (const id of ids) {
+    const r = defMap[id]?.rolesValidas.find((x) => slot[x] === null);
+    if (r) slot[r] = id;
+    else sobra.push(id);
+  }
+  for (const id of sobra) {
+    const r = ordem.find((x) => slot[x] === null);
+    if (r) slot[r] = id;
+  }
+  return ordem.map((role) => ({ role, id: slot[role] }));
+}
+
 function Coluna({
   nome,
   cor,
   bans,
   picks,
   campMap,
+  defMap,
   comfort,
   ativo,
   fase,
@@ -182,6 +210,7 @@ function Coluna({
   bans: string[];
   picks: string[];
   campMap: Record<string, Campeao>;
+  defMap: Record<string, ChampionDef>;
   comfort: string[];
   ativo: boolean;
   fase?: "ban" | "pick";
@@ -204,24 +233,21 @@ function Coluna({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        {Array.from({ length: 5 }).map((_, i) => {
-          const id = picks[i];
+        {atribuirRoles(picks, defMap).map(({ role, id }) => {
           const cam = id ? campMap[id] : undefined;
-          const aceso = ativo && fase === "pick" && i === picks.length;
           const conf = id ? comfort.includes(id) : false;
           return (
             <div
-              key={i}
-              className={`flex items-center gap-2 border-2 p-1 ${aceso ? "border-rosa" : "border-borda"} ${
-                conf ? "bg-ciano/5" : "bg-fundo/40"
-              }`}
+              key={role}
+              className={`flex items-center gap-2 border-2 border-borda p-1 ${conf ? "bg-ciano/5" : "bg-fundo/40"}`}
             >
+              <span className="w-7 shrink-0 text-center font-pixel text-[7px] text-borda">{ROTULO_ROLE[role]}</span>
               {cam ? (
                 <img src={cam.icone} alt="" width={28} height={28} className="h-7 w-7" />
               ) : (
                 <div className="h-7 w-7 bg-borda/40" />
               )}
-              <span className="truncate text-[10px] text-suave">{cam?.nome ?? (aceso ? "…" : "")}</span>
+              <span className="truncate text-[10px] text-suave">{cam?.nome ?? ""}</span>
               {conf && <span className="ml-auto text-[9px] text-ciano">★</span>}
             </div>
           );

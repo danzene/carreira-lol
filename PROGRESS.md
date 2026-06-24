@@ -213,6 +213,19 @@
 - **Campeonato = holofote:** `PREMIO_REPUTACAO` bem maior pro topo (TIER1 campeão +26, Mundial +40)
   e, ao encerrar a temporada em 1º/2º, um **surto de propostas** no store.
 
+### Circuito mundial — Parte 1 (regiões + ligas profissionais reais)
+- **Regiões** (`data/regioes.ts`): Brasil=**CBLOL**, Coreia=**LCK**, Europa=**LEC**, NA=**LCS**,
+  China=**LPL**, cada uma com **6 times reais** (LOUD, T1, G2, Cloud9, JDG…) e uma `forca`
+  regional. A **nacionalidade** vira região (`regiaoDoPais`). `TIMES` = AMADOR/ACADEMY genéricos
+  + os times regionais no TIER1.
+- **Escada preservada:** SOLOQ → AMADOR → ACADEMY → **liga PRO da sua região (TIER1)**. Ao ser
+  promovido pro TIER1 você é **assinado por um time da sua região** (entra por um menor).
+- **Liga regional:** `gerarTemporada(tier, meuTime, seed, regiao)` — no TIER1 usa só os times da
+  sua região; `forcaTimeDe` soma a `forca` da região (LCK/LPL mais fortes); ofertas no profissional
+  só vêm da **sua região**. TIER1 é o teto doméstico (vencer = vaga internacional, Parte 2).
+- **UI:** página da liga mostra o nome real (CBLOL/LCK…). +`engine/regioes.test.ts`.
+- **Parte 2 (próxima):** MSI e Worlds (classificação + fase de grupos + mata-mata internacional).
+
 ## Como rodar
 
 > Pré-requisito: Node 18+ instalado na máquina.

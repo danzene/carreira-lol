@@ -1,3 +1,4 @@
+import { regiaoDoPais } from "@/data/regioes";
 import { ELO_LADDER } from "@/data/simulacao";
 import { TIMES, timeDe, type Time } from "@/data/times";
 import { criarRng, entre, type Rng } from "./rng";
@@ -42,9 +43,11 @@ function ofertaDoTime(t: Time, rng: Rng): Offer {
 export function gerarOfertas(career: CareerState, seed: number): Offer[] {
   const rng = criarRng(seed);
   const rep = visibilidade(career);
+  const regiao = regiaoDoPais(career.player.nacionalidade).id;
   const ofertas: Offer[] = [];
   for (const t of TIMES) {
     if (t.id === career.contratoAtual?.timeId) continue;
+    if (t.tier === "TIER1" && t.regiao !== regiao) continue; // no profissional, só a sua região
     if (t.prestigio > rep + 12 || t.prestigio < rep - 25) continue;
     if (rng() < 0.2) ofertas.push(ofertaDoTime(t, rng));
   }

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import TabelaLiga from "@/components/TabelaLiga";
 import { LOOP } from "@/data/loop";
 import { ORDEM_TIER, VOCE } from "@/data/liga";
+import { regiaoDoPais } from "@/data/regioes";
 import { timeDe } from "@/data/times";
 import { premio, proximoConfrontoJogador } from "@/engine/liga";
 import type { ConfrontoPO, LigaState } from "@/engine/types";
@@ -81,7 +82,17 @@ export default function LigaPage() {
       <header className="flex items-center justify-between">
         <div>
           <h1 className="font-pixel text-sm text-ciano">LIGA</h1>
-          {liga && <p className="mt-1 text-[10px] text-suave">{liga.tier === "INTERNACIONAL" ? "Mundial 🌍" : `Tier ${liga.tier}`}</p>}
+          {liga && (
+            <p className="mt-1 text-[10px] text-suave">
+              {liga.tier === "TIER1"
+                ? regiaoDoPais(career.player.nacionalidade).liga
+                : liga.tier === "INTERNACIONAL"
+                  ? "Mundial 🌍"
+                  : liga.tier === "ACADEMY"
+                    ? "Liga Academy"
+                    : "Liga Amadora"}
+            </p>
+          )}
         </div>
         <Link href="/dashboard" className="border-2 border-borda px-3 py-1.5 text-[10px] text-suave transition hover:text-texto">
           Voltar

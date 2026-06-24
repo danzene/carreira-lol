@@ -1,4 +1,5 @@
 import { ORDEM_TIER, PREMIO_DINHEIRO, PREMIO_REPUTACAO, LIGA, VOCE } from "@/data/liga";
+import { regiaoDe, regiaoDoPais, timesDaRegiao } from "@/data/regioes";
 import { timeDe, timesDoTier } from "@/data/times";
 import { criarRng, type Rng } from "./rng";
 import type {
@@ -16,7 +17,8 @@ import type {
 // Força competitiva de um time (a partir do prestígio). Pesa na partida oficial.
 export function forcaTimeDe(timeId: string): number {
   const t = timeDe(timeId);
-  return t ? 35 + t.prestigio * 0.45 : 50;
+  if (!t) return 50;
+  return 35 + t.prestigio * 0.45 + (regiaoDe(t.regiao)?.forca ?? 0);
 }
 
 function outro(c: ConfrontoPO, id: string): string {
@@ -53,11 +55,11 @@ function roundRobin(ids: string[]): [string, string][][] {
 }
 
 // Monta a temporada do tier: VOCE + 5 rivais do tier, calendário todos-contra-todos.
-export function gerarTemporada(tier: Tier, meuTimeId: string, seed: number): LigaState {
+export function gerarTemporada(tier: Tier, meuTimeId: string, seed: number, regiaoId?: string): LigaState {
   const rng = criarRng(seed);
-  const pool = timesDoTier(tier)
-    .map((t) => t.id)
-    .filter((id) => id !== meuTimeId);
+  // No profissional (TIER1) a liga é a da sua região; nos tiers de base, genérica.
+  const times = tier === "TIER1" && regiaoId ? timesDaRegiao(regiaoId) : timesDoTier(tier);
+  const pool = times.map((t) => t.id).filter((id) => id !== meuTimeId);
   const rivais = embaralhar(pool, rng).slice(0, 5);
   const ids = [VOCE, ...rivais];
   const classificacao: TimeClassificacao[] = ids.map((timeId) => ({ timeId, vitorias: 0, derrotas: 0 }));
@@ -194,7 +196,8 @@ export function registrarResultadoJogador(career: CareerState, vitoria: boolean,
 export function garantirLiga(career: CareerState, seed: number): CareerState {
   if (!career.contratoAtual) return career.liga ? { ...career, liga: undefined } : career;
   if (career.liga) return career;
-  return { ...career, liga: gerarTemporada(career.tierAtual, career.contratoAtual.timeId, seed) };
+  const regiao = regiaoDoPais(career.player.nacionalidade).id;
+  return { ...career, liga: gerarTemporada(career.tierAtual, career.contratoAtual.timeId, seed, regiao) };
 }
 
 export function premio(tier: Tier, colocacao: number): { dinheiro: number; reputacao: number } {
@@ -224,8 +227,17 @@ export function encerrarTemporada(career: CareerState, seed: number): CareerStat
   const p = premio(liga.tier, colocacao);
 
   let novoTier = career.tierAtual;
-  if (colocacao === 1 && liga.tier !== "INTERNACIONAL") novoTier = tierAcima(liga.tier);
+  // TIER1 é o teto doméstico (vencer = vaga no MSI/Worlds, Parte 2 — não promove).
+  if (colocacao === 1 && liga.tier !== "INTERNACIONAL" && liga.tier !== "TIER1") novoTier = tierAcima(liga.tier);
   else if (colocacao >= totalTimes && liga.tier !== "AMADOR") novoTier = tierAbaixo(liga.tier);
+
+  // Ao chegar no profissional, você é assinado por um time PRO da sua região (entra por um menor).
+  let contrato = { ...career.contratoAtual, tier: novoTier };
+  if (novoTier === "TIER1" && career.tierAtual !== "TIER1") {
+    const reg = regiaoDoPais(career.player.nacionalidade).id;
+    const rookie = [...timesDaRegiao(reg)].sort((a, b) => a.prestigio - b.prestigio)[0];
+    if (rookie) contrato = { ...contrato, timeId: rookie.id, salarioSemanal: 1200, bonusPorVitoria: 300 };
+  }
 
   const base: CareerState = {
     ...career,
@@ -234,7 +246,7 @@ export function encerrarTemporada(career: CareerState, seed: number): CareerStat
       reputacao: Math.min(100, Math.round((career.player.reputacao + p.reputacao) * 10) / 10),
     },
     dinheiro: career.dinheiro + p.dinheiro,
-    contratoAtual: { ...career.contratoAtual, tier: novoTier },
+    contratoAtual: contrato,
     tierAtual: novoTier,
     liga: undefined,
   };

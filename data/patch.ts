@@ -3,8 +3,8 @@
 
 export const PATCH = {
   semanasPorPatch: 2, // um patch novo a cada 2 semanas
-  qtdBuffs: 7, // quantos campeões fracos são buffados por patch
-  qtdNerfs: 7, // quantos campeões fortes são nerfados
+  porRotaBuff: 2, // campeões fracos buffados POR ROTA a cada patch (garante mudança em toda rota)
+  porRotaNerf: 2, // campeões fortes nerfados POR ROTA a cada patch
   buffMin: 6,
   buffMax: 16,
   nerfMin: 6,

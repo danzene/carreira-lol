@@ -1,19 +1,21 @@
 import { describe, expect, it } from "vitest";
 import { alteracoesDoPatch, aplicarPatch, versaoPatch } from "./patch";
-import type { ChampionDef } from "./types";
+import type { ChampionDef, Role } from "./types";
 
-// forcaMetaBase variada: c0=30 (mais fraco) … c23=76 (mais forte).
+const RS: Role[] = ["TOP", "JUNGLE", "MID", "ADC", "SUPPORT"];
+
+// 8 campeões por rota, com forcaMetaBase variada (35..70) dentro de cada rota.
 function champ(i: number): ChampionDef {
   return {
     id: `c${i}`,
     nome: `C${i}`,
     classes: ["LUTADOR"],
-    rolesValidas: ["TOP", "JUNGLE"],
+    rolesValidas: [RS[i % 5]],
     perfil: { dano: 50, resistencia: 50, cc: 30, mobilidade: 30, sustain: 30 },
-    forcaMetaBase: 30 + i * 2,
+    forcaMetaBase: 35 + (i % 8) * 5,
   };
 }
-const BANCO: ChampionDef[] = Array.from({ length: 24 }, (_, i) => champ(i));
+const BANCO: ChampionDef[] = Array.from({ length: 40 }, (_, i) => champ(i));
 
 describe("auto patch", () => {
   it("patch 1 não altera nada (meta base/real)", () => {
@@ -21,23 +23,22 @@ describe("auto patch", () => {
     expect(alteracoesDoPatch(BANCO, 1)).toHaveLength(0);
   });
 
-  it("patch >= 2 gera buffs e nerfs", () => {
+  it("patch >= 2 gera buffs (+) e nerfs (-)", () => {
     const alts = alteracoesDoPatch(BANCO, 2);
-    expect(alts.filter((a) => a.tipo === "buff")).toHaveLength(7);
-    expect(alts.filter((a) => a.tipo === "nerf")).toHaveLength(7);
+    expect(alts.length).toBeGreaterThan(0);
+    expect(alts.every((a) => (a.tipo === "buff" ? a.delta > 0 : a.delta < 0))).toBe(true);
   });
 
-  it("nerfa os FORTES e buffa os FRACOS", () => {
-    const fortes = new Set(Array.from({ length: 8 }, (_, k) => `c${23 - k}`)); // terço mais forte
-    const fracos = new Set(Array.from({ length: 8 }, (_, k) => `c${k}`)); // terço mais fraco
-    for (const a of alteracoesDoPatch(BANCO, 2)) {
-      if (a.tipo === "nerf") {
-        expect(a.delta).toBeLessThan(0);
-        expect(fortes.has(a.championId)).toBe(true);
-      } else {
-        expect(a.delta).toBeGreaterThan(0);
-        expect(fracos.has(a.championId)).toBe(true);
-      }
+  it("TODA rota muda: nerfa os fortes e buffa os fracos de cada rota", () => {
+    const forca = new Map(BANCO.map((c) => [c.id, c.forcaMetaBase]));
+    const rotaDe = new Map(BANCO.map((c) => [c.id, c.rolesValidas[0]]));
+    const alts = alteracoesDoPatch(BANCO, 2);
+    for (const rota of RS) {
+      const nerfs = alts.filter((a) => a.tipo === "nerf" && rotaDe.get(a.championId) === rota).map((a) => forca.get(a.championId)!);
+      const buffs = alts.filter((a) => a.tipo === "buff" && rotaDe.get(a.championId) === rota).map((a) => forca.get(a.championId)!);
+      expect(nerfs.length).toBeGreaterThan(0);
+      expect(buffs.length).toBeGreaterThan(0);
+      expect(Math.min(...nerfs)).toBeGreaterThanOrEqual(Math.max(...buffs));
     }
   });
 

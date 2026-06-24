@@ -137,9 +137,9 @@
 
 ### Fase 9 (Auto Patch / meta realista) ✅
 - A meta muda a cada **2 semanas** (`patchVigente` definido em `avancarSemana`). `engine/patch.ts`
-  balanceia **como a Riot**: ancora levemente na força real (Oracle's Elixir) e a cada patch
-  **nerfa os campeões mais fortes e buffa os mais fracos** (terço superior/inferior), cumulativo e
-  determinístico por patch. **NUNCA mexe nas rotas (rolesValidas).**
+  balanceia **como a Riot**: ancora levemente na força real (Oracle's Elixir) e a cada patch,
+  **POR ROTA**, nerfa os mais fortes e buffa os mais fracos (`porRotaBuff`/`porRotaNerf`) — assim
+  **toda rota muda visivelmente** todo patch. Cumulativo e determinístico. **NUNCA mexe nas rotas.**
 - **DraftBoard e TierList aplicam o patch** → picks/bans da IA, tier list e força nas partidas
   mudam a cada patch. A **TierList carrega a carreira** (senão o patch caía no fallback) e marca
   **▲ buff / ▼ nerf** nos campeões que mudaram no patch atual. Banner "🧪 PATCH 25.N" no dashboard;

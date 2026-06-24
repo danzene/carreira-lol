@@ -1,6 +1,8 @@
 import { PATCH } from "@/data/patch";
 import { criarRng, entre, type Rng } from "./rng";
-import type { ChampionDef } from "./types";
+import type { ChampionDef, Role } from "./types";
+
+const ROTAS: Role[] = ["TOP", "JUNGLE", "MID", "ADC", "SUPPORT"];
 
 // Auto Patch (PURO): a meta evolui como a Riot balanceia — a cada patch os campeões mais
 // FORTES tendem a ser nerfados e os mais FRACOS buffados, com uma reversão leve à força
@@ -53,26 +55,31 @@ function passoDePatch(
     return { ...c, forcaMetaBase: c.forcaMetaBase + (real - c.forcaMetaBase) * PATCH.ancora };
   });
 
-  // 2) terço mais forte vira pool de nerf; terço mais fraco, pool de buff (sem sobreposição)
-  const porForca = [...ancorado].sort((a, b) => b.forcaMetaBase - a.forcaMetaBase);
-  const terco = Math.max(1, Math.floor(porForca.length / 3));
-  const poolNerf = porForca.slice(0, terco);
-  const poolBuff = porForca.slice(porForca.length - terco);
-  const nerfados = embaralhar(poolNerf, rng).slice(0, Math.min(PATCH.qtdNerfs, poolNerf.length));
-  const buffados = embaralhar(poolBuff, rng).slice(0, Math.min(PATCH.qtdBuffs, poolBuff.length));
-
   const delta = new Map<string, number>();
   const alteracoes: AlteracaoPatch[] = [];
-  for (const c of buffados) {
-    const d = Math.round(entre(rng, PATCH.buffMin, PATCH.buffMax));
-    delta.set(c.id, d);
-    alteracoes.push({ championId: c.id, nome: c.nome, delta: d, tipo: "buff" });
-  }
-  for (const c of nerfados) {
-    if (delta.has(c.id)) continue;
-    const d = -Math.round(entre(rng, PATCH.nerfMin, PATCH.nerfMax));
-    delta.set(c.id, d);
-    alteracoes.push({ championId: c.id, nome: c.nome, delta: d, tipo: "nerf" });
+
+  // 2) POR ROTA: nerfa os mais fortes da rota e buffa os mais fracos — garante que toda
+  //    rota muda a cada patch (não só o "top global"). Campeões multi-rota são deduplicados.
+  for (const rota of ROTAS) {
+    const daRota = ancorado
+      .filter((c) => c.rolesValidas.includes(rota))
+      .sort((a, b) => b.forcaMetaBase - a.forcaMetaBase);
+    if (daRota.length === 0) continue;
+    const terco = Math.max(1, Math.floor(daRota.length / 3));
+    const buffar = embaralhar(daRota.slice(daRota.length - terco), rng).slice(0, PATCH.porRotaBuff);
+    const nerfar = embaralhar(daRota.slice(0, terco), rng).slice(0, PATCH.porRotaNerf);
+    for (const c of buffar) {
+      if (delta.has(c.id)) continue;
+      const d = Math.round(entre(rng, PATCH.buffMin, PATCH.buffMax));
+      delta.set(c.id, d);
+      alteracoes.push({ championId: c.id, nome: c.nome, delta: d, tipo: "buff" });
+    }
+    for (const c of nerfar) {
+      if (delta.has(c.id)) continue;
+      const d = -Math.round(entre(rng, PATCH.nerfMin, PATCH.nerfMax));
+      delta.set(c.id, d);
+      alteracoes.push({ championId: c.id, nome: c.nome, delta: d, tipo: "nerf" });
+    }
   }
 
   const banco = ancorado.map((c) => {

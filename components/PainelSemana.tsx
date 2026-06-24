@@ -6,8 +6,10 @@ import { ATRIBUTOS, TRACOS } from "@/data/config";
 import { LOOP } from "@/data/loop";
 import type { AtributoKey, CareerState, TraitId } from "@/engine/types";
 import { useCareer } from "@/store/careerStore";
+import AnimacaoAcao, { type TipoAcao } from "./AnimacaoAcao";
 
 type Painel = null | "focado" | "especial" | "mental";
+type Anim = { tipo: TipoAcao; titulo: string; legenda: string };
 
 export default function PainelSemana({ career }: { career: CareerState }) {
   const treinar = useCareer((s) => s.treinar);
@@ -17,6 +19,7 @@ export default function PainelSemana({ career }: { career: CareerState }) {
 
   const [painel, setPainel] = useState<Painel>(null);
   const [aviso, setAviso] = useState<string | null>(null);
+  const [anim, setAnim] = useState<Anim | null>(null);
 
   const energia = career.player.energia;
   const podeSoloq = energia >= LOOP.custoSoloq;
@@ -24,18 +27,29 @@ export default function PainelSemana({ career }: { career: CareerState }) {
   function treino(k: AtributoKey, especial: boolean) {
     if (!treinar(k, especial)) setAviso("Sem energia.");
     else {
+      const nome = ATRIBUTOS.find((a) => a.chave === k)?.nome ?? k;
+      setAnim({
+        tipo: especial ? "especial" : "treino",
+        titulo: especial ? "TREINO ESPECIAL" : "TREINO",
+        legenda: `${nome} ↑`,
+      });
       setAviso(null);
       setPainel(null);
     }
   }
   function live() {
     if (!streaming()) setAviso("Sem energia para a live.");
-    else setAviso(null);
+    else {
+      setAnim({ tipo: "stream", titulo: "AO VIVO", legenda: `+$${LOOP.ganhoStream} · +reputação` });
+      setAviso(null);
+    }
   }
   function mental(t: TraitId) {
     if (!alteracaoMental(t)) {
       setAviso(career.player.tracos.length >= LOOP.maxTracos ? "Você já tem o máximo de traços." : "Sem energia.");
     } else {
+      const nome = TRACOS.find((x) => x.id === t)?.nome ?? t;
+      setAnim({ tipo: "mental", titulo: "FOCO MENTAL", legenda: `Novo traço: ${nome}` });
       setAviso(null);
       setPainel(null);
     }
@@ -149,6 +163,8 @@ export default function PainelSemana({ career }: { career: CareerState }) {
           😴 DESCANSAR A SEMANA
         </button>
       </div>
+
+      {anim && <AnimacaoAcao tipo={anim.tipo} titulo={anim.titulo} legenda={anim.legenda} onFechar={() => setAnim(null)} />}
     </div>
   );
 }

@@ -1,6 +1,21 @@
 import { CLASSE_PERFIL, TAG_CLASSE } from "@/data/champions";
+import oeJson from "@/data/champions-oe.json";
 import { hashString } from "./rng";
 import type { ChampionDef, Classe, PerfilCampeao, Role } from "./types";
+
+// Dados reais do Oracle's Elixir (gerados por scripts/processar-oe.mjs).
+// Quando presentes, sobrescrevem rotas e força sintéticas. Vazio = só sintético.
+const OE = (oeJson as { campeoes?: Record<string, { roles?: string[]; forca?: number }> }).campeoes ?? {};
+const OVERRIDE_OE: Record<string, string> = {
+  monkeyking: "wukong",
+  nunu: "nunuwillump",
+  renata: "renataglasc",
+};
+
+function oeDe(id: string): { roles?: string[]; forca?: number } | undefined {
+  const k = id.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return OE[OVERRIDE_OE[k] ?? k];
+}
 
 // Constrói o banco de `ChampionDef` a partir dos dados do Data Dragon. PURO.
 // `forcaMetaBase` é sintética e determinística (o Auto Patch ajusta depois).
@@ -66,5 +81,16 @@ export function mapearCampeao(e: CampeaoEntrada): ChampionDef {
 }
 
 export function construirBanco(campeoes: CampeaoEntrada[]): ChampionDef[] {
-  return campeoes.map(mapearCampeao).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+  return campeoes
+    .map((e) => {
+      const def = mapearCampeao(e);
+      // Sobrescreve com dados reais do Oracle's Elixir, se houver.
+      const oe = oeDe(e.id);
+      if (oe) {
+        if (Array.isArray(oe.roles) && oe.roles.length > 0) def.rolesValidas = oe.roles as Role[];
+        if (typeof oe.forca === "number") def.forcaMetaBase = oe.forca;
+      }
+      return def;
+    })
+    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
 }

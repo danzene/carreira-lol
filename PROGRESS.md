@@ -70,6 +70,13 @@
   auto-avanço da IA, sua pool destacada (★), e a força de comp ao fim. Link "Treinar
   draft" no dashboard. Partida fica pra Fase 4.
 
+### Dados reais — Oracle's Elixir (rotas + força) — a pedido do usuário
+- `scripts/processar-oe.mjs` lê o CSV de partidas do pro play e gera
+  `data/champions-oe.json` (rotas reais + força por winrate/presença). `construirBanco`
+  sobrescreve as rotas/força sintéticas com esses dados quando presentes.
+- Rodar (na raiz, com o CSV no Desktop): `node scripts/processar-oe.mjs` →
+  depois `git add data/champions-oe.json && git commit && git push`.
+
 ## Como rodar
 
 > Pré-requisito: Node 18+ instalado na máquina.

@@ -14,7 +14,8 @@ export default function CampeoesPage() {
         </Link>
       </header>
       <p className="text-xs text-suave">
-        Força sintética por campeão (a meta muda com o Auto Patch). Toque num campeão para ver o perfil.
+        A meta muda a cada patch (Auto Patch). <span className="text-ciano">▲</span> buffado /{" "}
+        <span className="text-rosa">▼</span> nerfado neste patch. Toque num campeão para ver o perfil.
       </p>
       <TierList />
     </main>

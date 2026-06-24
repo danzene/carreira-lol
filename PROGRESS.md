@@ -141,8 +141,9 @@
   **nerfa os campeões mais fortes e buffa os mais fracos** (terço superior/inferior), cumulativo e
   determinístico por patch. **NUNCA mexe nas rotas (rolesValidas).**
 - **DraftBoard e TierList aplicam o patch** → picks/bans da IA, tier list e força nas partidas
-  mudam a cada patch. Banner "🧪 PATCH 25.N" no dashboard; `app/patch/page.tsx` mostra as patch
-  notes (buffs 🔼 / nerfs 🔽). `data/patch.ts` (constantes) + `engine/patch.test.ts`.
+  mudam a cada patch. A **TierList carrega a carreira** (senão o patch caía no fallback) e marca
+  **▲ buff / ▼ nerf** nos campeões que mudaram no patch atual. Banner "🧪 PATCH 25.N" no dashboard;
+  `app/patch/page.tsx` mostra as patch notes (buffs 🔼 / nerfs 🔽). `data/patch.ts` + `engine/patch.test.ts`.
 - **Decisão:** "win rate ao vivo via Riot API" foi descartado — a API oficial da Riot **não expõe
   win rate de campeão** (só sites tipo op.gg, via scraping/ToS). Usamos os dados reais do
   Oracle's Elixir como âncora, que é a fonte confiável e legal.

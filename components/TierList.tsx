@@ -1,9 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ROTAS } from "@/data/config";
 import { construirBanco } from "@/engine/champions";
-import { aplicarPatch, versaoPatch } from "@/engine/patch";
+import { alteracoesDoPatch, aplicarPatch, versaoPatch } from "@/engine/patch";
 import type { ChampionDef, Role } from "@/engine/types";
 import { buscarCampeoes, type Campeao } from "@/lib/ddragon";
 import { useCareer } from "@/store/careerStore";
@@ -22,11 +23,17 @@ function tierDe(forca: number): string {
 }
 
 export default function TierList() {
-  const patch = useCareer((s) => s.career?.patchVigente ?? 1);
+  const career = useCareer((s) => s.career);
+  const recarregarAtual = useCareer((s) => s.recarregarAtual);
   const [campeoes, setCampeoes] = useState<Campeao[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [rota, setRota] = useState<Role>("MID");
   const [sel, setSel] = useState<ChampionDef | null>(null);
+
+  // Garante a carreira carregada (senão o patch cairia no fallback e a tier list não mudaria).
+  useEffect(() => {
+    if (!career) recarregarAtual();
+  }, [career, recarregarAtual]);
 
   useEffect(() => {
     buscarCampeoes()
@@ -37,7 +44,14 @@ export default function TierList() {
       .catch(() => setCarregando(false));
   }, []);
 
-  const banco = useMemo(() => aplicarPatch(construirBanco(campeoes), patch), [campeoes, patch]);
+  const patch = career?.patchVigente ?? 1;
+  const base = useMemo(() => construirBanco(campeoes), [campeoes]);
+  const banco = useMemo(() => aplicarPatch(base, patch), [base, patch]);
+  const mudancas = useMemo(() => {
+    const m: Record<string, "buff" | "nerf"> = {};
+    for (const a of alteracoesDoPatch(base, patch)) m[a.championId] = a.tipo;
+    return m;
+  }, [base, patch]);
   const campMap = useMemo(() => {
     const m: Record<string, Campeao> = {};
     for (const c of campeoes) m[c.id] = c;
@@ -53,7 +67,9 @@ export default function TierList() {
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-center font-pixel text-[8px] text-ciano">META · PATCH {versaoPatch(patch)}</p>
+      <Link href="/patch" className="text-center font-pixel text-[8px] text-ciano hover:underline">
+        META · PATCH {versaoPatch(patch)} · ver notas
+      </Link>
       <div className="grid grid-cols-5 gap-2">
         {ROTAS.map((r) => (
           <button
@@ -90,11 +106,22 @@ export default function TierList() {
                     title={`${c.nome} · ${c.forcaMetaBase}`}
                     className="flex w-12 flex-col items-center gap-1"
                   >
-                    {cam ? (
-                      <img src={cam.icone} alt={c.nome} width={40} height={40} className="h-10 w-10 border-2 border-borda hover:border-ciano" />
-                    ) : (
-                      <div className="h-10 w-10 border-2 border-borda bg-borda" />
-                    )}
+                    <span className="relative">
+                      {cam ? (
+                        <img src={cam.icone} alt={c.nome} width={40} height={40} className="h-10 w-10 border-2 border-borda hover:border-ciano" />
+                      ) : (
+                        <span className="block h-10 w-10 border-2 border-borda bg-borda" />
+                      )}
+                      {mudancas[c.id] && (
+                        <span
+                          className={`absolute -right-1 -top-1 border border-fundo px-0.5 text-[8px] font-bold leading-none ${
+                            mudancas[c.id] === "buff" ? "bg-ciano text-fundo" : "bg-rosa text-fundo"
+                          }`}
+                        >
+                          {mudancas[c.id] === "buff" ? "▲" : "▼"}
+                        </span>
+                      )}
+                    </span>
                     <span className="w-full truncate text-center text-[9px] text-suave">{c.nome}</span>
                   </button>
                 );

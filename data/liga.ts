@@ -21,10 +21,10 @@ export const PREMIO_DINHEIRO: Record<Tier, number[]> = {
 // Reputação ganha por colocação final (ajuda a empurrar pra promoção).
 export const PREMIO_REPUTACAO: Record<Tier, number[]> = {
   SOLOQ: [0, 0, 0, 0, 0, 0],
-  AMADOR: [6, 3, 1, 1, 0, 0],
-  ACADEMY: [8, 4, 2, 2, 0, 0],
-  TIER1: [12, 6, 3, 3, 1, 1],
-  INTERNACIONAL: [20, 10, 5, 5, 2, 2],
+  AMADOR: [10, 5, 2, 2, 1, 1],
+  ACADEMY: [16, 8, 4, 4, 2, 2],
+  TIER1: [26, 14, 7, 7, 3, 3],
+  INTERNACIONAL: [40, 22, 12, 12, 6, 6],
 };
 
 // Ordem dos tiers competitivos (para promoção/rebaixamento). SOLOQ fica de fora.

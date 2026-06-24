@@ -301,8 +301,11 @@ export const useCareer = create<CareerStore>((set, get) => ({
   encerrarTemporadaLiga: () => {
     const { career, slotId } = get();
     if (!career) return;
+    const colocacao = career.liga?.colocacaoFinal ?? 99;
     const seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
-    const novo = encerrarTemporadaEngine(career, seed);
+    let novo = encerrarTemporadaEngine(career, seed);
+    // ir bem no campeonato coloca você nos holofotes: surto de propostas.
+    if (colocacao <= 2) novo = adicionarOfertas(novo, gerarOfertas(novo, (seed ^ 0x77) >>> 0));
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
   },

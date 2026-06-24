@@ -2,7 +2,7 @@ import { LOOP } from "@/data/loop";
 import { mod } from "@/data/opcoes";
 import { PATCH } from "@/data/patch";
 import { bonusInstalacoes } from "./transferencias";
-import type { AtributoKey, CareerState, TraitId } from "./types";
+import type { Attributes, AtributoKey, CareerState, TraitId } from "./types";
 
 // Loop semanal (PURO): energia, atividades e avanço de tempo.
 
@@ -10,6 +10,16 @@ function clamp(v: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, v));
 }
 const round2 = (v: number): number => Math.round(v * 100) / 100;
+
+// Decaimento semanal dos atributos (estilo Punch Club): sem treinar, você enferruja.
+function decair(attrs: Attributes, total: number): Attributes {
+  if (total <= 0) return attrs;
+  const novo: Attributes = { ...attrs };
+  (Object.keys(novo) as AtributoKey[]).forEach((k) => {
+    novo[k] = clamp(round2(novo[k] - total), 0, 100);
+  });
+  return novo;
+}
 
 export function temEnergia(career: CareerState, custo: number): boolean {
   return career.player.energia >= custo;
@@ -93,5 +103,8 @@ export function avancarSemana(career: CareerState, modo: "normal" | "descanso" =
   const semanaGlobal = (temporada - 1) * LOOP.semanasPorTemporada + semanaAtual;
   const patchVigente = Math.floor((semanaGlobal - 1) / PATCH.semanasPorPatch) + 1;
 
-  return { ...career, semanaAtual, temporada, patchVigente, player: { ...career.player, energia, moral } };
+  // o tempo passa: atributos decaem um pouco (mais no difícil).
+  const atributos = decair(career.player.atributos, LOOP.decaimentoSemanal * mod(career.opcoes).decaimento);
+
+  return { ...career, semanaAtual, temporada, patchVigente, player: { ...career.player, energia, moral, atributos } };
 }

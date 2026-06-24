@@ -201,6 +201,18 @@
 - **Histórico de partidas** (`components/HistoricoPartidas.tsx`): últimas 5 no dashboard
   (V/D, campeão, KDA, nota).
 
+### Ajustes pós-v1.0 (progressão estilo Punch Club)
+- **Stamina/dificuldade:** energia recuperada por semana 55→**40**; **atributos decaem**
+  `LOOP.decaimentoSemanal` (0.25) por semana, escalado pela dificuldade (`mod().decaimento`:
+  Fácil 0.6 / Normal 1 / Difícil 1.5). Precisa treinar pra manter/crescer — não dá pra upar e relaxar.
+- **Champion pool cresce jogando:** `aplicarResultado` sobe a maestria do campeão usado
+  (`SIMULACAO.maestriaVitoria` 4 / `maestriaDerrota` 1.5); campeão novo entra na pool. PlayerCard
+  mostra os 12 melhores por maestria.
+- **Times pelo soloq/elo:** `engine/transferencias.visibilidade()` = max(reputação, nível do elo×0.9);
+  `gerarOfertas`/`contraproposta` usam isso — subir de elo no soloq atrai/segura times.
+- **Campeonato = holofote:** `PREMIO_REPUTACAO` bem maior pro topo (TIER1 campeão +26, Mundial +40)
+  e, ao encerrar a temporada em 1º/2º, um **surto de propostas** no store.
+
 ## Como rodar
 
 > Pré-requisito: Node 18+ instalado na máquina.

@@ -1,8 +1,21 @@
+import { ELO_LADDER } from "@/data/simulacao";
 import { TIMES, timeDe, type Time } from "@/data/times";
 import { criarRng, entre, type Rng } from "./rng";
 import type { CareerState, Offer, Tier } from "./types";
 
 // Reputação, geração de propostas, negociação e contratos. PURO.
+
+// Nível do elo de soloq em escala 0–100.
+function nivelElo(elo: string): number {
+  const i = ELO_LADDER.indexOf(elo as (typeof ELO_LADDER)[number]);
+  return i < 0 ? 0 : (i / (ELO_LADDER.length - 1)) * 100;
+}
+
+// Quão "visto" o jogador é pelos times: reputação OU o elo de soloq (o que for maior).
+// Subir de elo no soloq atrai times mesmo com pouca reputação.
+export function visibilidade(career: CareerState): number {
+  return Math.max(career.player.reputacao, nivelElo(career.player.rankSoloq.elo) * 0.9);
+}
 
 const SALARIO_TIER: Record<Tier, number> = {
   SOLOQ: 80,
@@ -28,7 +41,7 @@ function ofertaDoTime(t: Time, rng: Rng): Offer {
 // Times se interessam quando seu prestígio está perto da sua reputação.
 export function gerarOfertas(career: CareerState, seed: number): Offer[] {
   const rng = criarRng(seed);
-  const rep = career.player.reputacao;
+  const rep = visibilidade(career);
   const ofertas: Offer[] = [];
   for (const t of TIMES) {
     if (t.id === career.contratoAtual?.timeId) continue;
@@ -71,7 +84,7 @@ export function contraproposta(career: CareerState, timeId: string): { career: C
   const time = timeDe(timeId);
   if (!oferta || !time) return { career, aceita: false };
 
-  if (career.player.reputacao >= time.prestigio) {
+  if (visibilidade(career) >= time.prestigio) {
     const melhor: Offer = {
       ...oferta,
       salarioSemanal: Math.round((oferta.salarioSemanal * 1.25) / 10) * 10,

@@ -7,12 +7,13 @@ export interface ModDificuldade {
   dinheiro: number; // multiplicador de salário/bônus
   energia: number; // multiplicador da energia recuperada por semana
   forcaInimigo: number; // bônus de força do time/comp inimigo na partida
+  decaimento: number; // multiplicador do decaimento semanal de atributos
 }
 
 export const MODIFICADORES: Record<Dificuldade, ModDificuldade> = {
-  FACIL: { xp: 1.3, dinheiro: 1.3, energia: 1.15, forcaInimigo: -6 },
-  NORMAL: { xp: 1, dinheiro: 1, energia: 1, forcaInimigo: 0 },
-  DIFICIL: { xp: 0.8, dinheiro: 0.85, energia: 0.9, forcaInimigo: 8 },
+  FACIL: { xp: 1.3, dinheiro: 1.3, energia: 1.15, forcaInimigo: -6, decaimento: 0.6 },
+  NORMAL: { xp: 1, dinheiro: 1, energia: 1, forcaInimigo: 0, decaimento: 1 },
+  DIFICIL: { xp: 0.8, dinheiro: 0.85, energia: 0.9, forcaInimigo: 8, decaimento: 1.5 },
 };
 
 export const DIFICULDADES: { id: Dificuldade; nome: string; desc: string }[] = [

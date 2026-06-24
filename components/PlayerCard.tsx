@@ -100,7 +100,10 @@ export default function PlayerCard({ career }: { career: CareerState }) {
       <div className="border-2 border-borda bg-painel p-5">
         <h2 className="mb-3 font-pixel text-[10px] text-suave">CHAMPION POOL</h2>
         <div className="flex flex-wrap gap-3">
-          {player.pool.map((m) => {
+          {[...player.pool]
+            .sort((a, b) => b.pontos - a.pontos)
+            .slice(0, 12)
+            .map((m) => {
             const c = campMap[m.championId];
             return (
               <div key={m.championId} className="flex w-16 flex-col items-center gap-1">
@@ -110,7 +113,7 @@ export default function PlayerCard({ career }: { career: CareerState }) {
                   <div className="h-14 w-14 animate-pulse border-2 border-borda bg-borda" />
                 )}
                 <span className="w-full truncate text-center text-[11px] text-suave">{c?.nome ?? m.championId}</span>
-                <span className="font-pixel text-[8px] text-borda">M{m.pontos}</span>
+                <span className="font-pixel text-[8px] text-borda">M{Math.round(m.pontos)}</span>
               </div>
             );
           })}

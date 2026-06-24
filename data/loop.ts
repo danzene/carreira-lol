@@ -11,7 +11,8 @@ export const LOOP = {
   repStream: 0.5, // reputação por live
   custoAlteracao: 40, // alteração mental (ganhar traço)
   maxTracos: 3, // limite de traços
-  recuperaEnergiaSemana: 55, // energia ao avançar a semana (normal) — única forma de recuperar
+  recuperaEnergiaSemana: 40, // energia ao avançar a semana (normal) — única forma de recuperar
+  decaimentoSemanal: 0.25, // atributos caem isto por semana (estilo Punch Club): precisa treinar pra manter
   moralDescanso: 15, // bônus de moral ao "descansar a semana" (energia vai ao máx.)
   moralPorForma: 1.5, // moral += (notaMédia - 5) * isto, ao avançar
   janelaForma: 5,

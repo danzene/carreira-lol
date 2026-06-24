@@ -2,7 +2,7 @@ import { mod } from "@/data/opcoes";
 import { PESOS_ROTA, RANK, SIMULACAO } from "@/data/simulacao";
 import { aplicarResultadoRank, eloDeMmr } from "./elo";
 import { criarRng, entre, type Rng } from "./rng";
-import type { Attributes, AtributoKey, CareerState, MatchResult, Player, Role, TraitId } from "./types";
+import type { Attributes, AtributoKey, CareerState, ChampionMastery, MatchResult, Player, Role, TraitId } from "./types";
 
 // Motor de partida (auto-battle). PURO: (jogador, contexto do draft, semente) -> resultado.
 
@@ -153,6 +153,19 @@ function aplicarXp(attrs: Attributes, xp: Partial<Attributes>): Attributes {
   return novo;
 }
 
+// Jogar (e vencer) com um campeão aumenta a maestria; campeão novo entra na pool.
+function atualizarPool(pool: ChampionMastery[], championId: string, vitoria: boolean): ChampionMastery[] {
+  const ganho = vitoria ? SIMULACAO.maestriaVitoria : SIMULACAO.maestriaDerrota;
+  let achou = false;
+  const novo = pool.map((p) => {
+    if (p.championId !== championId) return p;
+    achou = true;
+    return { ...p, pontos: clamp(Math.round((p.pontos + ganho) * 10) / 10, 0, SIMULACAO.maestriaMax) };
+  });
+  if (!achou) novo.push({ championId, pontos: Math.min(SIMULACAO.maestriaMax, ganho) });
+  return novo;
+}
+
 // Escala o XP pela dificuldade (Fase 11).
 function escalarXp(xp: Partial<Attributes>, fator: number): Partial<Attributes> {
   if (fator === 1) return xp;
@@ -173,6 +186,7 @@ export function aplicarResultado(career: CareerState, resultado: MatchResult): C
       ...player,
       rankSoloq: { elo, lp, mmr: novoMmr },
       atributos: aplicarXp(player.atributos, escalarXp(resultado.xpGanho, mod(career.opcoes).xp)),
+      pool: atualizarPool(player.pool, resultado.championId, resultado.vitoria),
       reputacao: clamp(
         Math.round((player.reputacao + (resultado.notaPerformance - 5) * SIMULACAO.repPorNota) * 10) / 10,
         0,

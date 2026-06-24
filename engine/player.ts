@@ -101,5 +101,6 @@ export function criarCareerState(player: Player, opcoes: OpcoesCarreira = OPCOES
     inbox: [],
     patchVigente: 1,
     opcoes,
+    scoutPontos: 300,
   };
 }

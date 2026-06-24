@@ -237,6 +237,22 @@
 - **UI:** `app/torneio/page.tsx` (grupos + mata-mata + coletar), banner "🌍" no dashboard.
 - **Conquistas:** 🌐 Campeão do MSI e 🌍 Campeão Mundial (Worlds), via `titulosInternacionais`.
 
+### Scout Gacha — Parte 1 (Lendas)
+- **Dados** (`data/gacha.ts`): moeda (Pontos de Scout), raridades 3★/4★/5★ + chances + pity,
+  **substats** sorteáveis (atributos, XP%, salário%, anti-decaimento%, draft) com faixas por raridade,
+  e ~12 **Lendas** (arquétipos originais) com passivo fixo.
+- **Motor** (`engine/gacha.ts`, +test): `puxar` (1×/10× com pity, **rolagem de substats** — caçar o roll
+  perfeito; duplicata sobe de **nível** e guarda o melhor roll), `equipar` (toggle, até `GACHA.slots`),
+  `efeitoLendas` (soma passivo×nível + substats das equipadas).
+- **Efeitos reais nos hooks:** atributos entram no draft (`app/draft/page.tsx` junto dos periféricos) +
+  bônus de comp; `simularPartida` (XP × lendas), `economia` (salário/bônus × lendas), `loop`
+  (anti-decaimento). **Ganho de PS:** +30/semana e +8/vitória; começa com 300.
+- **Animação** (`components/AnimacaoGacha.tsx`): abertura em Canvas (raios convergindo → **estouro na
+  cor da raridade** + partículas/flash) e as cartas revelando com substats. Página `app/gacha/page.tsx`
+  (puxar, efeitos equipados, coleção, equipar) + banner 🎰 no dashboard.
+- **Parte 2 (próxima):** cartas de **Campeão** (entram no pool), **sets** (bônus permanente ao completar)
+  e **boosts temporários** (duram X semanas).
+
 ## Como rodar
 
 > Pré-requisito: Node 18+ instalado na máquina.

@@ -84,6 +84,13 @@ export default function DashboardPage() {
         🧪 PATCH {versaoPatch(career.patchVigente)} · VER MUDANÇAS
       </Link>
 
+      <Link
+        href="/gacha"
+        className="border-2 border-rosa bg-rosa/10 px-4 py-3 text-center font-pixel text-[10px] text-rosa transition hover:bg-rosa hover:text-fundo"
+      >
+        🎰 SCOUT GACHA · ⭐ {career.scoutPontos ?? 0}
+      </Link>
+
       <div className="grid grid-cols-2 gap-2">
         <Link
           href="/loja"

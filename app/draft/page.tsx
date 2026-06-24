@@ -9,9 +9,10 @@ import ResultadoPartida from "@/components/ResultadoPartida";
 import { FEARLESS_JANELA, mod } from "@/data/opcoes";
 import { timeDe } from "@/data/times";
 import { bonusEquipamentos } from "@/engine/economia";
+import { efeitoLendas } from "@/engine/gacha";
 import { forcaTimeDe, proximoConfrontoJogador } from "@/engine/liga";
 import { proximoConfrontoTorneio } from "@/engine/internacional";
-import type { MatchResult } from "@/engine/types";
+import type { AtributoKey, MatchResult } from "@/engine/types";
 import { useCareer } from "@/store/careerStore";
 
 type Fase = "draft" | "partida" | "resultado";
@@ -71,6 +72,13 @@ function DraftFlow() {
   }
 
   const adversario = adversarioId ? timeDe(adversarioId) : null;
+
+  // bônus das lendas equipadas: atributos somam aos periféricos; comp ajuda no draft.
+  const ef = efeitoLendas(career);
+  const bonusAtributos: Partial<Record<AtributoKey, number>> = { ...bonusEquipamentos(career.equipamentos) };
+  (Object.keys(ef.atributos) as AtributoKey[]).forEach((k) => {
+    bonusAtributos[k] = (bonusAtributos[k] ?? 0) + (ef.atributos[k] ?? 0);
+  });
 
   function aoJogar(i: JogarInfo) {
     setInfo(i);
@@ -143,9 +151,9 @@ function DraftFlow() {
           ctx={{
             championId: info.championId,
             forcaMetaCampeao: info.forcaMetaCampeao,
-            comp: info.comp,
+            comp: info.comp + ef.bonusComp,
             compInimigo: info.compInimigo,
-            bonusAtributos: bonusEquipamentos(career.equipamentos),
+            bonusAtributos,
             forcaTimeAliado: (oficial || internacional) && career.contratoAtual ? forcaTimeDe(career.contratoAtual.timeId) : undefined,
             forcaTimeInimigo: adversarioId ? forcaTimeDe(adversarioId) : undefined,
             bonusInimigo: mod(career.opcoes).forcaInimigo + (evento && career.eventoAtual ? career.eventoAtual.bonusInimigo : 0),

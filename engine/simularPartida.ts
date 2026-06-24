@@ -1,6 +1,8 @@
+import { GACHA } from "@/data/gacha";
 import { mod } from "@/data/opcoes";
 import { PESOS_ROTA, RANK, SIMULACAO } from "@/data/simulacao";
 import { aplicarResultadoRank, eloDeMmr } from "./elo";
+import { efeitoLendas } from "./gacha";
 import { criarRng, entre, type Rng } from "./rng";
 import type { Attributes, AtributoKey, CareerState, ChampionMastery, MatchResult, Player, Role, TraitId } from "./types";
 
@@ -180,12 +182,14 @@ export function aplicarResultado(career: CareerState, resultado: MatchResult): C
   const { player } = career;
   const novoMmr = Math.max(RANK.mmrBase, player.rankSoloq.mmr + (resultado.lpDelta ?? 0));
   const { elo, lp } = eloDeMmr(novoMmr);
+  const ef = efeitoLendas(career);
   return {
     ...career,
+    scoutPontos: (career.scoutPontos ?? 0) + (resultado.vitoria ? GACHA.porVitoria : 0),
     player: {
       ...player,
       rankSoloq: { elo, lp, mmr: novoMmr },
-      atributos: aplicarXp(player.atributos, escalarXp(resultado.xpGanho, mod(career.opcoes).xp)),
+      atributos: aplicarXp(player.atributos, escalarXp(resultado.xpGanho, mod(career.opcoes).xp * ef.xpMult)),
       pool: atualizarPool(player.pool, resultado.championId, resultado.vitoria),
       reputacao: clamp(
         Math.round((player.reputacao + (resultado.notaPerformance - 5) * SIMULACAO.repPorNota) * 10) / 10,

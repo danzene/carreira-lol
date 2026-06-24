@@ -32,6 +32,7 @@ import { gerarEvento, premioEvento } from "@/engine/eventos";
 import { verificarConquistas } from "@/engine/conquistas";
 import { sortearAcontecimento } from "@/engine/acontecimentos";
 import { avancarTorneio, criarTorneio, premioTorneio } from "@/engine/internacional";
+import { equipar, puxar, type ResultadoPuxada } from "@/engine/gacha";
 import type { AtributoKey, CareerState, Equip, MatchResult, OpcoesCarreira, Player, TraitId } from "@/engine/types";
 import {
   apagarSlot,
@@ -74,6 +75,8 @@ interface CareerStore {
   alternarCoach: () => void;
   sessaoMental: () => boolean;
   upgradeEquip: (tipo: Equip["tipo"]) => boolean;
+  puxarGacha: (qtd: number) => ResultadoPuxada[] | null;
+  equiparLenda: (id: string) => void;
   assinarContrato: (timeId: string) => void;
   recusarOferta: (timeId: string) => void;
   contraproposta: (timeId: string) => boolean;
@@ -228,6 +231,25 @@ export const useCareer = create<CareerStore>((set, get) => ({
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
     return true;
+  },
+
+  puxarGacha: (qtd) => {
+    const { career, slotId } = get();
+    if (!career) return null;
+    const seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
+    const r = puxar(career, qtd, seed);
+    if (!r) return null;
+    set({ career: r.career });
+    if (slotId) salvarSlot(slotId, r.career);
+    return r.resultados;
+  },
+
+  equiparLenda: (id) => {
+    const { career, slotId } = get();
+    if (!career) return;
+    const novo = equipar(career, id);
+    set({ career: novo });
+    if (slotId) salvarSlot(slotId, novo);
   },
 
   assinarContrato: (timeId) => {

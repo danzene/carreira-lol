@@ -182,6 +182,18 @@ export interface TorneioInternacional {
   bracket: LigaState;
 }
 
+// ----- Scout Gacha (Lendas) -----
+export interface SubstatValor {
+  chave: string;
+  valor: number;
+}
+
+export interface LendaPossuida {
+  id: string; // modelo (data/gacha)
+  nivel: number; // sobe com duplicatas
+  substats: SubstatValor[]; // rolagem aleatória
+}
+
 export interface CareerState {
   player: Player;
   dinheiro: number;
@@ -198,6 +210,10 @@ export interface CareerState {
   conquistas?: string[]; // ids de conquistas desbloqueadas (Fase 12)
   torneioAtual?: TorneioInternacional; // MSI/Worlds em disputa (circuito mundial p2)
   titulosInternacionais?: string[]; // "MSI" | "WORLDS" conquistados
+  scoutPontos?: number; // moeda do gacha (Pontos de Scout)
+  lendas?: LendaPossuida[]; // cartas de lenda possuídas
+  lendasEquipadas?: string[]; // ids equipados (até GACHA.slots)
+  pity?: number; // puxadas desde o último 5★
   liga?: LigaState; // temporada/campeonato do time atual (Fase 8)
   energiaEm?: number; // timestamp (ms) da regen de energia em tempo real (infra)
   coachAtivo?: boolean; // assinatura de coach (XP passivo semanal, custa upkeep)

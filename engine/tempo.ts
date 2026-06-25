@@ -20,6 +20,13 @@ export function sincronizarEnergia(career: CareerState, agora: number): CareerSt
   return { ...career, energiaEm: agora, player: { ...career.player, energia: energiaAgora(career, agora) } };
 }
 
+// Garante que os relógios de recarga (energia/cargas) existam — sem isso o tempo
+// offline não conta. Chamar ao criar e ao carregar a carreira. Não sobrescreve.
+export function inicializarTempo(career: CareerState, agora: number): CareerState {
+  if (career.energiaEm != null && career.cargasEm != null) return career;
+  return { ...career, energiaEm: career.energiaEm ?? agora, cargasEm: career.cargasEm ?? agora };
+}
+
 // ms que faltam para a energia encher (0 se já está cheia).
 export function tempoParaEncher(career: CareerState, agora: number): number {
   const e = energiaAgora(career, agora);

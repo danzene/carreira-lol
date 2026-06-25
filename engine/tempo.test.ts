@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { LOOP } from "@/data/loop";
 import { atributosIniciais, criarCareerState, criarPlayer } from "./player";
-import { cargasPartida, consumirCarga, energiaAgora, proximoUsoEm, registrarUso, usosRestantes } from "./tempo";
+import { cargasPartida, consumirCarga, energiaAgora, inicializarTempo, proximoUsoEm, registrarUso, usosRestantes } from "./tempo";
 import type { CareerState } from "./types";
 
 function carreira(energia: number, energiaEm?: number): CareerState {
@@ -62,5 +62,16 @@ describe("tempo (progressão por tempo real)", () => {
   it("consumirCarga desconta uma carga", () => {
     const apos = consumirCarga({ ...carreira(0), cargasPartida: 2, cargasEm: AGORA }, AGORA);
     expect(apos.cargasPartida).toBe(1);
+  });
+
+  it("inicializarTempo cria os relógios faltantes (pra contar offline) sem sobrescrever", () => {
+    const init = inicializarTempo(carreira(50), AGORA);
+    expect(init.energiaEm).toBe(AGORA);
+    expect(init.cargasEm).toBe(AGORA);
+
+    const comRelogio = { ...carreira(50), energiaEm: 123, cargasEm: 456 };
+    const r = inicializarTempo(comRelogio, AGORA);
+    expect(r).toBe(comRelogio); // já tinha tudo → mesmo objeto
+    expect(r.energiaEm).toBe(123);
   });
 });

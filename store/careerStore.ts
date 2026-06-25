@@ -33,7 +33,7 @@ import { verificarConquistas } from "@/engine/conquistas";
 import { sortearAcontecimento } from "@/engine/acontecimentos";
 import { avancarTorneio, criarTorneio, premioTorneio } from "@/engine/internacional";
 import { equipar, ganharCampeao as ganharCampeaoEngine, puxar, type ResultadoCampeao, type ResultadoPuxada } from "@/engine/gacha";
-import { cargasPartida, consumirCarga, registrarUso, sincronizarEnergia, usosRestantes } from "@/engine/tempo";
+import { cargasPartida, consumirCarga, inicializarTempo, registrarUso, sincronizarEnergia, usosRestantes } from "@/engine/tempo";
 import type { AtributoKey, CareerState, Equip, MatchResult, OpcoesCarreira, Player, TraitId } from "@/engine/types";
 import {
   apagarSlot,
@@ -98,7 +98,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
   ultimoResumo: null,
 
   iniciarCarreira: (player, opcoes) => {
-    const career = criarCareerState(player, opcoes);
+    const career = inicializarTempo(criarCareerState(player, opcoes), Date.now());
     const slotId = gerarId();
     salvarSlot(slotId, career);
     definirSlotAtual(slotId);
@@ -110,7 +110,9 @@ export const useCareer = create<CareerStore>((set, get) => ({
     const slot = lerSlot(slotId);
     if (!slot) return false;
     definirSlotAtual(slotId);
-    set({ career: slot.state, slotId });
+    const state = inicializarTempo(slot.state, Date.now()); // garante relógios de recarga
+    set({ career: state, slotId });
+    if (state !== slot.state) salvarSlot(slotId, state);
     return true;
   },
 

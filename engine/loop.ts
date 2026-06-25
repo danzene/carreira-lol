@@ -1,4 +1,3 @@
-import { GACHA } from "@/data/gacha";
 import { LOOP } from "@/data/loop";
 import { mod } from "@/data/opcoes";
 import { PATCH } from "@/data/patch";
@@ -107,7 +106,6 @@ export function avancarSemana(career: CareerState, modo: "normal" | "descanso" =
   // o tempo passa: atributos decaem (mais no difícil; lendas reduzem).
   const decaimento = LOOP.decaimentoSemanal * mod(career.opcoes).decaimento * (1 - efeitoLendas(career).reducaoDecaimento);
   const atributos = decair(career.player.atributos, decaimento);
-  const scoutPontos = (career.scoutPontos ?? 0) + GACHA.porSemana;
 
-  return { ...career, semanaAtual, temporada, patchVigente, scoutPontos, player: { ...career.player, energia, moral, atributos } };
+  return { ...career, semanaAtual, temporada, patchVigente, player: { ...career.player, energia, moral, atributos } };
 }

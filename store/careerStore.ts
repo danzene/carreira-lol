@@ -32,8 +32,10 @@ import { gerarEvento, premioEvento } from "@/engine/eventos";
 import { verificarConquistas } from "@/engine/conquistas";
 import { sortearAcontecimento } from "@/engine/acontecimentos";
 import { avancarTorneio, criarTorneio, premioTorneio } from "@/engine/internacional";
+import { GACHA } from "@/data/gacha";
 import { equipar, ganharCampeao as ganharCampeaoEngine, puxar, type ResultadoCampeao, type ResultadoPuxada } from "@/engine/gacha";
 import { cargasPartida, consumirCarga, inicializarTempo, registrarUso, sincronizarEnergia, usosRestantes } from "@/engine/tempo";
+import { useProfile } from "./profileStore";
 import type { AtributoKey, CareerState, Equip, MatchResult, OpcoesCarreira, Player, TraitId } from "@/engine/types";
 import {
   apagarSlot,
@@ -76,8 +78,8 @@ interface CareerStore {
   alternarCoach: () => void;
   sessaoMental: () => boolean;
   upgradeEquip: (tipo: Equip["tipo"]) => boolean;
-  puxarGacha: (qtd: number) => ResultadoPuxada[] | null;
-  ganharCampeao: (championId: string) => ResultadoCampeao | null;
+  puxarGacha: (qtd: number) => Promise<ResultadoPuxada[] | null>;
+  ganharCampeao: (championId: string) => Promise<ResultadoCampeao | null>;
   equiparLenda: (id: string) => void;
   assinarContrato: (timeId: string) => void;
   recusarOferta: (timeId: string) => void;
@@ -129,6 +131,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
     let novo = gastarEnergiaSoloq(aplicarResultado(career, resultado));
     if (resultado.vitoria) novo = { ...novo, dinheiro: novo.dinheiro + bonusVitoria(career) };
     novo = verificarConquistas(novo).career;
+    void useProfile.getState().ajustar(resultado.vitoria ? GACHA.porVitoria : GACHA.porDerrota, "partida");
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
   },
@@ -194,6 +197,8 @@ export const useCareer = create<CareerStore>((set, get) => ({
         ? { ...novo, descansosEm: registrarUso(antes.descansosEm, agora) }
         : { ...novo, avancosEm: registrarUso(antes.avancosEm, agora) };
 
+    void useProfile.getState().ajustar(GACHA.porSemana, "semana");
+
     const resumo: ResumoSemana = {
       semana: novo.semanaAtual,
       temporada: novo.temporada,
@@ -250,23 +255,26 @@ export const useCareer = create<CareerStore>((set, get) => ({
     return true;
   },
 
-  puxarGacha: (qtd) => {
+  puxarGacha: async (qtd) => {
     const { career, slotId } = get();
     if (!career) return null;
+    const custo = qtd >= 10 ? GACHA.custo10 : GACHA.custo1 * qtd;
+    const pago = await useProfile.getState().ajustar(-custo, "carreira-booster"); // cobra no servidor
+    if (!pago) return null; // saldo insuficiente / offline
     const seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
     const r = puxar(career, qtd, seed);
-    if (!r) return null;
     const novo = verificarConquistas(r.career).career;
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
     return r.resultados;
   },
 
-  ganharCampeao: (championId) => {
+  ganharCampeao: async (championId) => {
     const { career, slotId } = get();
     if (!career) return null;
+    const pago = await useProfile.getState().ajustar(-GACHA.custoCampeao, "campeao");
+    if (!pago) return null;
     const r = ganharCampeaoEngine(career, championId);
-    if (!r) return null;
     const novo = verificarConquistas(r.career).career;
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
@@ -319,6 +327,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
     if (resultado.vitoria) novo = { ...novo, dinheiro: novo.dinheiro + bonusVitoria(c0) };
     const seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
     novo = registrarResultadoJogador(novo, resultado.vitoria, seed);
+    void useProfile.getState().ajustar(resultado.vitoria ? GACHA.porVitoria : GACHA.porDerrota, "liga");
     novo = consumirCarga(novo, agora);
     novo = verificarConquistas(novo).career;
     set({ career: novo });
@@ -341,6 +350,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
       },
       eventoAtual: undefined,
     };
+    void useProfile.getState().ajustar(resultado.vitoria ? GACHA.porVitoria : GACHA.porDerrota, "evento");
     novo = verificarConquistas(novo).career;
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
@@ -384,6 +394,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
     if (resultado.vitoria) novo = { ...novo, dinheiro: novo.dinheiro + bonusVitoria(c0) };
     const seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
     novo = avancarTorneio(novo, resultado.vitoria, seed);
+    void useProfile.getState().ajustar(resultado.vitoria ? GACHA.porVitoria : GACHA.porDerrota, "torneio");
     novo = consumirCarga(novo, agora);
     novo = verificarConquistas(novo).career;
     set({ career: novo });

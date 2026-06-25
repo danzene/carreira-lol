@@ -82,10 +82,8 @@ function puxarUma(lendas: LendaPossuida[], rng: Rng, pity: number): { resultado:
   return { resultado: { id, raridade: r, novo, nivel, substats }, lendas: novas, pity: r >= 5 ? 0 : pity + 1 };
 }
 
-export function puxar(career: CareerState, qtd: number, seed: number): { career: CareerState; resultados: ResultadoPuxada[] } | null {
-  const custo = qtd >= 10 ? GACHA.custo10 : GACHA.custo1 * qtd;
-  if ((career.scoutPontos ?? 0) < custo) return null;
-
+// A moeda (CoinPoints) é POR CONTA, gerida no servidor (profileStore). Aqui é só a RNG.
+export function puxar(career: CareerState, qtd: number, seed: number): { career: CareerState; resultados: ResultadoPuxada[] } {
   const rng = criarRng(seed >>> 0);
   let pity = career.pity ?? 0;
   let lendas = career.lendas ?? [];
@@ -96,7 +94,7 @@ export function puxar(career: CareerState, qtd: number, seed: number): { career:
     pity = passo.pity;
     resultados.push(passo.resultado);
   }
-  return { career: { ...career, scoutPontos: (career.scoutPontos ?? 0) - custo, lendas, pity }, resultados };
+  return { career: { ...career, lendas, pity }, resultados };
 }
 
 export interface ResultadoCampeao {
@@ -105,9 +103,9 @@ export interface ResultadoCampeao {
   pontos: number;
 }
 
-// Carta de Campeão: entra no pool (ou sobe a maestria). O campeão é escolhido pela UI.
-export function ganharCampeao(career: CareerState, championId: string): { career: CareerState; resultado: ResultadoCampeao } | null {
-  if ((career.scoutPontos ?? 0) < GACHA.custoCampeao) return null;
+// Carta de Campeão: entra no pool (ou sobe a maestria). O custo (CoinPoints) é cobrado no
+// servidor (profileStore) pela UI; aqui só aplicamos o ganho.
+export function ganharCampeao(career: CareerState, championId: string): { career: CareerState; resultado: ResultadoCampeao } {
   const pool = career.player.pool;
   const existe = pool.find((p) => p.championId === championId);
   let novo = false;
@@ -122,11 +120,7 @@ export function ganharCampeao(career: CareerState, championId: string): { career
     novoPool = [...pool, { championId, pontos }];
   }
   return {
-    career: {
-      ...career,
-      scoutPontos: (career.scoutPontos ?? 0) - GACHA.custoCampeao,
-      player: { ...career.player, pool: novoPool },
-    },
+    career: { ...career, player: { ...career.player, pool: novoPool } },
     resultado: { championId, novo, pontos },
   };
 }

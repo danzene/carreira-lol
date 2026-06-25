@@ -12,6 +12,7 @@ import { proximoConfrontoJogador } from "@/engine/liga";
 import { versaoPatch } from "@/engine/patch";
 import type { CareerState } from "@/engine/types";
 import { useCareer } from "@/store/careerStore";
+import { useProfile } from "@/store/profileStore";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -21,6 +22,7 @@ export default function DashboardPage() {
   const ultimoResumo = useCareer((s) => s.ultimoResumo);
   const limparResumo = useCareer((s) => s.limparResumo);
   const sair = useCareer((s) => s.sair);
+  const coinpoints = useProfile((s) => s.perfil?.coinpoints ?? 0);
 
   useEffect(() => {
     if (!career && !recarregarAtual()) router.replace("/");
@@ -88,7 +90,7 @@ export default function DashboardPage() {
         href="/gacha"
         className="border-2 border-rosa bg-rosa/10 px-4 py-3 text-center font-pixel text-[10px] text-rosa transition hover:bg-rosa hover:text-fundo"
       >
-        🎰 CARREIRA BOOSTER · 🪙 {career.scoutPontos ?? 0}
+        🎰 CARREIRA BOOSTER · 🪙 {coinpoints}
       </Link>
 
       <div className="grid grid-cols-2 gap-2">

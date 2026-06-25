@@ -1,4 +1,3 @@
-import { GACHA } from "@/data/gacha";
 import { mod } from "@/data/opcoes";
 import { PESOS_ROTA, RANK, SIMULACAO } from "@/data/simulacao";
 import { aplicarResultadoRank, eloDeMmr, proximoStreak } from "./elo";
@@ -188,7 +187,6 @@ export function aplicarResultado(career: CareerState, resultado: MatchResult): C
   const ef = efeitoLendas(career);
   return {
     ...career,
-    scoutPontos: (career.scoutPontos ?? 0) + (resultado.vitoria ? GACHA.porVitoria : GACHA.porDerrota),
     player: {
       ...player,
       rankSoloq: { elo, lp, mmr: novoMmr, streak },

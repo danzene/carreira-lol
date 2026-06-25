@@ -18,6 +18,7 @@ import { efeitoLendas, sinergiasAtivas, type ResultadoPuxada } from "@/engine/ga
 import type { ChampionDef } from "@/engine/types";
 import { buscarCampeoes, type Campeao } from "@/lib/ddragon";
 import { useCareer } from "@/store/careerStore";
+import { useProfile } from "@/store/profileStore";
 
 export default function GachaPage() {
   const router = useRouter();
@@ -26,6 +27,7 @@ export default function GachaPage() {
   const puxarGacha = useCareer((s) => s.puxarGacha);
   const ganharCampeao = useCareer((s) => s.ganharCampeao);
   const equiparLenda = useCareer((s) => s.equiparLenda);
+  const perfil = useProfile((s) => s.perfil);
   const [anim, setAnim] = useState<CartaRevelada[] | null>(null);
   const [campeoes, setCampeoes] = useState<Campeao[]>([]);
 
@@ -59,7 +61,7 @@ export default function GachaPage() {
     return <main className="flex min-h-screen items-center justify-center text-sm text-suave">Carregando…</main>;
   }
 
-  const ps = career.scoutPontos ?? 0;
+  const ps = perfil?.coinpoints ?? 0;
   const possuidas = new Map((career.lendas ?? []).map((l) => [l.id, l]));
   const equipadas = career.lendasEquipadas ?? [];
   const pool = career.player.pool;
@@ -91,12 +93,12 @@ export default function GachaPage() {
     };
   }
 
-  function puxar(qtd: number) {
-    const r = puxarGacha(qtd);
+  async function puxar(qtd: number) {
+    const r = await puxarGacha(qtd);
     if (r) setAnim(r.map(cartaLenda));
   }
 
-  function puxarCampeao() {
+  async function puxarCampeao() {
     if (banco.length === 0 || ps < GACHA.custoCampeao) return;
     // campeões mais fortes (meta) são mais raros de cair.
     const maxF = Math.max(...banco.map((b) => b.forcaMetaBase));
@@ -111,7 +113,7 @@ export default function GachaPage() {
         break;
       }
     }
-    const res = ganharCampeao(escolhido.id);
+    const res = await ganharCampeao(escolhido.id);
     if (!res) return;
     const camp = campMap.get(escolhido.id);
     const rar = raridadeCampeao(escolhido.forcaMetaBase);

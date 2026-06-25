@@ -126,3 +126,18 @@ export function importarTudo(dados: Record<string, Slot>): void {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(chaveSaves(), JSON.stringify(dados ?? {}));
 }
+
+// No 1º login, leva os saves que estavam como anônimos pra conta (sem sobrescrever
+// se a conta já tiver saves). Evita "perder" a carreira ao ativar o login.
+export function migrarAnonParaUsuario(userId: string): void {
+  if (typeof window === "undefined" || !userId || userId === "anon") return;
+  const chaveUser = `${PREFIXO}:saves:v1:${userId}`;
+  const jaTem = window.localStorage.getItem(chaveUser);
+  if (jaTem && jaTem !== "{}") return; // conta já tem saves — não mexe
+  const anon = window.localStorage.getItem(`${PREFIXO}:saves:v1:anon`);
+  if (anon && anon !== "{}") {
+    window.localStorage.setItem(chaveUser, anon);
+    const slotAnon = window.localStorage.getItem(`${PREFIXO}:slot-atual:v1:anon`);
+    if (slotAnon) window.localStorage.setItem(`${PREFIXO}:slot-atual:v1:${userId}`, slotAnon);
+  }
+}

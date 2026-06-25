@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import type { User } from "@supabase/supabase-js";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabaseClient";
-import { definirUsuario, observarSaves } from "./saves";
+import { definirUsuario, migrarAnonParaUsuario, observarSaves } from "./saves";
 import { agendarPush, puxarDoCloud } from "./cloudSync";
 
 interface AuthStore {
@@ -29,7 +29,10 @@ function traduzErro(msg: string): string {
 export const useAuth = create<AuthStore>((set) => {
   async function aplicarSessao(user: User | null): Promise<void> {
     definirUsuario(user?.id ?? null);
-    if (user) await puxarDoCloud();
+    if (user) {
+      migrarAnonParaUsuario(user.id); // 1º login: traz a carreira anônima pra conta
+      await puxarDoCloud();
+    }
     set({ user });
   }
 

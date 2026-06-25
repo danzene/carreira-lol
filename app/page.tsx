@@ -6,11 +6,14 @@ import { useRouter } from "next/navigation";
 import { ROTAS } from "@/data/config";
 import { listarResumos, type SlotResumo } from "@/store/saves";
 import { useCareer } from "@/store/careerStore";
+import { useAuth } from "@/store/authStore";
 
 export default function Home() {
   const router = useRouter();
   const carregar = useCareer((s) => s.carregar);
   const apagar = useCareer((s) => s.apagar);
+  const user = useAuth((s) => s.user);
+  const sairConta = useAuth((s) => s.sairConta);
   const [saves, setSaves] = useState<SlotResumo[]>([]);
   const [pronto, setPronto] = useState(false);
 
@@ -83,7 +86,21 @@ export default function Home() {
         </section>
       )}
 
-      <p className="font-pixel text-[8px] text-borda">FASE 1 · CRIAÇÃO + DASHBOARD</p>
+      <div className="flex flex-col items-center gap-2">
+        {user && (
+          <p className="text-[10px] text-suave">
+            Logado como <span className="text-texto">{user.email}</span> ·{" "}
+            <button
+              type="button"
+              onClick={() => sairConta()}
+              className="text-rosa underline-offset-2 transition hover:underline"
+            >
+              sair da conta
+            </button>
+          </p>
+        )}
+        <p className="font-pixel text-[8px] text-borda">FASE 1 · CRIAÇÃO + DASHBOARD</p>
+      </div>
     </main>
   );
 }

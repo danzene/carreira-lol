@@ -13,14 +13,26 @@ export interface ResultadoRank {
   lpDelta: number;
 }
 
+// Próxima sequência: vitória soma (ou zera derrotas e vira 1); derrota o inverso.
+export function proximoStreak(streak: number, vitoria: boolean): number {
+  if (vitoria) return streak >= 0 ? streak + 1 : 1;
+  return streak <= 0 ? streak - 1 : -1;
+}
+
 export function aplicarResultadoRank(rank: RankSoloq, vitoria: boolean, mmrInimigo: number): ResultadoRank {
   const ajuste = Math.round((mmrInimigo - rank.mmr) / 40);
   let ganho = RANK.ganhoBase + (vitoria ? ajuste : -ajuste);
   ganho = Math.min(RANK.ganhoMax, Math.max(RANK.ganhoMin, ganho));
 
+  // Bônus de sequência (estilo LoL): cada vitória/derrota seguida (da 2ª em diante)
+  // aumenta o ganho/perda de PDL — quem está quente sobe mais, quem está frio cai mais.
+  const streak = proximoStreak(rank.streak ?? 0, vitoria);
+  const bonus = Math.min(RANK.streakBonusMax, Math.max(0, Math.abs(streak) - 1) * RANK.streakBonusPasso);
+  ganho += bonus;
+
   const delta = vitoria ? ganho : -ganho;
   const novoMmr = Math.max(RANK.mmrBase, rank.mmr + delta);
   const lpDelta = novoMmr - rank.mmr;
   const { elo, lp } = eloDeMmr(novoMmr);
-  return { rank: { elo, lp, mmr: novoMmr }, lpDelta };
+  return { rank: { elo, lp, mmr: novoMmr, streak }, lpDelta };
 }

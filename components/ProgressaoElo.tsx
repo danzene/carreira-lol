@@ -32,6 +32,7 @@ export default function ProgressaoElo({ rank }: { rank: RankSoloq }) {
   const trilha = trilhaElos(rank.elo, 5);
   const progressoGeral = Math.round((idx / (TOTAL_ELOS - 1)) * 100);
   const rotuloEmblema = topo ? "👑" : divisao || "★";
+  const streak = rank.streak ?? 0;
 
   return (
     <div className="border-2 border-borda bg-painel p-5">
@@ -47,6 +48,13 @@ export default function ProgressaoElo({ rank }: { rank: RankSoloq }) {
             </span>
             <span className="shrink-0 text-[10px] text-suave">MMR {rank.mmr}</span>
           </div>
+
+          {streak >= 2 && (
+            <p className="mt-1 text-[10px] text-amber-300">🔥 {streak} vitórias seguidas <span className="text-suave">· +PDL</span></p>
+          )}
+          {streak <= -2 && (
+            <p className="mt-1 text-[10px] text-rosa">❄️ {-streak} derrotas seguidas <span className="text-suave">· −PDL</span></p>
+          )}
 
           <div className="mt-2 h-3 overflow-hidden border-2 border-borda bg-fundo">
             <div className="h-full transition-all" style={{ width: `${lp}%`, backgroundColor: cor }} />

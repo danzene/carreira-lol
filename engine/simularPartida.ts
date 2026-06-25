@@ -1,7 +1,7 @@
 import { GACHA } from "@/data/gacha";
 import { mod } from "@/data/opcoes";
 import { PESOS_ROTA, RANK, SIMULACAO } from "@/data/simulacao";
-import { aplicarResultadoRank, eloDeMmr } from "./elo";
+import { aplicarResultadoRank, eloDeMmr, proximoStreak } from "./elo";
 import { efeitoLendas } from "./gacha";
 import { criarRng, entre, type Rng } from "./rng";
 import type { Attributes, AtributoKey, CareerState, ChampionMastery, MatchResult, Player, Role, TraitId } from "./types";
@@ -182,13 +182,16 @@ export function aplicarResultado(career: CareerState, resultado: MatchResult): C
   const { player } = career;
   const novoMmr = Math.max(RANK.mmrBase, player.rankSoloq.mmr + (resultado.lpDelta ?? 0));
   const { elo, lp } = eloDeMmr(novoMmr);
+  // sequência só conta em soloq (oficial/torneio entram com lpDelta 0 = não mexe no elo)
+  const mexeNoElo = (resultado.lpDelta ?? 0) !== 0;
+  const streak = mexeNoElo ? proximoStreak(player.rankSoloq.streak ?? 0, resultado.vitoria) : player.rankSoloq.streak;
   const ef = efeitoLendas(career);
   return {
     ...career,
     scoutPontos: (career.scoutPontos ?? 0) + (resultado.vitoria ? GACHA.porVitoria : GACHA.porDerrota),
     player: {
       ...player,
-      rankSoloq: { elo, lp, mmr: novoMmr },
+      rankSoloq: { elo, lp, mmr: novoMmr, streak },
       atributos: aplicarXp(player.atributos, escalarXp(resultado.xpGanho, mod(career.opcoes).xp * ef.xpMult)),
       pool: atualizarPool(player.pool, resultado.championId, resultado.vitoria),
       reputacao: clamp(

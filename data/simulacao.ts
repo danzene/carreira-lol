@@ -48,4 +48,6 @@ export const RANK = {
   ganhoBase: 20,
   ganhoMin: 12,
   ganhoMax: 28,
+  streakBonusPasso: 3, // PDL extra por vitória/derrota em sequência (a partir da 2ª seguida)
+  streakBonusMax: 12, // teto do bônus de sequência (estilo LoL: quente sobe rápido, frio cai rápido)
 } as const;

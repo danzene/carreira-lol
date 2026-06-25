@@ -57,6 +57,7 @@ export interface RankSoloq {
   elo: string;
   lp: number;
   mmr: number;
+  streak?: number; // sequência atual: >0 vitórias seguidas, <0 derrotas seguidas
 }
 
 export interface Player {

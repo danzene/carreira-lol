@@ -11,6 +11,7 @@ interface AuthStore {
   init: () => void;
   entrar: (email: string, senha: string) => Promise<string | null>;
   cadastrar: (email: string, senha: string) => Promise<string | null>;
+  entrarComGoogle: () => Promise<string | null>;
   sairConta: () => Promise<void>;
 }
 
@@ -71,6 +72,16 @@ export const useAuth = create<AuthStore>((set) => {
       if (error) return traduzErro(error.message);
       if (!data.session) return "CONFIRME_EMAIL"; // confirmação de email está ligada
       return null;
+    },
+
+    entrarComGoogle: async () => {
+      const sb = getSupabase();
+      const { error } = await sb.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: typeof window !== "undefined" ? window.location.origin : undefined },
+      });
+      // em sucesso o navegador é redirecionado pro Google; o retorno só importa em erro.
+      return error ? traduzErro(error.message) : null;
     },
 
     sairConta: async () => {

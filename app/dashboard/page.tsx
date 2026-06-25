@@ -88,7 +88,7 @@ export default function DashboardPage() {
         href="/gacha"
         className="border-2 border-rosa bg-rosa/10 px-4 py-3 text-center font-pixel text-[10px] text-rosa transition hover:bg-rosa hover:text-fundo"
       >
-        🎰 SCOUT GACHA · ⭐ {career.scoutPontos ?? 0}
+        🎰 CARREIRA BOOSTER · 🪙 {career.scoutPontos ?? 0}
       </Link>
 
       <div className="grid grid-cols-2 gap-2">

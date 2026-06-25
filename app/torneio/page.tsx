@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import PartidaCampeonato from "@/components/PartidaCampeonato";
 import TabelaLiga from "@/components/TabelaLiga";
 import { VOCE } from "@/data/liga";
-import { LOOP } from "@/data/loop";
 import { timeDe } from "@/data/times";
 import { premioTorneio, proximoConfrontoTorneio } from "@/engine/internacional";
-import type { ConfrontoPO, LigaState, TorneioInternacional } from "@/engine/types";
+import type { CareerState, ConfrontoPO, LigaState, TorneioInternacional } from "@/engine/types";
 import { useCareer } from "@/store/careerStore";
 
 function nomeTime(id: string): string {
@@ -83,7 +83,7 @@ export default function TorneioPage() {
           {t.bracket.fase === "ENCERRADA" ? (
             <Encerramento t={t} aoColetar={() => { encerrar(); router.push("/dashboard"); }} />
           ) : (
-            <ProximaPartida t={t} energia={career.player.energia} />
+            <ProximaPartida t={t} career={career} />
           )}
 
           {t.bracket.fase === "PLAYOFFS" && <Playoffs liga={t.bracket} />}
@@ -94,9 +94,8 @@ export default function TorneioPage() {
   );
 }
 
-function ProximaPartida({ t, energia }: { t: TorneioInternacional; energia: number }) {
+function ProximaPartida({ t, career }: { t: TorneioInternacional; career: CareerState }) {
   const adversario = proximoConfrontoTorneio(t);
-  const semEnergia = energia < LOOP.custoSoloq;
   const liga = t.bracket;
   return (
     <div className="border-2 border-borda bg-painel p-4">
@@ -108,18 +107,7 @@ function ProximaPartida({ t, energia }: { t: TorneioInternacional; energia: numb
           <p className="mt-2 text-sm text-texto">
             Próxima partida: <span className="text-amber-300">{nomeTime(adversario)}</span>
           </p>
-          {semEnergia ? (
-            <p className="mt-3 border-2 border-borda px-3 py-2 text-center text-[11px] text-suave">
-              Sem energia. Avance/descanse a semana no dashboard.
-            </p>
-          ) : (
-            <Link
-              href="/draft?internacional=1"
-              className="mt-3 block border-2 border-amber-300 bg-amber-300/10 px-4 py-2.5 text-center font-pixel text-[10px] text-amber-300 transition hover:bg-amber-300 hover:text-fundo"
-            >
-              ⚔️ JOGAR PARTIDA
-            </Link>
-          )}
+          <PartidaCampeonato career={career} href="/draft?internacional=1" tema="torneio" />
         </>
       ) : (
         <p className="mt-2 text-sm text-suave">Aguardando…</p>

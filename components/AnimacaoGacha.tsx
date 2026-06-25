@@ -1,12 +1,26 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import RetratoLenda from "@/components/RetratoLenda";
-import { defSub, infoRaridade, modeloLenda } from "@/data/gacha";
-import type { ResultadoPuxada } from "@/engine/gacha";
 
-const W = 260;
-const H = 130;
+export interface CartaRevelada {
+  raridade: number;
+  cor: string;
+  cartaImg?: string; // arte 2:3 completa (lendas — moldura já embutida)
+  icone?: string; // ícone quadrado (campeões)
+  nome: string;
+  subtitulo?: string;
+  badge?: string;
+  substats?: { rotulo: string; valor: number }[];
+  holo?: boolean;
+  mitica?: boolean;
+}
+
+const W = 280;
+const H = 150;
+const TAU = Math.PI * 2;
+const T_CONV = 0.45;
+const T_PULSE = 0.78;
+const T_BURST = 0.78;
 
 interface Part {
   x: number;
@@ -17,13 +31,26 @@ interface Part {
   max: number;
   cor: string;
   tam: number;
+  grav: number;
+  trail?: boolean;
+  px?: number;
+  py?: number;
 }
 
-export default function AnimacaoGacha({ resultados, onFechar }: { resultados: ResultadoPuxada[]; onFechar: () => void }) {
+function paletaRaridade(r: number) {
+  if (r >= 6) return { base: "#ffe14d", sec: "#ff2d7e", ter: "#19e6e0", swirl: true, squares: true, stars: true };
+  if (r >= 5) return { base: "#ff2d7e", sec: "#19e6e0", ter: "#ffd34d", swirl: true, squares: false, stars: true };
+  if (r >= 4) return { base: "#ffd34d", sec: "#ffe7a0", ter: "#fff7ff", swirl: false, squares: false, stars: true };
+  return { base: "#cfd2e6", sec: "#9a90c0", ter: "#fff7ff", swirl: false, squares: false, stars: false };
+}
+
+export default function AnimacaoGacha({ cartas, onFechar }: { cartas: CartaRevelada[]; onFechar: () => void }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const [revelado, setRevelado] = useState(false);
-  const melhor = Math.max(...resultados.map((r) => r.raridade));
-  const cor = infoRaridade(melhor).cor;
+  const melhorCarta = cartas.reduce((a, b) => (b.raridade > a.raridade ? b : a), cartas[0]);
+  const melhor = melhorCarta?.raridade ?? 3;
+  const cor = melhorCarta?.cor ?? "#9a90c0";
+  const unica = cartas.length === 1;
 
   useEffect(() => {
     const canvas = ref.current;
@@ -31,110 +58,187 @@ export default function AnimacaoGacha({ resultados, onFechar }: { resultados: Re
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.imageSmoothingEnabled = false;
-
+    const pal = paletaRaridade(melhor);
     const cx = W / 2;
     const cy = H / 2;
+    const maxR = 150;
     const parts: Part[] = [];
-    let explodiu = false;
+    let estourou = false;
     let raf = 0;
     const inicio = performance.now();
     let ultimo = inicio;
+
     const r = (x: number, y: number, w: number, h: number, c: string) => {
       ctx.fillStyle = c;
       ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
     };
-    const corDe = (i: number) => (melhor >= 5 ? ["#ff2d7e", "#ffd34d", "#19e6e0"][i % 3] : cor);
+    const anel = (x: number, y: number, raio: number, c: string, lw = 1) => {
+      ctx.strokeStyle = c;
+      ctx.lineWidth = lw;
+      ctx.beginPath();
+      ctx.ellipse(x, y, raio, raio * 0.72, 0, 0, TAU);
+      ctx.stroke();
+    };
+    const estrela = (x: number, y: number, t: number, c: string) => {
+      r(x - t, y, t * 2 + 1, 1, c);
+      r(x, y - t, 1, t * 2 + 1, c);
+      const d = Math.max(1, Math.floor(t / 2));
+      r(x - d, y - d, d, d, c);
+      r(x + 1, y - d, d, d, c);
+      r(x - d, y + 1, d, d, c);
+      r(x + 1, y + 1, d, d, c);
+      r(x, y, 1, 1, "#fff7ff");
+    };
 
     function frame(now: number) {
       const dt = Math.min(0.05, (now - ultimo) / 1000);
       ultimo = now;
       const clock = (now - inicio) / 1000;
-      const carga = Math.min(clock / 1.1, 1);
-      const burst = Math.max(0, Math.min((clock - 1.1) / 0.6, 1));
 
       ctx!.clearRect(0, 0, W, H);
       r(0, 0, W, H, "#0b0617");
 
-      // raios convergindo
-      ctx!.globalAlpha = 0.5 + carga * 0.5;
-      ctx!.lineWidth = 1;
-      for (let i = 0; i < 14; i++) {
-        const a = i * (Math.PI * 2 / 14) + clock * 1.5;
-        const rOut = 100 - carga * 40;
-        const rIn = 14 + (1 - carga) * 30;
-        ctx!.strokeStyle = corDe(i);
-        ctx!.beginPath();
-        ctx!.moveTo(cx + Math.cos(a) * rOut, cy + Math.sin(a) * rOut * 0.7);
-        ctx!.lineTo(cx + Math.cos(a) * rIn, cy + Math.sin(a) * rIn * 0.7);
-        ctx!.stroke();
+      // ===== FASE 1 — CONVERGÊNCIA =====
+      const convP = Math.min(clock / T_CONV, 1);
+      if (clock < T_PULSE) {
+        ctx!.globalAlpha = 0.5 + convP * 0.5;
+        for (let i = 0; i < 20; i++) {
+          const a = i * (TAU / 20) + clock * 2.4;
+          const rad = maxR * (1 - convP) + 8;
+          const x = cx + Math.cos(a) * rad;
+          const y = cy + Math.sin(a) * rad * 0.72;
+          // rastro fino apontando pro centro
+          ctx!.strokeStyle = i % 2 ? pal.base : pal.sec;
+          ctx!.lineWidth = 1;
+          ctx!.beginPath();
+          ctx!.moveTo(x, y);
+          ctx!.lineTo(cx + Math.cos(a) * (rad + 14), cy + Math.sin(a) * (rad + 14) * 0.72);
+          ctx!.stroke();
+          r(x, y, 2, 2, i % 2 ? pal.base : pal.sec);
+        }
+        ctx!.globalAlpha = 1;
       }
-      ctx!.globalAlpha = 1;
 
-      // orbe pulsante
-      const orb = 4 + carga * 9 + Math.sin(clock * 18) * 1.5;
-      ctx!.fillStyle = cor;
+      // orbe central crescente
+      const grow = Math.min(clock / T_PULSE, 1);
+      const orb = 3 + grow * 11 + Math.sin(clock * 20) * 1.5;
+      ctx!.fillStyle = pal.base;
       ctx!.beginPath();
-      ctx!.arc(cx, cy, orb, 0, Math.PI * 2);
+      ctx!.arc(cx, cy, orb, 0, TAU);
       ctx!.fill();
       r(cx - 1, cy - 1, 2, 2, "#fff7ff");
 
-      // estouro
-      if (clock > 1.1) {
-        if (!explodiu) {
-          explodiu = true;
-          setRevelado(true);
-          for (let i = 0; i < 60; i++) {
-            const a = Math.random() * Math.PI * 2;
-            const v = 30 + Math.random() * 90;
-            parts.push({ x: cx, y: cy, vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.7, vida: 1.1, max: 1.1, cor: corDe(i), tam: Math.random() < 0.4 ? 3 : 2 });
+      // ===== FASE 2 — PULSAÇÃO (anéis) =====
+      if (clock > T_CONV) {
+        const pp = clock - T_CONV;
+        for (let k = 0; k < 4; k++) {
+          const rr = (pp * 130 + k * 24) % 96;
+          ctx!.globalAlpha = Math.max(0, 1 - rr / 96);
+          anel(cx, cy, rr + 6, k % 2 ? pal.base : pal.sec, melhor >= 5 ? 2 : 1);
+        }
+        ctx!.globalAlpha = 1;
+
+        // vórtice (5★/6★)
+        if (pal.swirl && clock < 1.1) {
+          for (let arm = 0; arm < 3; arm++) {
+            for (let s = 2; s < 26; s++) {
+              const a = arm * (TAU / 3) + s * 0.3 + clock * 6;
+              const rad = s * 1.7;
+              r(cx + Math.cos(a) * rad, cy + Math.sin(a) * rad * 0.72, 2, 2, arm % 2 ? pal.base : pal.ter);
+            }
           }
         }
-        const n = melhor >= 5 ? 5 : 3;
-        for (let k = 0; k < n; k++) {
-          ctx!.globalAlpha = Math.max(0, 1 - burst);
-          ctx!.strokeStyle = corDe(k);
-          ctx!.lineWidth = 2;
-          ctx!.beginPath();
-          ctx!.arc(cx, cy, burst * (k * 26 + 24), 0, Math.PI * 2);
-          ctx!.stroke();
+
+        // quadrados holográficos (6★)
+        if (pal.squares) {
+          const cores = ["#ff2d7e", "#19e6e0", "#ffe14d"];
+          for (let q = 0; q < 3; q++) {
+            const sz = 14 + q * 12 + Math.sin(clock * 5 + q) * 2;
+            ctx!.globalAlpha = 0.75 - q * 0.18;
+            ctx!.strokeStyle = cores[q];
+            ctx!.lineWidth = 1;
+            ctx!.strokeRect(cx - sz, cy - sz, sz * 2, sz * 2);
+          }
+          ctx!.globalAlpha = 1;
         }
-        // flash
-        ctx!.globalAlpha = Math.max(0, (1 - burst) * 0.7);
+      }
+
+      // ===== FASE 3 — EXPLOSÃO =====
+      if (clock >= T_BURST && !estourou) {
+        estourou = true;
+        setRevelado(true);
+        const n = melhor >= 6 ? 90 : melhor >= 5 ? 70 : melhor >= 4 ? 50 : 36;
+        for (let i = 0; i < n; i++) {
+          const a = Math.random() * TAU;
+          const v = 40 + Math.random() * 130;
+          const cores = [pal.base, pal.sec, pal.ter];
+          parts.push({ x: cx, y: cy, vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.72, vida: 1.2, max: 1.2, cor: cores[i % 3], tam: Math.random() < 0.35 ? 3 : 2, grav: 30 });
+        }
+        // estrelas cadentes (5★/6★)
+        if (pal.stars && melhor >= 5) {
+          for (let i = 0; i < 5; i++) {
+            const a = -0.3 - Math.random() * 1.4;
+            const v = 150 + Math.random() * 90;
+            parts.push({ x: cx, y: cy, vx: Math.cos(a) * v, vy: Math.sin(a) * v, vida: 1.1, max: 1.1, cor: pal.base, tam: 2, grav: 120, trail: true, px: cx, py: cy });
+          }
+        }
+      }
+      // flash branco do estouro
+      if (clock >= T_BURST) {
+        const bp = Math.min((clock - T_BURST) / 0.45, 1);
+        ctx!.globalAlpha = Math.max(0, (1 - bp) * 0.85);
         r(0, 0, W, H, "#fff7ff");
         ctx!.globalAlpha = 1;
       }
 
-      // partículas
+      // ===== FASES 4–5 — DISPERSÃO + RESÍDUOS =====
       for (let i = parts.length - 1; i >= 0; i--) {
         const p = parts[i];
+        p.px = p.x;
+        p.py = p.y;
         p.vida -= dt;
         p.x += p.vx * dt;
         p.y += p.vy * dt;
-        p.vy += 40 * dt;
+        p.vy += p.grav * dt;
         if (p.vida <= 0) {
           parts.splice(i, 1);
           continue;
         }
         ctx!.globalAlpha = Math.max(0, p.vida / p.max);
-        r(p.x, p.y, p.tam, p.tam, p.cor);
+        if (p.trail) {
+          ctx!.strokeStyle = p.cor;
+          ctx!.lineWidth = 2;
+          ctx!.beginPath();
+          ctx!.moveTo(p.px ?? p.x, p.py ?? p.y);
+          ctx!.lineTo(p.x, p.y);
+          ctx!.stroke();
+          r(p.x, p.y, 2, 2, "#fff7ff");
+        } else {
+          r(p.x, p.y, p.tam, p.tam, p.cor);
+        }
         ctx!.globalAlpha = 1;
+      }
+
+      // brilhos residuais (twinkle) após o estouro
+      if (pal.stars && estourou && Math.random() < 0.5) {
+        estrela(20 + Math.random() * (W - 40), 14 + Math.random() * (H - 28), Math.random() < 0.4 ? 3 : 2, Math.random() < 0.5 ? pal.base : "#fff7ff");
       }
 
       raf = requestAnimationFrame(frame);
     }
     raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);
-  }, [resultados, melhor, cor]);
+  }, [cartas, melhor]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-fundo/90 p-4" onClick={onFechar}>
       <div
-        className="flex max-h-[90vh] w-full max-w-md flex-col gap-3 overflow-y-auto border-2 bg-painel p-4"
+        className="flex max-h-[92vh] w-full max-w-lg flex-col gap-3 overflow-y-auto border-2 bg-painel p-4"
         style={{ borderColor: cor }}
         onClick={(e) => e.stopPropagation()}
       >
         <p className="text-center font-pixel text-[10px]" style={{ color: cor }}>
-          SCOUT · {resultados.length}× PUXADA
+          CARREIRA BOOSTER · {cartas.length}×
         </p>
         <canvas
           ref={ref}
@@ -145,45 +249,10 @@ export default function AnimacaoGacha({ resultados, onFechar }: { resultados: Re
         />
 
         {revelado && (
-          <div className={`grid gap-2 ${resultados.length > 1 ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-1"}`}>
-            {resultados.map((res, i) => {
-              const m = modeloLenda(res.id);
-              const info = infoRaridade(res.raridade);
-              return (
-                <div
-                  key={i}
-                  className={`overflow-hidden border-2 bg-fundo/40 ${res.raridade === 6 ? "carta-mitica" : ""}`}
-                  style={{ borderColor: info.cor }}
-                >
-                  <div className="relative">
-                    {m ? (
-                      <RetratoLenda tema={m.tema} cor={info.cor} paleta={m.paleta} className="block aspect-[8/9] w-full" />
-                    ) : (
-                      <div className="aspect-[8/9] w-full bg-fundo" />
-                    )}
-                    <span className="absolute left-1 top-1 font-pixel text-[8px]" style={{ color: info.cor }}>
-                      {"★".repeat(res.raridade)}
-                    </span>
-                    {res.novo ? (
-                      <span className="absolute right-1 top-1 bg-amber-300 px-1 text-[7px] font-bold text-fundo">NOVO</span>
-                    ) : (
-                      <span className="absolute right-1 top-1 bg-painel px-1 text-[7px] text-suave">Nv.{res.nivel}</span>
-                    )}
-                  </div>
-                  <div className="p-1.5">
-                    <p className="truncate text-[11px] text-texto">{m?.nome ?? res.id}</p>
-                    <p className="truncate text-[8px] text-suave">{m?.titulo}</p>
-                    <div className="mt-0.5 flex flex-wrap gap-0.5">
-                      {res.substats.map((s, j) => (
-                        <span key={j} className="border border-borda px-0.5 text-[7px] text-ciano">
-                          {defSub(s.chave)?.rotulo ?? s.chave}+{s.valor}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+          <div className={unica ? "flex justify-center" : "grid grid-cols-3 gap-2 sm:grid-cols-5"}>
+            {cartas.map((c, i) => (
+              <CartaRevel key={i} c={c} delay={i * 0.08} grande={unica} />
+            ))}
           </div>
         )}
 
@@ -196,6 +265,53 @@ export default function AnimacaoGacha({ resultados, onFechar }: { resultados: Re
           {revelado ? "CONTINUAR" : "..."}
         </button>
       </div>
+    </div>
+  );
+}
+
+function CartaRevel({ c, delay, grande }: { c: CartaRevelada; delay: number; grande: boolean }) {
+  const estilo = { animationDelay: `${delay}s` };
+  if (c.cartaImg) {
+    return (
+      <div className={`carta-entra ${grande ? "w-44 max-w-full" : ""}`} style={estilo}>
+        <div
+          className="relative overflow-hidden"
+          style={c.mitica ? { boxShadow: "0 0 10px #ffe14d, 0 0 22px rgba(255,45,126,0.5)" } : undefined}
+        >
+          <img src={c.cartaImg} alt={c.nome} className="img-hd block aspect-[2/3] w-full" />
+          {c.holo && <div className={`holo-sheen ${c.mitica ? "holo-forte" : ""}`} />}
+        </div>
+        <p className="mt-1 truncate text-center text-[11px] text-texto">{c.nome}</p>
+        {c.subtitulo && <p className="truncate text-center text-[8px] text-suave">{c.subtitulo}</p>}
+        {c.badge && (
+          <p className="text-center font-pixel text-[8px]" style={{ color: c.cor }}>
+            {c.badge}
+          </p>
+        )}
+        {grande && c.substats && c.substats.length > 0 && (
+          <div className="mt-1 flex flex-wrap justify-center gap-0.5">
+            {c.substats.map((s, j) => (
+              <span key={j} className="border border-borda px-1 text-[8px] text-ciano">
+                {s.rotulo}+{s.valor}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+  // campeão (ícone quadrado)
+  return (
+    <div className={`carta-entra ${grande ? "w-40 max-w-full" : ""}`} style={estilo}>
+      <div className="relative overflow-hidden border-2" style={{ borderColor: c.cor }}>
+        {c.icone ? <img src={c.icone} alt="" className="block aspect-square w-full" /> : <div className="aspect-square w-full bg-fundo" />}
+        <span className="absolute left-1 top-1 font-pixel text-[8px]" style={{ color: c.cor }}>
+          {"★".repeat(c.raridade)}
+        </span>
+        {c.badge && <span className="absolute right-1 top-1 bg-painel px-1 text-[7px] text-amber-300">{c.badge}</span>}
+      </div>
+      <p className="mt-1 truncate text-center text-[11px] text-texto">{c.nome}</p>
+      {c.subtitulo && <p className="truncate text-center text-[8px] text-suave">{c.subtitulo}</p>}
     </div>
   );
 }

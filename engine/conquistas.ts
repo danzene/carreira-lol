@@ -31,7 +31,7 @@ export const CONQUISTAS: Conquista[] = [
   { id: "mundial", nome: "Campeão Mundial", emoji: "🌍", desc: "Vença o Worlds.", checar: (c) => (c.titulosInternacionais ?? []).includes("WORLDS") },
   { id: "rico", nome: "Patrimônio", emoji: "💰", desc: "Acumule $10.000.", checar: (c) => c.dinheiro >= 10000 },
   { id: "veterano", nome: "Veterano", emoji: "🎖️", desc: "Jogue 50 partidas.", checar: (c) => hist(c).length >= 50 },
-  { id: "mitica", nome: "Carta Mítica", emoji: "💠", desc: "Tire uma lenda Mítica no Scout Gacha.", checar: (c) => (c.lendas ?? []).some((l) => modeloLenda(l.id)?.raridade === 6) },
+  { id: "mitica", nome: "Carta Mítica", emoji: "💠", desc: "Tire uma lenda Mítica no Carreira Booster.", checar: (c) => (c.lendas ?? []).some((l) => modeloLenda(l.id)?.raridade === 6) },
 ];
 
 // Desbloqueia as conquistas recém-atingidas; devolve a carreira atualizada e as novas.

@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import PartidaCampeonato from "@/components/PartidaCampeonato";
 import TabelaLiga from "@/components/TabelaLiga";
-import { LOOP } from "@/data/loop";
 import { ORDEM_TIER, VOCE } from "@/data/liga";
 import { regiaoDoPais } from "@/data/regioes";
 import { timeDe } from "@/data/times";
@@ -74,7 +74,6 @@ export default function LigaPage() {
   }
 
   const liga = career.liga;
-  const semEnergia = career.player.energia < LOOP.custoSoloq;
   const adversario = proximoConfrontoJogador(liga);
 
   return (
@@ -121,18 +120,7 @@ export default function LigaPage() {
                   <p className="mt-2 text-sm text-texto">
                     Próxima partida oficial: <span className="text-rosa">{nomeTime(adversario)}</span>
                   </p>
-                  {semEnergia ? (
-                    <p className="mt-3 border-2 border-borda px-3 py-2 text-center text-[11px] text-suave">
-                      Sem energia. Avance/descanse a semana no dashboard.
-                    </p>
-                  ) : (
-                    <Link
-                      href="/draft?oficial=1"
-                      className="mt-3 block border-2 border-rosa bg-rosa/10 px-4 py-2.5 text-center font-pixel text-[10px] text-rosa transition hover:bg-rosa hover:text-fundo"
-                    >
-                      ⚔️ JOGAR PARTIDA OFICIAL
-                    </Link>
-                  )}
+                  <PartidaCampeonato career={career} href="/draft?oficial=1" tema="liga" />
                 </>
               ) : (
                 <p className="mt-2 text-sm text-suave">Aguardando o calendário…</p>

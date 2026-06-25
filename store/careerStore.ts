@@ -32,7 +32,8 @@ import { gerarEvento, premioEvento } from "@/engine/eventos";
 import { verificarConquistas } from "@/engine/conquistas";
 import { sortearAcontecimento } from "@/engine/acontecimentos";
 import { avancarTorneio, criarTorneio, premioTorneio } from "@/engine/internacional";
-import { equipar, puxar, type ResultadoPuxada } from "@/engine/gacha";
+import { equipar, ganharCampeao as ganharCampeaoEngine, puxar, type ResultadoCampeao, type ResultadoPuxada } from "@/engine/gacha";
+import { cargasPartida, consumirCarga, registrarUso, sincronizarEnergia, usosRestantes } from "@/engine/tempo";
 import type { AtributoKey, CareerState, Equip, MatchResult, OpcoesCarreira, Player, TraitId } from "@/engine/types";
 import {
   apagarSlot,
@@ -76,6 +77,7 @@ interface CareerStore {
   sessaoMental: () => boolean;
   upgradeEquip: (tipo: Equip["tipo"]) => boolean;
   puxarGacha: (qtd: number) => ResultadoPuxada[] | null;
+  ganharCampeao: (championId: string) => ResultadoCampeao | null;
   equiparLenda: (id: string) => void;
   assinarContrato: (timeId: string) => void;
   recusarOferta: (timeId: string) => void;
@@ -119,8 +121,9 @@ export const useCareer = create<CareerStore>((set, get) => ({
   },
 
   aplicarPartida: (resultado) => {
-    const { career, slotId } = get();
-    if (!career) return;
+    const { career: c0, slotId } = get();
+    if (!c0) return;
+    const career = sincronizarEnergia(c0, Date.now());
     let novo = gastarEnergiaSoloq(aplicarResultado(career, resultado));
     if (resultado.vitoria) novo = { ...novo, dinheiro: novo.dinheiro + bonusVitoria(career) };
     novo = verificarConquistas(novo).career;
@@ -129,8 +132,9 @@ export const useCareer = create<CareerStore>((set, get) => ({
   },
 
   treinar: (atributo, especial = false) => {
-    const { career, slotId } = get();
-    if (!career) return false;
+    const { career: c0, slotId } = get();
+    if (!c0) return false;
+    const career = sincronizarEnergia(c0, Date.now());
     const novo = treinarEngine(career, atributo, especial);
     if (!novo) return false;
     set({ career: novo });
@@ -139,8 +143,9 @@ export const useCareer = create<CareerStore>((set, get) => ({
   },
 
   streaming: () => {
-    const { career, slotId } = get();
-    if (!career) return false;
+    const { career: c0, slotId } = get();
+    if (!c0) return false;
+    const career = sincronizarEnergia(c0, Date.now());
     const novo = streamingEngine(career);
     if (!novo) return false;
     set({ career: novo });
@@ -149,8 +154,9 @@ export const useCareer = create<CareerStore>((set, get) => ({
   },
 
   alteracaoMental: (traco) => {
-    const { career, slotId } = get();
-    if (!career) return false;
+    const { career: c0, slotId } = get();
+    if (!c0) return false;
+    const career = sincronizarEnergia(c0, Date.now());
     const novo = alteracaoMentalEngine(career, traco);
     if (!novo) return false;
     set({ career: novo });
@@ -159,8 +165,12 @@ export const useCareer = create<CareerStore>((set, get) => ({
   },
 
   avancarSemana: (modo = "normal") => {
-    const { career: antes, slotId } = get();
-    if (!antes) return;
+    const { career: c0, slotId } = get();
+    if (!c0) return;
+    const agora = Date.now();
+    const antes = sincronizarEnergia(c0, agora);
+    const lista = modo === "descanso" ? antes.descansosEm : antes.avancosEm;
+    if (usosRestantes(lista, agora) <= 0) return; // sem usos na janela (a UI já desabilita)
     const seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
     let novo = processarSemanaEconomia(avancarSemanaEngine(antes, modo));
 
@@ -176,6 +186,11 @@ export const useCareer = create<CareerStore>((set, get) => ({
 
     const conq = verificarConquistas(novo);
     novo = conq.career;
+
+    novo =
+      modo === "descanso"
+        ? { ...novo, descansosEm: registrarUso(antes.descansosEm, agora) }
+        : { ...novo, avancosEm: registrarUso(antes.avancosEm, agora) };
 
     const resumo: ResumoSemana = {
       semana: novo.semanaAtual,
@@ -245,6 +260,17 @@ export const useCareer = create<CareerStore>((set, get) => ({
     return r.resultados;
   },
 
+  ganharCampeao: (championId) => {
+    const { career, slotId } = get();
+    if (!career) return null;
+    const r = ganharCampeaoEngine(career, championId);
+    if (!r) return null;
+    const novo = verificarConquistas(r.career).career;
+    set({ career: novo });
+    if (slotId) salvarSlot(slotId, novo);
+    return r.resultado;
+  },
+
   equiparLenda: (id) => {
     const { career, slotId } = get();
     if (!career) return;
@@ -282,22 +308,26 @@ export const useCareer = create<CareerStore>((set, get) => ({
   },
 
   aplicarPartidaOficial: (resultado) => {
-    const { career, slotId } = get();
-    if (!career) return;
+    const { career: c0, slotId } = get();
+    if (!c0) return;
+    const agora = Date.now();
+    if (cargasPartida(c0, agora) < 1) return; // sem carga de partida (a UI já desabilita)
     const semRank = { ...resultado, lpDelta: 0 }; // partida oficial não mexe no elo de soloq
-    let novo = gastarEnergiaSoloq(aplicarResultado(career, semRank));
-    if (resultado.vitoria) novo = { ...novo, dinheiro: novo.dinheiro + bonusVitoria(career) };
+    let novo = aplicarResultado(c0, semRank); // partida de campeonato NÃO gasta energia
+    if (resultado.vitoria) novo = { ...novo, dinheiro: novo.dinheiro + bonusVitoria(c0) };
     const seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
     novo = registrarResultadoJogador(novo, resultado.vitoria, seed);
+    novo = consumirCarga(novo, agora);
     novo = verificarConquistas(novo).career;
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
   },
 
   aplicarPartidaEvento: (resultado) => {
-    const { career, slotId } = get();
-    if (!career || !career.eventoAtual) return;
-    const premio = premioEvento(career.eventoAtual, resultado.vitoria);
+    const { career: c0, slotId } = get();
+    if (!c0 || !c0.eventoAtual) return;
+    const career = sincronizarEnergia(c0, Date.now());
+    const premio = premioEvento(career.eventoAtual!, resultado.vitoria);
     const semRank = { ...resultado, lpDelta: 0 }; // evento não mexe no elo
     let novo = gastarEnergiaSoloq(aplicarResultado(career, semRank));
     novo = {
@@ -343,13 +373,16 @@ export const useCareer = create<CareerStore>((set, get) => ({
   },
 
   aplicarPartidaTorneio: (resultado) => {
-    const { career, slotId } = get();
-    if (!career || !career.torneioAtual) return;
+    const { career: c0, slotId } = get();
+    if (!c0 || !c0.torneioAtual) return;
+    const agora = Date.now();
+    if (cargasPartida(c0, agora) < 1) return; // sem carga de partida (a UI já desabilita)
     const semRank = { ...resultado, lpDelta: 0 }; // torneio não mexe no elo
-    let novo = gastarEnergiaSoloq(aplicarResultado(career, semRank));
-    if (resultado.vitoria) novo = { ...novo, dinheiro: novo.dinheiro + bonusVitoria(career) };
+    let novo = aplicarResultado(c0, semRank); // campeonato NÃO gasta energia
+    if (resultado.vitoria) novo = { ...novo, dinheiro: novo.dinheiro + bonusVitoria(c0) };
     const seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
     novo = avancarTorneio(novo, resultado.vitoria, seed);
+    novo = consumirCarga(novo, agora);
     novo = verificarConquistas(novo).career;
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);

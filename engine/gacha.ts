@@ -99,6 +99,38 @@ export function puxar(career: CareerState, qtd: number, seed: number): { career:
   return { career: { ...career, scoutPontos: (career.scoutPontos ?? 0) - custo, lendas, pity }, resultados };
 }
 
+export interface ResultadoCampeao {
+  championId: string;
+  novo: boolean;
+  pontos: number;
+}
+
+// Carta de Campeão: entra no pool (ou sobe a maestria). O campeão é escolhido pela UI.
+export function ganharCampeao(career: CareerState, championId: string): { career: CareerState; resultado: ResultadoCampeao } | null {
+  if ((career.scoutPontos ?? 0) < GACHA.custoCampeao) return null;
+  const pool = career.player.pool;
+  const existe = pool.find((p) => p.championId === championId);
+  let novo = false;
+  let pontos: number;
+  let novoPool;
+  if (existe) {
+    pontos = Math.min(100, Math.round((existe.pontos + GACHA.maestriaDupCampeao) * 10) / 10);
+    novoPool = pool.map((p) => (p.championId === championId ? { ...p, pontos } : p));
+  } else {
+    novo = true;
+    pontos = GACHA.maestriaNovoCampeao;
+    novoPool = [...pool, { championId, pontos }];
+  }
+  return {
+    career: {
+      ...career,
+      scoutPontos: (career.scoutPontos ?? 0) - GACHA.custoCampeao,
+      player: { ...career.player, pool: novoPool },
+    },
+    resultado: { championId, novo, pontos },
+  };
+}
+
 // Liga/desliga uma lenda (toggle). Respeita o limite de slots e só equipa o que possui.
 export function equipar(career: CareerState, id: string): CareerState {
   const eq = career.lendasEquipadas ?? [];

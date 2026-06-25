@@ -67,7 +67,7 @@ export default function ResultadoPartida({
       </div>
 
       <div className="flex items-center justify-center gap-2 border-2 border-rosa/40 bg-rosa/5 py-2 text-sm text-rosa">
-        🎰 Scout <span className="font-pixel">+{scoutGanho} ⭐</span>
+        🪙 CoinPoints <span className="font-pixel">+{scoutGanho}</span>
       </div>
 
       {xpEntries.length > 0 && (

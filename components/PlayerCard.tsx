@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { ATRIBUTOS, NACIONALIDADES, ROTAS, TRACOS } from "@/data/config";
-import { nomeDificuldade } from "@/data/opcoes";
 import { timeDe } from "@/data/times";
+import { energiaAgora } from "@/engine/tempo";
 import IconeRota from "./IconeRota";
+import ProgressaoElo from "./ProgressaoElo";
 import { buscarCampeoes, type Campeao } from "@/lib/ddragon";
 import type { CareerState, TraitId } from "@/engine/types";
 import BarraAtributo from "./BarraAtributo";
@@ -45,11 +46,13 @@ export default function PlayerCard({ career }: { career: CareerState }) {
             <span className="mt-0.5 text-[11px] text-ciano">
               {career.contratoAtual ? (timeDe(career.contratoAtual.timeId)?.nome ?? career.contratoAtual.timeId) : "Sem time (agente livre)"}
             </span>
-            <span className="mt-0.5 text-[10px] text-suave">
-              {nomeDificuldade(career.opcoes)}
-              {career.opcoes?.esconderAtributos ? " · 🙈" : ""}
-              {career.opcoes?.fearless ? " · ⚔️ Fearless" : ""}
-            </span>
+            {(career.opcoes?.esconderAtributos || career.opcoes?.fearless) && (
+              <span className="mt-0.5 text-[10px] text-suave">
+                {career.opcoes?.esconderAtributos ? "🙈 Imersão" : ""}
+                {career.opcoes?.esconderAtributos && career.opcoes?.fearless ? " · " : ""}
+                {career.opcoes?.fearless ? "⚔️ Fearless" : ""}
+              </span>
+            )}
           </div>
           <div className="flex flex-col items-end gap-1">
             <IconeRota rota={player.rota} className="h-8 w-8 text-ciano" />
@@ -57,18 +60,20 @@ export default function PlayerCard({ career }: { career: CareerState }) {
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <Stat rotulo="Rank" valor={player.rankSoloq.elo} sub={`${player.rankSoloq.lp} PDL`} />
+        <div className="mt-4 grid grid-cols-3 gap-2">
           <Stat rotulo="Reputação" valor={`${player.reputacao}`} />
           <Stat rotulo="Dinheiro" valor={`$${career.dinheiro}`} />
           <Stat rotulo="Tier" valor={career.tierAtual} sub={`Temp. ${career.temporada} · Sem. ${career.semanaAtual}`} />
         </div>
 
         <div className="mt-3 grid grid-cols-2 gap-3">
-          <Medidor rotulo="Energia" valor={player.energia} />
+          <Medidor rotulo="Energia" valor={energiaAgora(career, Date.now())} />
           <Medidor rotulo="Moral" valor={player.moral} />
         </div>
       </div>
+
+      {/* progressão de elo */}
+      <ProgressaoElo rank={player.rankSoloq} />
 
       {/* traços */}
       <div className="border-2 border-borda bg-painel p-5">

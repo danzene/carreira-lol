@@ -25,6 +25,61 @@ canvas {
   image-rendering: pixelated;
 }
 
+/* arte em alta resolução (cartas/ícones) — downscale suave, sem serrilhado */
+.img-hd {
+  image-rendering: auto;
+}
+
+/* Holográfico — varredura arco-íris (retícula holo) sobre cartas raras */
+.holo-sheen {
+  position: absolute;
+  inset: 0;
+  background-image: url("/carreira/holo.png");
+  background-size: cover;
+  background-position: center;
+  mix-blend-mode: color-dodge;
+  opacity: 0.4;
+  pointer-events: none;
+  animation: holoVarre 5s linear infinite;
+}
+.holo-sheen.holo-forte {
+  opacity: 0.55;
+  mix-blend-mode: screen;
+}
+@keyframes holoVarre {
+  0% {
+    background-position: 0% 0%;
+    filter: hue-rotate(0deg) saturate(1.4);
+  }
+  50% {
+    background-position: 100% 100%;
+    filter: hue-rotate(180deg) saturate(1.6);
+  }
+  100% {
+    background-position: 0% 0%;
+    filter: hue-rotate(360deg) saturate(1.4);
+  }
+}
+
+/* Entrada das cartas reveladas no gacha */
+@keyframes cartaEntra {
+  0% {
+    transform: translateY(14px) scale(0.82);
+    opacity: 0;
+  }
+  60% {
+    transform: translateY(0) scale(1.04);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+.carta-entra {
+  animation: cartaEntra 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
 /* Carta Mítica — brilho animado (6★ do gacha) */
 @keyframes brilhoMitico {
   0%,

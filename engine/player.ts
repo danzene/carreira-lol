@@ -101,6 +101,6 @@ export function criarCareerState(player: Player, opcoes: OpcoesCarreira = OPCOES
     inbox: [],
     patchVigente: 1,
     opcoes,
-    scoutPontos: 900, // TEMP (teste): começa com 900 pra puxar 10× na hora — voltar pra ~300 depois
+    scoutPontos: 0, // começa sem CoinPoints — ganha jogando/avançando a semana
   };
 }

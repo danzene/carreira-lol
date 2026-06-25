@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { GACHA } from "@/data/gacha";
-import { efeitoLendas, equipar, puxar } from "./gacha";
+import { efeitoLendas, equipar, ganharCampeao, puxar } from "./gacha";
 import { atributosIniciais, criarCareerState, criarPlayer } from "./player";
 import type { CareerState } from "./types";
 
@@ -44,6 +44,32 @@ describe("scout gacha", () => {
     const ef = efeitoLendas(c);
     expect(ef.atributos.mecanica ?? 0).toBeGreaterThanOrEqual(5); // passivo +5 mecânica
     expect(ef.atributos.macro ?? 0).toBe(3); // substat
+  });
+
+  it("ganharCampeao novo entra no pool com a maestria de estreia", () => {
+    const c = carreira(100);
+    const r = ganharCampeao(c, "Zed");
+    expect(r).not.toBeNull();
+    if (!r) return;
+    expect(r.career.scoutPontos).toBe(100 - GACHA.custoCampeao);
+    expect(r.resultado.novo).toBe(true);
+    expect(r.career.player.pool.find((p) => p.championId === "Zed")?.pontos).toBe(GACHA.maestriaNovoCampeao);
+  });
+
+  it("ganharCampeao duplicado sobe a maestria (cap 100)", () => {
+    const c = carreira(100);
+    const antes = c.player.pool.find((p) => p.championId === "A")?.pontos ?? 0;
+    const r = ganharCampeao(c, "A");
+    expect(r).not.toBeNull();
+    if (!r) return;
+    expect(r.resultado.novo).toBe(false);
+    expect(r.career.player.pool.find((p) => p.championId === "A")?.pontos).toBe(
+      Math.min(100, antes + GACHA.maestriaDupCampeao),
+    );
+  });
+
+  it("ganharCampeao sem PS suficiente retorna null", () => {
+    expect(ganharCampeao(carreira(10), "Zed")).toBeNull();
   });
 
   it("sinergia: 2 do mesmo estilo dão bônus extra", () => {

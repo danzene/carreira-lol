@@ -2,7 +2,7 @@
 // aleatórios (caçar o roll perfeito). Duplicata sobe de nível. PURO (só dados).
 
 export const GACHA = {
-  custo1: 100, // Pontos de Scout por puxada
+  custo1: 100, // CoinPoints por puxada
   custo10: 900, // 10 puxadas (desconto)
   porSemana: 40, // PS ao avançar a semana
   porVitoria: 10, // PS por vitória
@@ -10,6 +10,9 @@ export const GACHA = {
   pity5: 100, // 5★ (ou melhor) garantido nesta puxada
   nivelMax: 5, // duplicatas sobem até aqui
   slots: 3, // lendas equipadas ao mesmo tempo
+  custoCampeao: 60, // PS por carta de Campeão
+  maestriaNovoCampeao: 25, // maestria ao tirar um campeão novo
+  maestriaDupCampeao: 15, // maestria extra na duplicata
 } as const;
 
 export type Raridade = 3 | 4 | 5 | 6;
@@ -69,7 +72,8 @@ export function defSub(chave: string): DefSubstat | undefined {
   return SUBSTATS.find((s) => s.chave === chave);
 }
 
-// Tema do desenho pixel (RetratoLenda) e estilo (sinergias).
+// Tema (flavor da lenda) e estilo (define as sinergias). A arte vem das imagens em
+// /public/carreira/cards (ver imagemCarta).
 export type Tema =
   | "rei"
   | "mente"
@@ -149,3 +153,14 @@ export const SINERGIA: Record<Estilo, { chave: string; valor: number }> = {
 export function modeloLenda(id: string): ModeloLenda | undefined {
   return LENDAS.find((l) => l.id === id);
 }
+
+// Arte da carta (832×1248, moldura já embutida por raridade) em /public/carreira/cards/<id>.jpg
+export function imagemCarta(id: string): string {
+  return `/carreira/cards/${id}.jpg`;
+}
+
+// Overlay holográfico (retícula arco-íris) aplicado nas cartas raras.
+export const HOLO_RETICULA = "/carreira/holo.png";
+
+// A partir de qual raridade a carta ganha brilho holográfico.
+export const RARIDADE_HOLO = 5;

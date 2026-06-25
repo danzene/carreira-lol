@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { NACIONALIDADES, ROTAS } from "@/data/config";
-import { DIFICULDADES, OPCOES_PADRAO } from "@/data/opcoes";
+import { OPCOES_PADRAO } from "@/data/opcoes";
 import {
   atributosIniciais,
   criarPlayer,
@@ -11,7 +11,7 @@ import {
   validarCriacao,
   type FormularioCriacao,
 } from "@/engine/player";
-import type { Attributes, Dificuldade, OpcoesCarreira, Role, TraitId } from "@/engine/types";
+import type { Attributes, OpcoesCarreira, Role, TraitId } from "@/engine/types";
 import { useCareer } from "@/store/careerStore";
 import EditorAtributos from "./EditorAtributos";
 import IconeRota from "./IconeRota";
@@ -124,25 +124,6 @@ export default function CriacaoWizard() {
 
       {passo === 4 && (
         <div className="flex flex-col gap-5">
-          <div className="flex flex-col gap-2">
-            <span className="text-sm text-suave">Dificuldade</span>
-            <div className="grid grid-cols-3 gap-2">
-              {DIFICULDADES.map((d) => (
-                <button
-                  key={d.id}
-                  type="button"
-                  onClick={() => setOpcoes((o) => ({ ...o, dificuldade: d.id as Dificuldade }))}
-                  className={`flex flex-col gap-1 border-2 p-3 text-left transition ${
-                    opcoes.dificuldade === d.id ? "border-rosa bg-rosa/10 text-texto" : "border-borda text-suave hover:border-suave"
-                  }`}
-                >
-                  <span className="font-pixel text-[10px]">{d.nome}</span>
-                  <span className="text-[10px] leading-tight text-suave">{d.desc}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
           <Alternar
             ativo={opcoes.esconderAtributos}
             onToggle={() => setOpcoes((o) => ({ ...o, esconderAtributos: !o.esconderAtributos }))}

@@ -91,8 +91,7 @@ export function avancarSemana(career: CareerState, modo: "normal" | "descanso" =
   const drift = (formaRecente(career) - 5) * LOOP.moralPorForma;
   const bonus = modo === "descanso" ? LOOP.moralDescanso : 0;
   const moral = clamp(Math.round((career.player.moral + drift + bonus) * 10) / 10, 0, 100);
-  const ganhoEnergia = LOOP.recuperaEnergiaSemana * mod(career.opcoes).energia;
-  const energia = modo === "descanso" ? 100 : clamp(career.player.energia + ganhoEnergia, 0, 100);
+  const energia = modo === "descanso" ? 100 : clamp(career.player.energia + LOOP.ganhoAvancoEnergia, 0, 100);
 
   let semanaAtual = career.semanaAtual + 1;
   let temporada = career.temporada;

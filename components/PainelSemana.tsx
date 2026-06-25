@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { ATRIBUTOS, TRACOS } from "@/data/config";
 import { LOOP } from "@/data/loop";
+import { energiaAgora, proximoUsoEm, usosRestantes } from "@/engine/tempo";
 import type { AtributoKey, CareerState, TraitId } from "@/engine/types";
 import { useCareer } from "@/store/careerStore";
 import AnimacaoAcao, { type TipoAcao } from "./AnimacaoAcao";
@@ -21,7 +22,18 @@ export default function PainelSemana({ career }: { career: CareerState }) {
   const [aviso, setAviso] = useState<string | null>(null);
   const [anim, setAnim] = useState<Anim | null>(null);
 
-  const energia = career.player.energia;
+  const [agora, setAgora] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setAgora(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const energia = energiaAgora(career, agora);
+  const tempoCheia = energia >= 100 ? 0 : Math.ceil((100 - energia) * (LOOP.energiaCheiaMs / 100));
+  const usosAvancar = usosRestantes(career.avancosEm, agora);
+  const usosDescansar = usosRestantes(career.descansosEm, agora);
+  const liberaAvancar = proximoUsoEm(career.avancosEm, agora);
+  const liberaDescansar = proximoUsoEm(career.descansosEm, agora);
   const podeSoloq = energia >= LOOP.custoSoloq;
 
   function treino(k: AtributoKey, especial: boolean) {
@@ -69,8 +81,11 @@ export default function PainelSemana({ career }: { career: CareerState }) {
           <span className="text-texto">{Math.round(energia)}/100</span>
         </div>
         <div className="h-3 border-2 border-borda bg-fundo">
-          <div className="h-full bg-gradient-to-r from-rosa to-ciano" style={{ width: `${energia}%` }} />
+          <div className="h-full bg-gradient-to-r from-rosa to-ciano transition-all" style={{ width: `${energia}%` }} />
         </div>
+        <p className="mt-1 text-right text-[9px] text-suave">
+          {tempoCheia > 0 ? `🕒 cheia em ${fmt(tempoCheia)}` : "⚡ energia cheia"}
+        </p>
       </div>
 
       <div className="grid grid-cols-3 gap-2">
@@ -86,10 +101,10 @@ export default function PainelSemana({ career }: { career: CareerState }) {
           ⚔️ JOGAR
           <span className="text-[7px] font-normal opacity-80">−{LOOP.custoSoloq}</span>
         </Link>
-        <Atividade rotulo="🎯 TREINO" sub={`−${LOOP.custoTreino}`} disabled={energia < LOOP.custoTreino} onClick={() => setPainel((p) => (p === "focado" ? null : "focado"))} />
-        <Atividade rotulo="🔥 ESPECIAL" sub={`−${LOOP.custoEspecial}`} disabled={energia < LOOP.custoEspecial} onClick={() => setPainel((p) => (p === "especial" ? null : "especial"))} />
-        <Atividade rotulo="📺 STREAM" sub={`−${LOOP.custoStream} +$`} disabled={energia < LOOP.custoStream} onClick={live} />
-        <Atividade rotulo="🧠 MENTAL" sub={`−${LOOP.custoAlteracao}`} disabled={energia < LOOP.custoAlteracao} onClick={() => setPainel((p) => (p === "mental" ? null : "mental"))} />
+        <Atividade rotulo={<IconeAcao acao="treino" label="TREINO" />} sub={`−${LOOP.custoTreino}`} disabled={energia < LOOP.custoTreino} onClick={() => setPainel((p) => (p === "focado" ? null : "focado"))} />
+        <Atividade rotulo={<IconeAcao acao="especial" label="ESPECIAL" />} sub={`−${LOOP.custoEspecial}`} disabled={energia < LOOP.custoEspecial} onClick={() => setPainel((p) => (p === "especial" ? null : "especial"))} />
+        <Atividade rotulo={<IconeAcao acao="stream" label="STREAM" />} sub={`−${LOOP.custoStream} +$`} disabled={energia < LOOP.custoStream} onClick={live} />
+        <Atividade rotulo={<IconeAcao acao="mental" label="MENTAL" />} sub={`−${LOOP.custoAlteracao}`} disabled={energia < LOOP.custoAlteracao} onClick={() => setPainel((p) => (p === "mental" ? null : "mental"))} />
       </div>
 
       {(painel === "focado" || painel === "especial") && (
@@ -138,34 +153,63 @@ export default function PainelSemana({ career }: { career: CareerState }) {
 
       {aviso && <p className="mt-2 text-xs text-amber-400">{aviso}</p>}
 
-      <p className="mt-3 text-center text-[10px] text-borda">A energia só recupera quando o tempo passa.</p>
+      <p className="mt-3 text-center text-[10px] text-borda">
+        A energia regenera sozinha (2h pra encher). Avançar/descansar a semana têm limite por tempo.
+      </p>
       <div className="mt-1 grid grid-cols-2 gap-2">
         <button
           type="button"
+          disabled={usosAvancar <= 0}
           onClick={() => {
             avancarSemana("normal");
             setAviso(null);
             setPainel(null);
           }}
-          className="border-2 border-ciano bg-ciano/10 py-3 font-pixel text-[10px] text-ciano transition hover:bg-ciano hover:text-fundo"
+          className="flex flex-col items-center gap-0.5 border-2 border-ciano bg-ciano/10 py-3 font-pixel text-[10px] text-ciano transition hover:bg-ciano hover:text-fundo disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-ciano/10 disabled:hover:text-ciano"
         >
           ⏭️ AVANÇAR SEMANA
+          <span className="text-[7px] font-normal opacity-80">
+            {usosAvancar > 0 ? `${usosAvancar}/${LOOP.maxPassesJanela} · +${LOOP.ganhoAvancoEnergia}⚡` : `🔒 ${fmt(liberaAvancar)}`}
+          </span>
         </button>
         <button
           type="button"
+          disabled={usosDescansar <= 0}
           onClick={() => {
             avancarSemana("descanso");
             setAviso(null);
             setPainel(null);
           }}
-          className="border-2 border-borda bg-fundo/40 py-3 font-pixel text-[10px] text-suave transition hover:border-suave"
+          className="flex flex-col items-center gap-0.5 border-2 border-borda bg-fundo/40 py-3 font-pixel text-[10px] text-suave transition hover:border-suave disabled:cursor-not-allowed disabled:opacity-40"
         >
-          😴 DESCANSAR A SEMANA
+          😴 DESCANSAR
+          <span className="text-[7px] font-normal opacity-80">
+            {usosDescansar > 0 ? `${usosDescansar}/${LOOP.maxPassesJanela} · energia cheia` : `🔒 ${fmt(liberaDescansar)}`}
+          </span>
         </button>
       </div>
 
       {anim && <AnimacaoAcao tipo={anim.tipo} titulo={anim.titulo} legenda={anim.legenda} onFechar={() => setAnim(null)} />}
     </div>
+  );
+}
+
+function fmt(ms: number): string {
+  const s = Math.max(0, Math.ceil(ms / 1000));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const seg = s % 60;
+  if (h > 0) return `${h}h${m.toString().padStart(2, "0")}`;
+  if (m > 0) return `${m}m${seg.toString().padStart(2, "0")}s`;
+  return `${seg}s`;
+}
+
+function IconeAcao({ acao, label }: { acao: TipoAcao; label: string }) {
+  return (
+    <span className="flex flex-col items-center gap-1">
+      <img src={`/carreira/icones/${acao}.png`} alt="" className="img-hd h-9 w-9" />
+      <span>{label}</span>
+    </span>
   );
 }
 

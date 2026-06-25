@@ -114,10 +114,8 @@ export interface MatchResult {
 }
 
 // ----- Opções de nova carreira (Fase 11) -----
-export type Dificuldade = "FACIL" | "NORMAL" | "DIFICIL";
-
+// (sem dificuldade — o jogo é linear; ver data/opcoes.ts)
 export interface OpcoesCarreira {
-  dificuldade: Dificuldade;
   esconderAtributos: boolean; // modo imersão: esconde os números dos atributos
   fearless: boolean; // não dá pra repetir campeões jogados recentemente
 }
@@ -205,12 +203,18 @@ export interface CareerState {
   historicoPartidas: MatchResult[];
   inbox: Offer[];
   patchVigente: number; // win rates mudam a cada split
-  opcoes?: OpcoesCarreira; // dificuldade + modos (Fase 11); ausente em saves antigos = Normal
+  opcoes?: OpcoesCarreira; // modos (imersão/fearless); ausente em saves antigos
   eventoAtual?: EventoAtivo; // partida-evento disponível (Fase 11 p2)
   conquistas?: string[]; // ids de conquistas desbloqueadas (Fase 12)
   torneioAtual?: TorneioInternacional; // MSI/Worlds em disputa (circuito mundial p2)
   titulosInternacionais?: string[]; // "MSI" | "WORLDS" conquistados
-  scoutPontos?: number; // moeda do gacha (Pontos de Scout)
+  // ⏱️ progressão por tempo real (ausente em saves antigos)
+  energiaEm?: number; // epoch ms da última atualização da energia (regen passivo)
+  avancosEm?: number[]; // timestamps dos avanços de semana na janela atual
+  descansosEm?: number[]; // timestamps dos descansos na janela atual
+  cargasPartida?: number; // cargas de partida de campeonato acumuladas (regen por tempo)
+  cargasEm?: number; // epoch ms da última atualização das cargas de partida
+  scoutPontos?: number; // moeda do gacha (CoinPoints); campo interno mantém o nome p/ não quebrar saves
   lendas?: LendaPossuida[]; // cartas de lenda possuídas
   lendasEquipadas?: string[]; // ids equipados (até GACHA.slots)
   pity?: number; // puxadas desde o último 5★

@@ -52,10 +52,15 @@ export default function TelaLogin() {
         className="pointer-events-none absolute -top-40 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-destaque/20 blur-3xl"
       />
 
-      <div className="relative flex flex-col items-center gap-2 text-center">
-        <span className="text-xs font-semibold uppercase tracking-[0.3em] text-destaque2">Modo Carreira · Esports</span>
-        <h1 className="bg-gradient-to-r from-destaque via-fuchsia-400 to-destaque2 bg-clip-text text-5xl font-black tracking-tight text-transparent">
-          Carreira LoL
+      <div className="relative flex flex-col items-center gap-4 text-center">
+        <span className="font-pixel text-[10px] tracking-[0.3em] text-ciano">MODO CARREIRA · ESPORTS</span>
+        <h1
+          className="font-pixel text-3xl leading-[1.6] text-rosa sm:text-4xl sm:leading-[1.6]"
+          style={{ textShadow: "3px 3px 0 #0b0617, 6px 6px 0 rgba(25,230,224,0.35)" }}
+        >
+          CARREIRA
+          <br />
+          <span className="text-ciano">LoL</span>
         </h1>
       </div>
 

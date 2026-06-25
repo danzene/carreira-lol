@@ -219,6 +219,5 @@ export interface CareerState {
   lendasEquipadas?: string[]; // ids equipados (até GACHA.slots)
   pity?: number; // puxadas desde o último 5★
   liga?: LigaState; // temporada/campeonato do time atual (Fase 8)
-  energiaEm?: number; // timestamp (ms) da regen de energia em tempo real (infra)
   coachAtivo?: boolean; // assinatura de coach (XP passivo semanal, custa upkeep)
 }

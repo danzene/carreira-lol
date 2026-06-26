@@ -35,6 +35,7 @@ export interface JogarInfo {
 
 export default function DraftBoard({
   comfort,
+  maestria = {},
   reputacao,
   rota,
   patch = 1,
@@ -42,6 +43,7 @@ export default function DraftBoard({
   onJogar,
 }: {
   comfort: string[];
+  maestria?: Record<string, number>;
   reputacao: number;
   rota: Role;
   patch?: number;
@@ -93,6 +95,11 @@ export default function DraftBoard({
   }, [estado, banco, fim, seuTurno, passo, comfort]);
 
   const fc = useMemo(() => (fim ? forcaComp(estado, banco) : null), [fim, estado, banco]);
+  const seuChamp = useMemo(() => {
+    if (!fim) return null;
+    const r = atribuirRoles(estado.picks.azul, defMap).find((s) => s.role === rota)?.id;
+    return r ?? estado.picks.azul[0] ?? null;
+  }, [fim, estado, defMap, rota]);
 
   const disponiveis = useMemo(
     () =>
@@ -179,6 +186,13 @@ export default function DraftBoard({
                 ? "O inimigo saiu melhor no draft. 🟥"
                 : "Draft equilibrado."}
           </p>
+          {seuChamp && (
+            <p className="mt-2 text-center text-[10px] text-suave">
+              Você joga de <span className="text-texto">{campMap[seuChamp]?.nome ?? seuChamp}</span> · Maestria{" "}
+              <span className="text-ciano">{Math.round(maestria[seuChamp] ?? 0)}</span>
+              {(maestria[seuChamp] ?? 0) >= 60 ? " 🔥 domínio alto, força extra" : (maestria[seuChamp] ?? 0) === 0 ? " (campeão novo)" : ""}
+            </p>
+          )}
           <button
             type="button"
             onClick={jogar}
@@ -221,6 +235,9 @@ export default function DraftBoard({
                     <div className="h-10 w-10 bg-borda" />
                   )}
                   <span className="w-full truncate text-center text-[9px] text-suave">{c.nome}</span>
+                  {conf && (maestria[c.id] ?? 0) > 0 && (
+                    <span className="font-pixel text-[7px] text-ciano">M{Math.round(maestria[c.id])}</span>
+                  )}
                 </button>
               );
             })}

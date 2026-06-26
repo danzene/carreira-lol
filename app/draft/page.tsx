@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import DraftBoard, { type JogarInfo } from "@/components/DraftBoard";
+import EfeitosLendas from "@/components/EfeitosLendas";
 import Partida from "@/components/Partida";
 import ResultadoPartida from "@/components/ResultadoPartida";
 import { FEARLESS_JANELA, mod } from "@/data/opcoes";
@@ -135,14 +136,18 @@ function DraftFlow() {
       </header>
 
       {fase === "draft" && (
-        <DraftBoard
-          comfort={career.player.pool.map((p) => p.championId)}
-          reputacao={career.player.reputacao}
-          rota={career.player.rota}
-          patch={career.patchVigente}
-          proibidos={proibidos}
-          onJogar={aoJogar}
-        />
+        <>
+          <EfeitosLendas career={career} />
+          <DraftBoard
+            comfort={career.player.pool.map((p) => p.championId)}
+            maestria={Object.fromEntries(career.player.pool.map((p) => [p.championId, p.pontos]))}
+            reputacao={career.player.reputacao}
+            rota={career.player.rota}
+            patch={career.patchVigente}
+            proibidos={proibidos}
+            onJogar={aoJogar}
+          />
+        </>
       )}
 
       {fase === "partida" && info && (

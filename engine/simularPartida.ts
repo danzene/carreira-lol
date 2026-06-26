@@ -96,7 +96,8 @@ export function simularPartida(player: Player, ctx: ContextoPartida, seed: numbe
   const rng = criarRng(seed);
 
   const fRota = forcaRota(player, ctx.bonusAtributos);
-  const fCampeao = (maestria(player, ctx.championId) + ctx.forcaMetaCampeao) / 2;
+  // maestria pesa mais que o meta: dominar um campeão fora de meta compensa.
+  const fCampeao = SIMULACAO.pesoMaestria * maestria(player, ctx.championId) + SIMULACAO.pesoMeta * ctx.forcaMetaCampeao;
   const fTimeAliado = ctx.forcaTimeAliado ?? SIMULACAO.forcaTimeBase;
   const fTimeInimigo = ctx.forcaTimeInimigo ?? SIMULACAO.forcaTimeBase;
   const base =

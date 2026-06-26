@@ -16,6 +16,10 @@ export const SIMULACAO = {
   pesoCampeao: 0.25,
   pesoTime: 0.2,
   pesoComp: 0.2,
+  // dentro de forcaCampeao: maestria pesa mais que o meta (campeão fora de meta mas
+  // dominado vira viável; o meta dá vantagem, mas não prevalece). Soma deve dar 1.
+  pesoMaestria: 0.62,
+  pesoMeta: 0.38,
   forcaTimeBase: 50, // força genérica do time (depois vem do tier/contrato)
   ruidoMax: 20, // variância (estabilidade baixa)
   ruidoMin: 6, // variância (estabilidade alta)

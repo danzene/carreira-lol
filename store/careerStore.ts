@@ -36,6 +36,7 @@ import { GACHA } from "@/data/gacha";
 import { equipar, ganharCampeao as ganharCampeaoEngine, puxar, type ResultadoCampeao, type ResultadoPuxada } from "@/engine/gacha";
 import { cargasPartida, consumirCarga, inicializarTempo, registrarUso, sincronizarEnergia, usosRestantes } from "@/engine/tempo";
 import { useProfile } from "./profileStore";
+import { useInventory } from "./inventoryStore";
 import type { AtributoKey, CareerState, Equip, MatchResult, OpcoesCarreira, Player, TraitId } from "@/engine/types";
 import {
   apagarSlot,
@@ -94,6 +95,11 @@ interface CareerStore {
   sair: () => void;
 }
 
+// iLvl dos drops conforme o MMR do jogador (elo mais alto → itens melhores).
+function iLvlDe(c: CareerState): number {
+  return Math.max(10, Math.min(60, Math.round((c.player.rankSoloq.mmr - 800) / 50) + 10));
+}
+
 export const useCareer = create<CareerStore>((set, get) => ({
   career: null,
   slotId: null,
@@ -132,6 +138,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
     if (resultado.vitoria) novo = { ...novo, dinheiro: novo.dinheiro + bonusVitoria(career) };
     novo = verificarConquistas(novo).career;
     void useProfile.getState().ajustar(resultado.vitoria ? GACHA.porVitoria : GACHA.porDerrota, "partida");
+    if (resultado.vitoria) void useInventory.getState().dropDePartida(iLvlDe(career));
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
   },
@@ -328,6 +335,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
     const seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
     novo = registrarResultadoJogador(novo, resultado.vitoria, seed);
     void useProfile.getState().ajustar(resultado.vitoria ? GACHA.porVitoria : GACHA.porDerrota, "liga");
+    if (resultado.vitoria) void useInventory.getState().dropDePartida(iLvlDe(c0), 0.05);
     novo = consumirCarga(novo, agora);
     novo = verificarConquistas(novo).career;
     set({ career: novo });
@@ -395,6 +403,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
     const seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
     novo = avancarTorneio(novo, resultado.vitoria, seed);
     void useProfile.getState().ajustar(resultado.vitoria ? GACHA.porVitoria : GACHA.porDerrota, "torneio");
+    if (resultado.vitoria) void useInventory.getState().dropDePartida(iLvlDe(c0), 0.05);
     novo = consumirCarga(novo, agora);
     novo = verificarConquistas(novo).career;
     set({ career: novo });

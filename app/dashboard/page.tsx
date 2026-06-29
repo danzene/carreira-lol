@@ -122,6 +122,12 @@ export default function DashboardPage() {
         >
           🏅 CONQUISTAS
         </Link>
+        <Link
+          href="/inventario"
+          className="border-2 border-borda bg-painel px-2 py-3 text-center font-pixel text-[10px] text-ciano transition hover:border-ciano"
+        >
+          🎒 INVENTÁRIO
+        </Link>
       </div>
 
       <p className="text-center font-pixel text-[8px] text-borda">CARREIRA LoL · v1.0 🏁</p>

@@ -11,10 +11,12 @@ import { FEARLESS_JANELA, mod } from "@/data/opcoes";
 import { timeDe } from "@/data/times";
 import { bonusEquipamentos } from "@/engine/economia";
 import { efeitoLendas } from "@/engine/gacha";
+import { efeitoItens } from "@/engine/itens";
 import { forcaTimeDe, proximoConfrontoJogador } from "@/engine/liga";
 import { proximoConfrontoTorneio } from "@/engine/internacional";
 import type { AtributoKey, MatchResult } from "@/engine/types";
 import { useCareer } from "@/store/careerStore";
+import { itensEquipadosDe, useInventory } from "@/store/inventoryStore";
 
 type Fase = "draft" | "partida" | "resultado";
 
@@ -30,6 +32,8 @@ function DraftFlow() {
   const aplicarPartidaOficial = useCareer((s) => s.aplicarPartidaOficial);
   const aplicarPartidaEvento = useCareer((s) => s.aplicarPartidaEvento);
   const aplicarPartidaTorneio = useCareer((s) => s.aplicarPartidaTorneio);
+  const invItens = useInventory((s) => s.itens);
+  const invEquip = useInventory((s) => s.equipado);
 
   const [fase, setFase] = useState<Fase>("draft");
   const [info, setInfo] = useState<JogarInfo | null>(null);
@@ -48,6 +52,9 @@ function DraftFlow() {
     () => (career?.opcoes?.fearless ? career.historicoPartidas.slice(0, FEARLESS_JANELA).map((m) => m.championId) : []),
     [career],
   );
+
+  const equipadosItens = useMemo(() => itensEquipadosDe(invItens, invEquip), [invItens, invEquip]);
+  const efItens = useMemo(() => efeitoItens(equipadosItens), [equipadosItens]);
 
   // Modo oficial sem partida pendente → volta pra liga.
   useEffect(() => {
@@ -79,6 +86,9 @@ function DraftFlow() {
   const bonusAtributos: Partial<Record<AtributoKey, number>> = { ...bonusEquipamentos(career.equipamentos) };
   (Object.keys(ef.atributos) as AtributoKey[]).forEach((k) => {
     bonusAtributos[k] = (bonusAtributos[k] ?? 0) + (ef.atributos[k] ?? 0);
+  });
+  (Object.keys(efItens.atributos) as AtributoKey[]).forEach((k) => {
+    bonusAtributos[k] = (bonusAtributos[k] ?? 0) + (efItens.atributos[k] ?? 0);
   });
 
   function aoJogar(i: JogarInfo) {
@@ -137,7 +147,7 @@ function DraftFlow() {
 
       {fase === "draft" && (
         <>
-          <EfeitosLendas career={career} />
+          <EfeitosLendas career={career} itens={equipadosItens} />
           <DraftBoard
             comfort={career.player.pool.map((p) => p.championId)}
             maestria={Object.fromEntries(career.player.pool.map((p) => [p.championId, p.pontos]))}
@@ -156,7 +166,7 @@ function DraftFlow() {
           ctx={{
             championId: info.championId,
             forcaMetaCampeao: info.forcaMetaCampeao,
-            comp: info.comp + ef.bonusComp,
+            comp: info.comp + ef.bonusComp + efItens.bonusComp,
             compInimigo: info.compInimigo,
             bonusAtributos,
             forcaTimeAliado: (oficial || internacional) && career.contratoAtual ? forcaTimeDe(career.contratoAtual.timeId) : undefined,

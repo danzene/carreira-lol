@@ -122,3 +122,15 @@ export interface Item {
   afixos: Afixo[]; // aleatórios (RNG)
   setId?: SetId;
 }
+
+// Economia do sistema de itens (em CoinPoints). Tunável.
+export const ITENS_ECON = {
+  custoReroll: 80, // re-sortear os afixos de um item
+  coinsDesmonte: 20, // ganho ao desmontar um item
+  dropChanceVitoria: 0.25, // chance de cair item ao vencer uma partida
+} as const;
+
+// Nome de exibição do item (ex.: "Épico Mouse").
+export function nomeItem(item: Item): string {
+  return `${raridadeItemDef(item.raridade).nome} ${slotDef(item.slot).nome}`;
+}

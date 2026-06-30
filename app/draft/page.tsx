@@ -12,7 +12,6 @@ import { LOOP } from "@/data/loop";
 import { FEARLESS_JANELA, mod } from "@/data/opcoes";
 import { timeDe } from "@/data/times";
 import { energiaAgora } from "@/engine/tempo";
-import { bonusEquipamentos } from "@/engine/economia";
 import { dificuldadeSoloq } from "@/engine/elo";
 import { efeitoLendas } from "@/engine/gacha";
 import { efeitoItens } from "@/engine/itens";
@@ -87,9 +86,9 @@ function DraftFlow() {
 
   const adversario = adversarioId ? timeDe(adversarioId) : null;
 
-  // bônus das lendas equipadas: atributos somam aos periféricos; comp ajuda no draft.
+  // bônus de gear: lendas equipadas + itens RPG (os periféricos viraram itens). Comp ajuda no draft.
   const ef = efeitoLendas(career);
-  const bonusAtributos: Partial<Record<AtributoKey, number>> = { ...bonusEquipamentos(career.equipamentos) };
+  const bonusAtributos: Partial<Record<AtributoKey, number>> = {};
   (Object.keys(ef.atributos) as AtributoKey[]).forEach((k) => {
     bonusAtributos[k] = (bonusAtributos[k] ?? 0) + (ef.atributos[k] ?? 0);
   });

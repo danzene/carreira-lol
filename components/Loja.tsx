@@ -1,20 +1,14 @@
 "use client";
 
 import { type ReactNode, useState } from "react";
-import { ATRIBUTOS } from "@/data/config";
-import { ECONOMIA, EQUIP_INFO, EQUIP_MAX_NIVEL } from "@/data/economia";
-import { custoUpgrade, nivelEquip } from "@/engine/economia";
-import type { CareerState, Equip } from "@/engine/types";
+import { ECONOMIA } from "@/data/economia";
+import type { CareerState } from "@/engine/types";
 import { useCareer } from "@/store/careerStore";
-
-const TIPOS: Equip["tipo"][] = ["HEADSET", "MOUSE", "CADEIRA", "MONITOR"];
-const nomeAtr = (k: string) => ATRIBUTOS.find((a) => a.chave === k)?.nome ?? k;
 
 export default function Loja({ career }: { career: CareerState }) {
   const bootcamp = useCareer((s) => s.bootcamp);
   const alternarCoach = useCareer((s) => s.alternarCoach);
   const sessaoMental = useCareer((s) => s.sessaoMental);
-  const upgradeEquip = useCareer((s) => s.upgradeEquip);
   const [aviso, setAviso] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
 
@@ -61,27 +55,14 @@ export default function Loja({ career }: { career: CareerState }) {
         <Botao onClick={() => tenta(bootcamp, "Você voltou da Coreia muito melhor!")}>Ir</Botao>
       </Card>
 
-      <h2 className="mt-2 font-pixel text-[10px] text-suave">PERIFÉRICOS</h2>
-      {TIPOS.map((tipo) => {
-        const info = EQUIP_INFO[tipo];
-        const nivel = nivelEquip(career, tipo);
-        const max = nivel >= EQUIP_MAX_NIVEL;
-        const custo = custoUpgrade(nivel);
-        return (
-          <Card
-            key={tipo}
-            icone={info.icone}
-            titulo={`${info.nome} · Nv ${nivel}/${EQUIP_MAX_NIVEL}`}
-            desc={`+${info.bonusPorNivel}/nível em ${nomeAtr(info.atributo)}${max ? "" : ` · próximo: $${custo}`}`}
-          >
-            {max ? (
-              <span className="font-pixel text-[10px] text-emerald-400">MÁX</span>
-            ) : (
-              <Botao onClick={() => tenta(() => upgradeEquip(tipo), `${info.nome} melhorado!`)}>Upgrade</Botao>
-            )}
-          </Card>
-        );
-      })}
+      <h2 className="mt-2 font-pixel text-[10px] text-suave">EQUIPAMENTOS</h2>
+      <div className="flex items-center gap-3 border-2 border-borda bg-painel p-3 text-[11px] text-suave">
+        <span className="text-2xl">🎒</span>
+        <span>
+          Seu setup agora são <span className="text-ciano">itens com afixos</span> que caem nas partidas — equipe, faça
+          reroll e monte seu set no <span className="text-rosa">Inventário</span>.
+        </span>
+      </div>
     </div>
   );
 }

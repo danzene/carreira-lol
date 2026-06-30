@@ -1,9 +1,9 @@
 "use client";
 
-import { type ReactNode } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { ATRIBUTOS } from "@/data/config";
 import { GACHA } from "@/data/gacha";
-import type { AtributoKey, MatchResult } from "@/engine/types";
+import type { Attributes, AtributoKey, MatchResult } from "@/engine/types";
 
 function corNota(n: number): string {
   if (n >= 8) return "text-ciano";
@@ -16,10 +16,12 @@ export default function ResultadoPartida({
   resultado,
   icone,
   elo,
+  atributos,
 }: {
   resultado: MatchResult;
   icone?: string;
   elo: string;
+  atributos?: Attributes;
 }) {
   const xpEntries = Object.entries(resultado.xpGanho) as [AtributoKey, number][];
   const nomeAtr = (k: AtributoKey) => ATRIBUTOS.find((a) => a.chave === k)?.nome ?? k;
@@ -72,16 +74,40 @@ export default function ResultadoPartida({
 
       {xpEntries.length > 0 && (
         <div className="border-2 border-borda bg-painel p-3">
-          <h3 className="mb-2 font-pixel text-[10px] text-suave">XP GANHO</h3>
-          <div className="flex flex-wrap gap-2">
+          <h3 className="mb-3 font-pixel text-[10px] text-suave">PROGRESSO DOS ATRIBUTOS</h3>
+          <div className="flex flex-col gap-2.5">
             {xpEntries.map(([k, v]) => (
-              <span key={k} className="border border-ciano/40 bg-ciano/10 px-2 py-0.5 text-[11px] text-ciano">
-                {nomeAtr(k)} +{v.toFixed(2)}
-              </span>
+              <BarraXp key={k} nome={nomeAtr(k)} valor={atributos?.[k] ?? v} ganho={v} />
             ))}
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// Barra do atributo que "sobe" do valor anterior pro novo (sensação de progressão).
+function BarraXp({ nome, valor, ganho }: { nome: string; valor: number; ganho: number }) {
+  const [cheio, setCheio] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setCheio(true), 90);
+    return () => clearTimeout(t);
+  }, []);
+  const de = Math.max(0, valor - ganho);
+  return (
+    <div>
+      <div className="mb-0.5 flex items-baseline justify-between text-[10px]">
+        <span className="text-suave">{nome}</span>
+        <span className="text-texto">
+          {Math.round(valor * 10) / 10} <span className="font-pixel text-[8px] text-emerald-400">+{ganho.toFixed(2)}</span>
+        </span>
+      </div>
+      <div className="h-2.5 overflow-hidden border-2 border-borda bg-fundo">
+        <div
+          className="h-full bg-gradient-to-r from-rosa to-ciano transition-[width] duration-700 ease-out"
+          style={{ width: `${cheio ? valor : de}%` }}
+        />
+      </div>
     </div>
   );
 }

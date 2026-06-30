@@ -8,11 +8,19 @@ import {
   GACHA,
   LENDAS,
   RARIDADE_HOLO,
+  SINERGIA,
   defSub,
   imagemCarta,
   infoRaridade,
   modeloLenda,
 } from "@/data/gacha";
+
+// Descrição do passivo da lenda (com % nos efeitos percentuais).
+function descricaoPassivo(p: { chave: string; valor: number }): string {
+  const d = defSub(p.chave);
+  const pct = d?.tipo === "xp" || d?.tipo === "dinheiro" || d?.tipo === "decaimento";
+  return `+${p.valor}${pct ? "%" : ""} ${d?.rotulo ?? p.chave}`;
+}
 import { construirBanco } from "@/engine/champions";
 import { efeitoLendas, sinergiasAtivas, type ResultadoPuxada } from "@/engine/gacha";
 import type { ChampionDef } from "@/engine/types";
@@ -219,12 +227,15 @@ export default function GachaPage() {
           {LENDAS.map((l) => {
             const tem = possuidas.get(l.id);
             const eq = equipadas.includes(l.id);
+            const sin = SINERGIA[l.estilo];
+            const dica = `${l.nome} — ${l.titulo}\nPassivo: ${descricaoPassivo(l.passivo)}\nEstilo ${l.estilo}: 2+ equipadas dão +${sin.valor} ${defSub(sin.chave)?.rotulo ?? sin.chave} (sinergia)`;
             return (
               <button
                 key={l.id}
                 type="button"
                 disabled={!tem}
                 onClick={() => equiparLenda(l.id)}
+                title={dica}
                 className={`overflow-hidden border-2 text-left transition ${eq ? "border-ciano ring-2 ring-ciano" : "border-borda"} ${tem && l.raridade === 6 ? "carta-mitica" : ""}`}
               >
                 <div className="relative">
@@ -248,6 +259,7 @@ export default function GachaPage() {
                       <p className="text-[8px] text-suave">
                         {l.estilo} · Nv.{tem.nivel}
                       </p>
+                      <p className="text-[8px] text-amber-300">⚡ {descricaoPassivo(l.passivo)}</p>
                       <div className="mt-0.5 flex flex-wrap gap-0.5">
                         {tem.substats.map((s, j) => (
                           <span key={j} className="border border-borda px-0.5 text-[7px] text-suave">

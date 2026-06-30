@@ -8,8 +8,10 @@ import EfeitosLendas from "@/components/EfeitosLendas";
 import ItemVisual, { classeBrilho, corRaridade, estiloCartaItem } from "@/components/ItemVisual";
 import Partida from "@/components/Partida";
 import ResultadoPartida from "@/components/ResultadoPartida";
+import { LOOP } from "@/data/loop";
 import { FEARLESS_JANELA, mod } from "@/data/opcoes";
 import { timeDe } from "@/data/times";
+import { energiaAgora } from "@/engine/tempo";
 import { bonusEquipamentos } from "@/engine/economia";
 import { dificuldadeSoloq } from "@/engine/elo";
 import { efeitoLendas } from "@/engine/gacha";
@@ -94,6 +96,8 @@ function DraftFlow() {
   (Object.keys(efItens.atributos) as AtributoKey[]).forEach((k) => {
     bonusAtributos[k] = (bonusAtributos[k] ?? 0) + (efItens.atributos[k] ?? 0);
   });
+
+  const podeReplay = energiaAgora(career, Date.now()) >= LOOP.custoSoloq;
 
   function aoJogar(i: JogarInfo) {
     limparDrop(); // zera o drop antes da partida (só conta o desta)
@@ -186,7 +190,7 @@ function DraftFlow() {
 
       {fase === "resultado" && resultado && (
         <div className="flex flex-col gap-4">
-          <ResultadoPartida resultado={resultado} icone={info?.icone} elo={career.player.rankSoloq.elo} />
+          <ResultadoPartida resultado={resultado} icone={info?.icone} elo={career.player.rankSoloq.elo} atributos={career.player.atributos} />
           {ultimoDrop && (
             <div className={`item-card border-2 bg-painel p-3 ${classeBrilho(ultimoDrop.raridade)}`} style={estiloCartaItem(ultimoDrop.raridade)}>
               <p className="mb-2 text-center font-pixel text-[9px]" style={{ color: corRaridade(ultimoDrop.raridade) }}>
@@ -231,9 +235,11 @@ function DraftFlow() {
                 <button
                   type="button"
                   onClick={denovo}
-                  className="border-2 border-rosa bg-rosa/10 px-6 py-2 font-pixel text-[10px] text-rosa transition hover:bg-rosa hover:text-fundo"
+                  disabled={!podeReplay}
+                  className="flex flex-col items-center border-2 border-rosa bg-rosa/10 px-6 py-2 font-pixel text-[10px] text-rosa transition hover:bg-rosa hover:text-fundo disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-rosa/10 disabled:hover:text-rosa"
                 >
-                  JOGAR DE NOVO
+                  {podeReplay ? "JOGAR DE NOVO" : "SEM ENERGIA"}
+                  <span className="text-[7px] font-normal opacity-80">−{LOOP.custoSoloq}⚡</span>
                 </button>
               </>
             )}

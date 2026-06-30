@@ -94,3 +94,36 @@ canvas {
   animation: brilhoMitico 1.8s ease-in-out infinite;
   border-color: #ffe14d !important;
 }
+
+/* Cartas de item (inventário) — brilho pela raridade (cor via --cor inline) */
+.item-card {
+  transition: transform 0.12s ease;
+}
+.item-card:hover {
+  transform: translateY(-2px);
+}
+.item-glow {
+  box-shadow: inset 0 0 0 1px var(--cor), 0 0 9px -3px var(--cor);
+}
+.item-glow-forte {
+  box-shadow: inset 0 0 0 1px var(--cor), 0 0 16px -2px var(--cor);
+  animation: itemPulso 2.4s ease-in-out infinite;
+}
+@keyframes itemPulso {
+  0%,
+  100% {
+    box-shadow: inset 0 0 0 1px var(--cor), 0 0 9px -3px var(--cor);
+  }
+  50% {
+    box-shadow: inset 0 0 0 1px var(--cor), 0 0 22px 0 var(--cor);
+  }
+}
+.slot-vazio {
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 7px,
+    rgba(154, 144, 192, 0.04) 7px,
+    rgba(154, 144, 192, 0.04) 14px
+  );
+}

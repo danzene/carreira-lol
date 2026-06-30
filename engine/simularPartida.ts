@@ -16,6 +16,7 @@ export interface ContextoPartida {
   forcaTimeAliado?: number; // força do seu time (partida oficial; senão usa a base)
   forcaTimeInimigo?: number; // força do time adversário (partida oficial)
   bonusInimigo?: number; // dificuldade (Fase 11): força extra do inimigo
+  dificuldadeElo?: number; // soloq: penalidade de vitória pelo elo (ajuda embaixo, aperta em cima)
 }
 
 function clamp(v: number, min: number, max: number): number {
@@ -117,7 +118,8 @@ export function simularPartida(player: Player, ctx: ContextoPartida, seed: numbe
     ctx.compInimigo +
     (forcaFinal - 50) * 0.5 +
     (fTimeAliado - fTimeInimigo) * SIMULACAO.pesoForcaTimeVitoria -
-    (ctx.bonusInimigo ?? 0);
+    (ctx.bonusInimigo ?? 0) -
+    (ctx.dificuldadeElo ?? 0);
   const vitoria = rng() < 1 / (1 + Math.exp(-SIMULACAO.sensibilidadeVitoria * vantagem));
 
   const nota = clamp(

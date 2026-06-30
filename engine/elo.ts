@@ -1,5 +1,16 @@
-import { ELO_LADDER, RANK } from "@/data/simulacao";
+import { DIFICULDADE_ELO, ELO_LADDER, RANK } from "@/data/simulacao";
 import type { RankSoloq } from "./types";
+
+// Índice do elo na ladder (0 = Ferro IV).
+export function idxElo(elo: string): number {
+  const i = ELO_LADDER.indexOf(elo as (typeof ELO_LADDER)[number]);
+  return i < 0 ? 0 : i;
+}
+
+// Penalidade de vitória na soloq pelo elo: negativa no elo baixo (ajuda), positiva no alto (aperta).
+export function dificuldadeSoloq(elo: string): number {
+  return (idxElo(elo) - DIFICULDADE_ELO.pivo) * DIFICULDADE_ELO.fator;
+}
 
 export function eloDeMmr(mmr: number): { elo: string; lp: number } {
   const acima = Math.max(0, mmr - RANK.mmrBase);

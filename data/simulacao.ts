@@ -55,3 +55,8 @@ export const RANK = {
   streakBonusPasso: 3, // PDL extra por vitória/derrota em sequência (a partir da 2ª seguida)
   streakBonusMax: 12, // teto do bônus de sequência (estilo LoL: quente sobe rápido, frio cai rápido)
 } as const;
+
+// Dificuldade da SOLOQ por elo: ajuda no elo baixo, aperta conforme você sobe. Os atributos/
+// itens/maestria do personagem precisam acompanhar a barra subindo.
+// `pivo` = índice do elo neutro na ELO_LADDER; `fator` = pontos de vantagem por degrau de elo.
+export const DIFICULDADE_ELO = { pivo: 12, fator: 0.8 } as const;

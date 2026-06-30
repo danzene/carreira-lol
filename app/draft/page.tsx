@@ -10,6 +10,7 @@ import ResultadoPartida from "@/components/ResultadoPartida";
 import { FEARLESS_JANELA, mod } from "@/data/opcoes";
 import { timeDe } from "@/data/times";
 import { bonusEquipamentos } from "@/engine/economia";
+import { dificuldadeSoloq } from "@/engine/elo";
 import { efeitoLendas } from "@/engine/gacha";
 import { efeitoItens } from "@/engine/itens";
 import { forcaTimeDe, proximoConfrontoJogador } from "@/engine/liga";
@@ -172,6 +173,7 @@ function DraftFlow() {
             forcaTimeAliado: (oficial || internacional) && career.contratoAtual ? forcaTimeDe(career.contratoAtual.timeId) : undefined,
             forcaTimeInimigo: adversarioId ? forcaTimeDe(adversarioId) : undefined,
             bonusInimigo: mod(career.opcoes).forcaInimigo + (evento && career.eventoAtual ? career.eventoAtual.bonusInimigo : 0),
+            dificuldadeElo: !oficial && !internacional && !evento ? dificuldadeSoloq(career.player.rankSoloq.elo) : 0,
           }}
           times={{ azul: info.timeAzul, vermelho: info.timeVermelho }}
           onFim={aoFim}

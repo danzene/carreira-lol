@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { infoElo, proximoElo, trilhaElos } from "@/data/elo";
-import { aplicarResultadoRank, eloDeMmr, proximoStreak } from "./elo";
+import { aplicarResultadoRank, dificuldadeSoloq, eloDeMmr, idxElo, proximoStreak } from "./elo";
 
 describe("apresentação de elo", () => {
   it("infoElo separa tier e divisão", () => {
@@ -25,6 +25,13 @@ describe("apresentação de elo", () => {
 
   it("começa em Ferro IV no MMR base", () => {
     expect(eloDeMmr(800)).toEqual({ elo: "Ferro IV", lp: 0 });
+  });
+
+  it("dificuldade da soloq: ajuda no elo baixo, aperta no alto", () => {
+    expect(idxElo("Ferro IV")).toBe(0);
+    expect(dificuldadeSoloq("Ferro IV")).toBeLessThan(0); // ajuda
+    expect(dificuldadeSoloq("Diamante I")).toBeGreaterThan(0); // aperta
+    expect(dificuldadeSoloq("Diamante I")).toBeGreaterThan(dificuldadeSoloq("Prata IV"));
   });
 
   it("proximoStreak conta vitórias/derrotas seguidas e reseta ao virar", () => {

@@ -29,6 +29,10 @@ interface InventoryStore {
   dropDePartida: (iLvl: number, sorte?: number) => Item | null;
   reroll: (id: string) => Promise<boolean>;
   desmontar: (id: string) => void;
+  ultimoDrop: Item | null; // último item dropado (pra mostrar no resultado da partida)
+  novos: number; // itens novos não vistos (selo no dashboard)
+  limparDrop: () => void;
+  marcarVistos: () => void;
   limpar: () => void;
 }
 
@@ -56,6 +60,8 @@ export const useInventory = create<InventoryStore>((set, get) => {
     itens: [],
     equipado: {},
     carregando: true,
+    ultimoDrop: null,
+    novos: 0,
 
     carregar: async () => {
       if (!isSupabaseConfigured()) {
@@ -106,7 +112,8 @@ export const useInventory = create<InventoryStore>((set, get) => {
       if (Math.random() > ITENS_ECON.dropChanceVitoria) return null;
       const slot = SLOTS_GEAR[Math.floor(Math.random() * SLOTS_GEAR.length)].slot;
       const item = gerarItem(slot, iLvl, seedAgora(), { sorte });
-      get().adicionarItem(item);
+      set({ itens: [...get().itens, item], ultimoDrop: item, novos: get().novos + 1 });
+      persistir();
       return item;
     },
 
@@ -134,6 +141,9 @@ export const useInventory = create<InventoryStore>((set, get) => {
       persistir();
     },
 
-    limpar: () => set({ itens: [], equipado: {}, carregando: true }),
+    limparDrop: () => set({ ultimoDrop: null }),
+    marcarVistos: () => set({ novos: 0 }),
+
+    limpar: () => set({ itens: [], equipado: {}, carregando: true, ultimoDrop: null, novos: 0 }),
   };
 });

@@ -13,6 +13,7 @@ import { versaoPatch } from "@/engine/patch";
 import type { CareerState } from "@/engine/types";
 import { useCareer } from "@/store/careerStore";
 import { useProfile } from "@/store/profileStore";
+import { useInventory } from "@/store/inventoryStore";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -23,6 +24,7 @@ export default function DashboardPage() {
   const limparResumo = useCareer((s) => s.limparResumo);
   const sair = useCareer((s) => s.sair);
   const coinpoints = useProfile((s) => s.perfil?.coinpoints ?? 0);
+  const novosItens = useInventory((s) => s.novos);
 
   useEffect(() => {
     if (!career && !recarregarAtual()) router.replace("/");
@@ -124,9 +126,14 @@ export default function DashboardPage() {
         </Link>
         <Link
           href="/inventario"
-          className="border-2 border-borda bg-painel px-2 py-3 text-center font-pixel text-[10px] text-ciano transition hover:border-ciano"
+          className="relative border-2 border-borda bg-painel px-2 py-3 text-center font-pixel text-[10px] text-ciano transition hover:border-ciano"
         >
           🎒 INVENTÁRIO
+          {novosItens > 0 && (
+            <span className="absolute -right-1.5 -top-1.5 grid h-5 min-w-[20px] place-items-center border-2 border-fundo bg-rosa px-1 font-pixel text-[8px] text-fundo">
+              {novosItens}
+            </span>
+          )}
         </Link>
       </div>
 

@@ -5,6 +5,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import DraftBoard, { type JogarInfo } from "@/components/DraftBoard";
 import EfeitosLendas from "@/components/EfeitosLendas";
+import ItemVisual, { classeBrilho, corRaridade, estiloCartaItem } from "@/components/ItemVisual";
 import Partida from "@/components/Partida";
 import ResultadoPartida from "@/components/ResultadoPartida";
 import { FEARLESS_JANELA, mod } from "@/data/opcoes";
@@ -35,6 +36,8 @@ function DraftFlow() {
   const aplicarPartidaTorneio = useCareer((s) => s.aplicarPartidaTorneio);
   const invItens = useInventory((s) => s.itens);
   const invEquip = useInventory((s) => s.equipado);
+  const ultimoDrop = useInventory((s) => s.ultimoDrop);
+  const limparDrop = useInventory((s) => s.limparDrop);
 
   const [fase, setFase] = useState<Fase>("draft");
   const [info, setInfo] = useState<JogarInfo | null>(null);
@@ -93,6 +96,7 @@ function DraftFlow() {
   });
 
   function aoJogar(i: JogarInfo) {
+    limparDrop(); // zera o drop antes da partida (só conta o desta)
     setInfo(i);
     setFase("partida");
   }
@@ -183,6 +187,20 @@ function DraftFlow() {
       {fase === "resultado" && resultado && (
         <div className="flex flex-col gap-4">
           <ResultadoPartida resultado={resultado} icone={info?.icone} elo={career.player.rankSoloq.elo} />
+          {ultimoDrop && (
+            <div className={`item-card border-2 bg-painel p-3 ${classeBrilho(ultimoDrop.raridade)}`} style={estiloCartaItem(ultimoDrop.raridade)}>
+              <p className="mb-2 text-center font-pixel text-[9px]" style={{ color: corRaridade(ultimoDrop.raridade) }}>
+                🎁 ITEM DROPADO!
+              </p>
+              <ItemVisual item={ultimoDrop} />
+              <Link
+                href="/inventario"
+                className="mt-3 block border-2 border-borda py-1.5 text-center font-pixel text-[8px] text-suave transition hover:border-ciano hover:text-ciano"
+              >
+                VER NO INVENTÁRIO
+              </Link>
+            </div>
+          )}
           <div className="flex justify-center gap-3">
             {internacional ? (
               <Link

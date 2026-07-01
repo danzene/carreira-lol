@@ -4,6 +4,7 @@ import { type ReactNode, useEffect } from "react";
 import { useAuth } from "@/store/authStore";
 import { useProfile } from "@/store/profileStore";
 import { useInventory } from "@/store/inventoryStore";
+import { usePasse } from "@/store/passeStore";
 import EscolherNick from "./EscolherNick";
 import TelaLogin from "./TelaLogin";
 
@@ -24,6 +25,8 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   const limparPerfil = useProfile((s) => s.limpar);
   const carregarInv = useInventory((s) => s.carregar);
   const limparInv = useInventory((s) => s.limpar);
+  const carregarPasse = usePasse((s) => s.carregar);
+  const limparPasse = usePasse((s) => s.limpar);
 
   useEffect(() => {
     init();
@@ -32,12 +35,14 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (user) {
       carregarPerfil();
-      carregarInv(); // inventário em segundo plano (não bloqueia a entrada)
+      carregarInv(); // inventário + passe em segundo plano (não bloqueiam a entrada)
+      carregarPasse();
     } else {
       limparPerfil();
       limparInv();
+      limparPasse();
     }
-  }, [user, carregarPerfil, limparPerfil, carregarInv, limparInv]);
+  }, [user, carregarPerfil, limparPerfil, carregarInv, limparInv, carregarPasse, limparPasse]);
 
   if (carregando) return <Centro>Carregando…</Centro>;
   if (!configurado) {

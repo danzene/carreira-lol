@@ -35,8 +35,10 @@ import { avancarTorneio, criarTorneio, premioTorneio } from "@/engine/internacio
 import { GACHA } from "@/data/gacha";
 import { equipar, ganharCampeao as ganharCampeaoEngine, puxar, type ResultadoCampeao, type ResultadoPuxada } from "@/engine/gacha";
 import { cargasPartida, consumirCarga, inicializarTempo, registrarUso, sincronizarEnergia, usosRestantes } from "@/engine/tempo";
+import { idxElo } from "@/engine/elo";
 import { useProfile } from "./profileStore";
 import { useInventory } from "./inventoryStore";
+import { usePasse } from "./passeStore";
 import type { AtributoKey, CareerState, Equip, MatchResult, OpcoesCarreira, Player, TraitId } from "@/engine/types";
 import {
   apagarSlot,
@@ -139,6 +141,10 @@ export const useCareer = create<CareerStore>((set, get) => ({
     novo = verificarConquistas(novo).career;
     void useProfile.getState().ajustar(resultado.vitoria ? GACHA.porVitoria : GACHA.porDerrota, "partida");
     if (resultado.vitoria) void useInventory.getState().dropDePartida(iLvlDe(career));
+    usePasse.getState().progredir("jogar");
+    if (resultado.vitoria) usePasse.getState().progredir("vencer");
+    const subiuElo = idxElo(novo.player.rankSoloq.elo) - idxElo(career.player.rankSoloq.elo);
+    if (subiuElo > 0) usePasse.getState().progredir("subir_elo", subiuElo);
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
   },
@@ -149,6 +155,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
     const career = sincronizarEnergia(c0, Date.now());
     const novo = treinarEngine(career, atributo, especial);
     if (!novo) return false;
+    usePasse.getState().progredir("treinar");
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
     return true;
@@ -160,6 +167,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
     const career = sincronizarEnergia(c0, Date.now());
     const novo = streamingEngine(career);
     if (!novo) return false;
+    usePasse.getState().progredir("stream");
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
     return true;
@@ -273,6 +281,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
     const novo = verificarConquistas(r.career).career;
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
+    usePasse.getState().progredir("booster");
     return r.resultados;
   },
 
@@ -285,6 +294,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
     const novo = verificarConquistas(r.career).career;
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
+    usePasse.getState().progredir("booster");
     return r.resultado;
   },
 
@@ -336,6 +346,9 @@ export const useCareer = create<CareerStore>((set, get) => ({
     novo = registrarResultadoJogador(novo, resultado.vitoria, seed);
     void useProfile.getState().ajustar(resultado.vitoria ? GACHA.porVitoria : GACHA.porDerrota, "liga");
     if (resultado.vitoria) void useInventory.getState().dropDePartida(iLvlDe(c0), 0.05);
+    usePasse.getState().progredir("jogar");
+    usePasse.getState().progredir("campeonato");
+    if (resultado.vitoria) usePasse.getState().progredir("vencer");
     novo = consumirCarga(novo, agora);
     novo = verificarConquistas(novo).career;
     set({ career: novo });
@@ -359,6 +372,8 @@ export const useCareer = create<CareerStore>((set, get) => ({
       eventoAtual: undefined,
     };
     void useProfile.getState().ajustar(resultado.vitoria ? GACHA.porVitoria : GACHA.porDerrota, "evento");
+    usePasse.getState().progredir("jogar");
+    if (resultado.vitoria) usePasse.getState().progredir("vencer");
     novo = verificarConquistas(novo).career;
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
@@ -404,6 +419,9 @@ export const useCareer = create<CareerStore>((set, get) => ({
     novo = avancarTorneio(novo, resultado.vitoria, seed);
     void useProfile.getState().ajustar(resultado.vitoria ? GACHA.porVitoria : GACHA.porDerrota, "torneio");
     if (resultado.vitoria) void useInventory.getState().dropDePartida(iLvlDe(c0), 0.05);
+    usePasse.getState().progredir("jogar");
+    usePasse.getState().progredir("campeonato");
+    if (resultado.vitoria) usePasse.getState().progredir("vencer");
     novo = consumirCarga(novo, agora);
     novo = verificarConquistas(novo).career;
     set({ career: novo });

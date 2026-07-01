@@ -14,6 +14,9 @@ import type { CareerState } from "@/engine/types";
 import { useCareer } from "@/store/careerStore";
 import { useProfile } from "@/store/profileStore";
 import { useInventory } from "@/store/inventoryStore";
+import { usePasse } from "@/store/passeStore";
+import { RECOMPENSAS_FREE } from "@/data/passe";
+import { nivelDoPasse, podeResgatar } from "@/engine/passe";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -25,6 +28,8 @@ export default function DashboardPage() {
   const sair = useCareer((s) => s.sair);
   const coinpoints = useProfile((s) => s.perfil?.coinpoints ?? 0);
   const novosItens = useInventory((s) => s.novos);
+  const passe = usePasse((s) => s.passe);
+  const resgataveis = passe ? RECOMPENSAS_FREE.filter((r) => podeResgatar(passe, r)).length : 0;
 
   useEffect(() => {
     if (!career && !recarregarAtual()) router.replace("/");
@@ -93,6 +98,18 @@ export default function DashboardPage() {
         className="border-2 border-rosa bg-rosa/10 px-4 py-3 text-center font-pixel text-[10px] text-rosa transition hover:bg-rosa hover:text-fundo"
       >
         🎰 CARREIRA BOOSTER · 🪙 {coinpoints}
+      </Link>
+
+      <Link
+        href="/passe"
+        className="relative border-2 border-amber-300 bg-amber-300/10 px-4 py-3 text-center font-pixel text-[10px] text-amber-300 transition hover:bg-amber-300 hover:text-fundo"
+      >
+        🎟️ PASSE DE BATALHA{passe ? ` · Nv ${nivelDoPasse(passe.pp)}` : ""}
+        {resgataveis > 0 && (
+          <span className="absolute -right-1.5 -top-1.5 grid h-5 min-w-[20px] place-items-center border-2 border-fundo bg-rosa px-1 font-pixel text-[8px] text-fundo">
+            {resgataveis}
+          </span>
+        )}
       </Link>
 
       <div className="grid grid-cols-2 gap-2">

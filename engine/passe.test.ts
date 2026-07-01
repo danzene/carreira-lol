@@ -1,15 +1,20 @@
 import { describe, expect, it } from "vitest";
 import { PASSE, recompensaDe } from "@/data/passe";
 import {
+  DIA_MS,
   criarPasse,
-  gerarMissoes,
+  gerarDiarias,
+  gerarSemanais,
   marcarResgatada,
   nivelDoPasse,
   podeResgatar,
   ppParaProximo,
-  progredirMissoes,
-  type MissaoAtiva,
+  progredirPasse,
+  renovarMissoes,
+  type PasseState,
 } from "./passe";
+
+const passeCom = (over: Partial<PasseState>): PasseState => ({ ...criarPasse(1, 0), ...over });
 
 describe("passe de batalha", () => {
   it("nível pelo PP (1 → 60, capado)", () => {
@@ -22,33 +27,39 @@ describe("passe de batalha", () => {
   it("PP para o próximo nível", () => {
     expect(ppParaProximo(0)).toBe(PASSE.ppPorNivel);
     expect(ppParaProximo(40)).toBe(PASSE.ppPorNivel - 40);
-    expect(ppParaProximo(999999)).toBe(0); // no topo
+    expect(ppParaProximo(999999)).toBe(0);
   });
 
-  it("gera o nº certo de missões e é determinístico", () => {
-    const a = gerarMissoes(7);
-    expect(a).toHaveLength(PASSE.qtdDiarias + PASSE.qtdSemanais);
-    expect(gerarMissoes(7)).toEqual(a);
+  it("gera nº certo de missões, determinístico", () => {
+    expect(gerarDiarias(7)).toHaveLength(PASSE.qtdDiarias);
+    expect(gerarSemanais(7)).toHaveLength(PASSE.qtdSemanais);
+    expect(gerarDiarias(7)).toEqual(gerarDiarias(7));
   });
 
-  it("progredirMissoes conclui e dá o PP só no tipo certo", () => {
-    const ms: MissaoAtiva[] = [
-      { tipo: "vencer", texto: "Vença 1", escopo: "diaria", alvo: 1, pp: 40, id: "a", progresso: 0, concluida: false },
-    ];
-    const r = progredirMissoes(ms, "vencer", 1);
-    expect(r.ppGanho).toBe(40);
-    expect(r.missoes[0].concluida).toBe(true);
-    expect(progredirMissoes(ms, "treinar", 1).ppGanho).toBe(0);
+  it("progredirPasse conclui e dá PP só no tipo certo (mesmo objeto se nada muda)", () => {
+    const passe = passeCom({
+      diarias: [{ tipo: "vencer", texto: "Vença 1", escopo: "diaria", alvo: 1, pp: 40, id: "a", progresso: 0, concluida: false }],
+      semanais: [],
+    });
+    const p2 = progredirPasse(passe, "vencer", 1);
+    expect(p2.pp).toBe(passe.pp + 40);
+    expect(p2.diarias[0].concluida).toBe(true);
+    expect(progredirPasse(passe, "treinar", 1)).toBe(passe); // nada muda → mesma referência
   });
 
-  it("resgate exige nível e não repete; premium exige premium", () => {
+  it("renova diárias após 24h, semanais só após 7 dias", () => {
+    const p = criarPasse(1, 0);
+    const r = renovarMissoes(p, 9, 26 * 3600 * 1000);
+    expect(r.diariasEm).toBe(26 * 3600 * 1000);
+    expect(r.semanaisEm).toBe(0); // < 7 dias
+    expect(renovarMissoes(p, 9, DIA_MS - 1)).toBe(p); // < 24h → nada muda
+  });
+
+  it("resgate exige nível e não repete", () => {
     const rec = recompensaDe(10, "free")!;
-    const passe = { ...criarPasse(1, 0), pp: 1000 }; // nível 11
+    const passe = passeCom({ pp: 1000 }); // nível 11
     expect(podeResgatar(passe, rec)).toBe(true);
-    const depois = marcarResgatada(passe, rec);
-    expect(podeResgatar(depois, rec)).toBe(false);
-
-    const cedo = { ...criarPasse(1, 0), pp: 0 }; // nível 1
-    expect(podeResgatar(cedo, rec)).toBe(false);
+    expect(podeResgatar(marcarResgatada(passe, rec), rec)).toBe(false);
+    expect(podeResgatar(passeCom({ pp: 0 }), rec)).toBe(false); // nível 1
   });
 });

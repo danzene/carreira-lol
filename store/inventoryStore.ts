@@ -3,6 +3,7 @@ import { ITENS_ECON, SLOTS_GEAR, type Item, type SlotGear } from "@/data/itens";
 import { gerarItem, rerollAfixos } from "@/engine/itens";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabaseClient";
 import { useProfile } from "./profileStore";
+import { usePasse } from "./passeStore";
 
 // Inventário RPG por conta (servidor). Itens + o que está equipado por slot.
 // Custos em CoinPoints (reroll/desmonte) passam pela função autoritativa do profileStore.
@@ -93,6 +94,7 @@ export const useInventory = create<InventoryStore>((set, get) => {
       if (!item) return;
       set({ equipado: { ...equipado, [item.slot]: id } });
       persistir();
+      usePasse.getState().progredir("equipar_item");
     },
 
     desequipar: (slot) => {

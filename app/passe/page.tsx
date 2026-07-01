@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect } from "react";
-import { PASSE, RECOMPENSAS_FREE, type Recompensa } from "@/data/passe";
+import { PASSE, RECOMPENSAS_FREE, RECOMPENSAS_PREMIUM, type Recompensa } from "@/data/passe";
 import { nivelDoPasse, podeResgatar, ppNoNivel, ppParaProximo, type MissaoAtiva, type PasseState } from "@/engine/passe";
 import { usePasse } from "@/store/passeStore";
 
@@ -30,7 +30,7 @@ function Missao({ m }: { m: MissaoAtiva }) {
 }
 
 function CartaRecompensa({ r, passe, onResgatar }: { r: Recompensa; passe: PasseState; onResgatar: () => void }) {
-  const resgatada = passe.resgatadasFree.includes(r.nivel);
+  const resgatada = (r.trilha === "free" ? passe.resgatadasFree : passe.resgatadasPremium).includes(r.nivel);
   const pode = podeResgatar(passe, r);
   const alcancado = nivelDoPasse(passe.pp) >= r.nivel;
   return (
@@ -93,7 +93,10 @@ export default function PassePage() {
       <div className="border-2 border-ciano/40 bg-ciano/5 p-4">
         <div className="mb-2 flex items-center justify-between">
           <span className="font-pixel text-sm text-ciano">NÍVEL {nivel}/{PASSE.niveis}</span>
-          <span className="text-[10px] text-amber-300">🎟️ {passe.ingressos} ingressos</span>
+          <span className="flex items-center gap-2 text-[10px] text-amber-300">
+            {passe.premium && <span className="border border-amber-300 px-1 font-pixel text-[7px]">✨ PREMIUM</span>}
+            🎟️ {passe.ingressos}
+          </span>
         </div>
         <div className="h-3 overflow-hidden border-2 border-borda bg-fundo">
           <div className="h-full bg-gradient-to-r from-rosa to-ciano transition-all" style={{ width: `${pctNivel}%` }} />
@@ -120,14 +123,28 @@ export default function PassePage() {
         <h2 className="font-pixel text-[10px] text-suave">RECOMPENSAS · TRILHA GRÁTIS</h2>
         <div className="flex gap-2 overflow-x-auto pb-1">
           {RECOMPENSAS_FREE.map((r) => (
-            <CartaRecompensa key={r.nivel} r={r} passe={passe} onResgatar={() => resgatar(r)} />
+            <CartaRecompensa key={`f${r.nivel}`} r={r} passe={passe} onResgatar={() => resgatar(r)} />
           ))}
         </div>
       </section>
 
-      <div className="border-2 border-borda bg-painel/40 p-3 text-center text-[10px] text-suave">
-        🔒 Passe <span className="text-amber-300">Premium</span> (recompensas em todo nível + molduras) em breve.
-      </div>
+      {/* recompensas premium */}
+      <section className="flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <h2 className="font-pixel text-[10px] text-amber-300">RECOMPENSAS · TRILHA PREMIUM</h2>
+          <span className="font-pixel text-[8px] text-suave">{passe.premium ? "✨ ATIVO" : "🔒 bloqueado"}</span>
+        </div>
+        {!passe.premium && (
+          <p className="text-[9px] text-suave">
+            Ative o Premium pra resgatar esta trilha e ganhar +{Math.round(PASSE.premiumBonusPP * 100)}% de PP. (compra em breve)
+          </p>
+        )}
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {RECOMPENSAS_PREMIUM.map((r) => (
+            <CartaRecompensa key={`p${r.nivel}`} r={r} passe={passe} onResgatar={() => resgatar(r)} />
+          ))}
+        </div>
+      </section>
     </main>
   );
 }

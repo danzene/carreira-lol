@@ -47,6 +47,23 @@ describe("passe de batalha", () => {
     expect(progredirPasse(passe, "treinar", 1)).toBe(passe); // nada muda → mesma referência
   });
 
+  it("premium ganha +10% de PP ao concluir missão", () => {
+    const base = {
+      diarias: [{ tipo: "vencer" as const, texto: "Vença 1", escopo: "diaria" as const, alvo: 1, pp: 40, id: "a", progresso: 0, concluida: false }],
+      semanais: [],
+    };
+    const free = progredirPasse(passeCom({ ...base, premium: false }), "vencer", 1);
+    const prem = progredirPasse(passeCom({ ...base, premium: true }), "vencer", 1);
+    expect(free.pp).toBe(40);
+    expect(prem.pp).toBe(40 + Math.round(40 * PASSE.premiumBonusPP)); // 44
+  });
+
+  it("resgate da trilha premium exige o passe premium", () => {
+    const rec = recompensaDe(5, "premium")!;
+    expect(podeResgatar(passeCom({ pp: 1000, premium: false }), rec)).toBe(false);
+    expect(podeResgatar(passeCom({ pp: 1000, premium: true }), rec)).toBe(true);
+  });
+
   it("renova diárias após 24h, semanais só após 7 dias", () => {
     const p = criarPasse(1, 0);
     const r = renovarMissoes(p, 9, 26 * 3600 * 1000);

@@ -95,7 +95,9 @@ export function progredirPasse(passe: PasseState, tipo: TipoMissao, qtd = 1): Pa
   const d = progredirLista(passe.diarias, tipo, qtd);
   const s = progredirLista(passe.semanais, tipo, qtd);
   if (d.lista === passe.diarias && s.lista === passe.semanais) return passe;
-  return { ...passe, diarias: d.lista, semanais: s.lista, pp: passe.pp + d.ppGanho + s.ppGanho };
+  const ganho = d.ppGanho + s.ppGanho;
+  const bonus = passe.premium ? Math.round(ganho * PASSE.premiumBonusPP) : 0;
+  return { ...passe, diarias: d.lista, semanais: s.lista, pp: passe.pp + ganho + bonus };
 }
 
 export function podeResgatar(passe: PasseState, r: Recompensa): boolean {

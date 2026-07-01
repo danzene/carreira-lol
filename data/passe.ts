@@ -62,8 +62,21 @@ export const RECOMPENSAS_FREE: Recompensa[] = [
   { nivel: 60, trilha: "free", tipo: "ingresso", valor: 1, rotulo: "Ingresso de campeonato" },
 ];
 
-// (Trilha PREMIUM entra na fatia de monetização.)
-export const RECOMPENSAS_PREMIUM: Recompensa[] = [];
+// Trilha PREMIUM (paga): mais recompensas e maiores. Requer passe.premium pra resgatar.
+export const RECOMPENSAS_PREMIUM: Recompensa[] = [
+  { nivel: 5, trilha: "premium", tipo: "coinpoints", valor: 100, rotulo: "100 CoinPoints" },
+  { nivel: 10, trilha: "premium", tipo: "coinpoints", valor: 250, rotulo: "250 CoinPoints" },
+  { nivel: 15, trilha: "premium", tipo: "item", valor: 25, rotulo: "Item (iLvl 25)" },
+  { nivel: 20, trilha: "premium", tipo: "item", valor: 30, rotulo: "Item (iLvl 30)" },
+  { nivel: 25, trilha: "premium", tipo: "coinpoints", valor: 300, rotulo: "300 CoinPoints" },
+  { nivel: 30, trilha: "premium", tipo: "item", valor: 40, rotulo: "Item (iLvl 40)" },
+  { nivel: 35, trilha: "premium", tipo: "coinpoints", valor: 400, rotulo: "400 CoinPoints" },
+  { nivel: 40, trilha: "premium", tipo: "item", valor: 45, rotulo: "Item (iLvl 45)" },
+  { nivel: 45, trilha: "premium", tipo: "ingresso", valor: 1, rotulo: "Ingresso de campeonato" },
+  { nivel: 50, trilha: "premium", tipo: "coinpoints", valor: 600, rotulo: "600 CoinPoints" },
+  { nivel: 55, trilha: "premium", tipo: "item", valor: 55, rotulo: "Item (iLvl 55)" },
+  { nivel: 60, trilha: "premium", tipo: "item", valor: 60, rotulo: "Item lendário (iLvl 60)" },
+];
 
 export function recompensaDe(nivel: number, trilha: "free" | "premium"): Recompensa | undefined {
   const lista = trilha === "free" ? RECOMPENSAS_FREE : RECOMPENSAS_PREMIUM;

@@ -112,6 +112,13 @@ export default function DashboardPage() {
         )}
       </Link>
 
+      <Link
+        href="/online"
+        className="border-2 border-ciano bg-ciano/10 px-4 py-3 text-center font-pixel text-[10px] text-ciano transition hover:bg-ciano hover:text-fundo"
+      >
+        ⚔️ ONLINE · DUELO 1v1
+      </Link>
+
       <div className="grid grid-cols-2 gap-2">
         <Link
           href="/loja"

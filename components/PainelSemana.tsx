@@ -102,7 +102,10 @@ export default function PainelSemana({ career }: { career: CareerState }) {
               : "pointer-events-none border-borda text-borda"
           }`}
         >
-          ⚔️ JOGAR
+          <span className="flex flex-col items-center gap-1">
+            <img src="/carreira/icones/jogar.png" alt="" className="h-9 w-9" style={{ imageRendering: "pixelated" }} />
+            <span>JOGAR</span>
+          </span>
           <span className="text-[9px] font-normal opacity-80">−{LOOP.custoSoloq}</span>
         </Link>
         <Atividade rotulo={<IconeAcao acao="treino" label="TREINO" />} sub={`−${LOOP.custoTreino}`} disabled={energia < LOOP.custoTreino} onClick={() => setPainel((p) => (p === "focado" ? null : "focado"))} />

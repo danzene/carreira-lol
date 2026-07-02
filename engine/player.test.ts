@@ -4,12 +4,47 @@ import {
   atributosIniciais,
   criarCareerState,
   criarPlayer,
+  normalizarCareer,
   pontosRestantes,
   somaPontosDistribuidos,
   validarCriacao,
   type CriarPlayerInput,
   type FormularioCriacao,
 } from "./player";
+import type { CareerState } from "./types";
+
+describe("normalizarCareer (migração de save)", () => {
+  it("save antigo/parcial ganha todos os campos obrigatórios (crash de produção)", () => {
+    // save de versão velha: player sem tracos/pool, sem inbox/historico
+    const bruto = {
+      player: { nome: "Onitsut", rota: "MID", atributos: { mecanica: 60 }, rankSoloq: { elo: "Ferro III", lp: 20, mmr: 900 } },
+      dinheiro: 500,
+      semanaAtual: 9,
+      temporada: 1,
+    } as unknown as CareerState;
+    const c = normalizarCareer(bruto);
+    expect(c.player.tracos).toEqual([]); // era o crash: tracos.includes de undefined
+    expect(c.player.pool).toEqual([]);
+    expect(c.historicoPartidas).toEqual([]);
+    expect(c.inbox).toEqual([]);
+    expect(c.equipamentos).toEqual([]);
+    expect(c.player.atributos.macro).toBeGreaterThan(0); // atributos completados
+    expect(c.player.atributos.mecanica).toBe(60); // sem perder o que existia
+    expect(c.player.rankSoloq.elo).toBe("Ferro III");
+    expect(c.semanaAtual).toBe(9);
+    expect(c.dinheiro).toBe(500);
+  });
+
+  it("save completo passa intacto nos campos preenchidos", () => {
+    const completo = criarCareerState(
+      criarPlayer({ nome: "T", nacionalidade: "Brasil", rota: "MID", atributos: atributosIniciais(), traco: "FLEX", campeoes: ["A", "B", "C"] }),
+    );
+    const n = normalizarCareer(completo);
+    expect(n.player.tracos).toEqual(completo.player.tracos);
+    expect(n.player.pool).toEqual(completo.player.pool);
+    expect(n.dinheiro).toBe(completo.dinheiro);
+  });
+});
 
 function formValido(): FormularioCriacao {
   const atributos = atributosIniciais();

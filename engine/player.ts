@@ -104,3 +104,35 @@ export function criarCareerState(player: Player, opcoes: OpcoesCarreira = OPCOES
     scoutPontos: 0, // começa sem CoinPoints — ganha jogando/avançando a semana
   };
 }
+
+// 🩹 Migração de save (PURO): saves antigos/parciais (localStorage de versões velhas ou
+// nuvem incompleta) ganham TODOS os campos obrigatórios com defaults sãos — o jogo
+// nunca crasha por campo faltando. Roda em todo carregamento de slot.
+export function normalizarCareer(bruto: CareerState): CareerState {
+  const p = (bruto.player ?? {}) as Partial<Player>;
+  return {
+    ...bruto,
+    dinheiro: typeof bruto.dinheiro === "number" ? bruto.dinheiro : INICIO.dinheiro,
+    equipamentos: Array.isArray(bruto.equipamentos) ? bruto.equipamentos : [],
+    contratoAtual: bruto.contratoAtual ?? null,
+    semanaAtual: typeof bruto.semanaAtual === "number" ? bruto.semanaAtual : 1,
+    temporada: typeof bruto.temporada === "number" ? bruto.temporada : 1,
+    tierAtual: bruto.tierAtual ?? "SOLOQ",
+    historicoPartidas: Array.isArray(bruto.historicoPartidas) ? bruto.historicoPartidas : [],
+    inbox: Array.isArray(bruto.inbox) ? bruto.inbox : [],
+    patchVigente: typeof bruto.patchVigente === "number" ? bruto.patchVigente : 1,
+    player: {
+      nome: p.nome ?? "Jogador",
+      nacionalidade: p.nacionalidade ?? "Brasil",
+      idade: typeof p.idade === "number" ? p.idade : 17,
+      rota: p.rota ?? "MID",
+      atributos: { ...atributosIniciais(), ...(p.atributos ?? {}) },
+      pool: Array.isArray(p.pool) ? p.pool : [],
+      tracos: Array.isArray(p.tracos) ? p.tracos : [],
+      reputacao: typeof p.reputacao === "number" ? p.reputacao : 0,
+      rankSoloq: p.rankSoloq ?? { ...INICIO.rank },
+      energia: typeof p.energia === "number" ? p.energia : INICIO.energia,
+      moral: typeof p.moral === "number" ? p.moral : INICIO.moral,
+    },
+  };
+}

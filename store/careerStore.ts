@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { criarCareerState } from "@/engine/player";
+import { criarCareerState, normalizarCareer } from "@/engine/player";
 import { aplicarResultado } from "@/engine/simularPartida";
 import {
   alteracaoMental as alteracaoMentalEngine,
@@ -217,7 +217,8 @@ export const useCareer = create<CareerStore>((set, get) => ({
     const slot = lerSlot(slotId);
     if (!slot) return false;
     definirSlotAtual(slotId);
-    const state = migrarUnlocks(inicializarTempo(slot.state, Date.now())); // relógios + migração de unlocks
+    // migração de save (campos faltando) + relógios de recarga + migração de unlocks
+    const state = migrarUnlocks(inicializarTempo(normalizarCareer(slot.state), Date.now()));
     set({ career: state, slotId });
     if (state !== slot.state) salvarSlot(slotId, state);
     return true;

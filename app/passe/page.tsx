@@ -31,7 +31,7 @@ function Missao({ m }: { m: MissaoAtiva }) {
 }
 
 function CartaRecompensa({ r, passe, onResgatar }: { r: Recompensa; passe: PasseState; onResgatar: () => void }) {
-  const resgatada = (r.trilha === "free" ? passe.resgatadasFree : passe.resgatadasPremium).includes(r.nivel);
+  const resgatada = ((r.trilha === "free" ? passe.resgatadasFree : passe.resgatadasPremium) ?? []).includes(r.nivel);
   const pode = podeResgatar(passe, r);
   const bloqueadoPorPremium = r.trilha === "premium" && !passe.premium;
   const ppAlvo = (r.nivel - 1) * PASSE.ppPorNivel; // PP para atingir este nível

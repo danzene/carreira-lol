@@ -69,7 +69,7 @@ export default function PainelSemana({ career }: { career: CareerState }) {
     }
   }
 
-  const tracosDisponiveis = TRACOS.filter((t) => t.inicial && !career.player.tracos.includes(t.id));
+  const tracosDisponiveis = TRACOS.filter((t) => t.inicial && !(career.player.tracos ?? []).includes(t.id));
 
   return (
     <div className="border-2 border-borda bg-painel p-5">

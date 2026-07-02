@@ -193,6 +193,25 @@ export interface LendaPossuida {
   substats: SubstatValor[]; // rolagem aleatória
 }
 
+// ----- Ritual diário (retenção) -----
+export interface EstadoDiario {
+  ultimoLoginDia: string; // "YYYY-MM-DD" local
+  streak: number; // dias consecutivos
+  escudoUsadoEm?: string; // dia em que o escudo foi consumido (1 por semana)
+  puxadaGratisEm?: string; // dia da última puxada grátis no Booster
+  recompensaColetadaEm?: string; // dia da última recompensa de streak coletada
+}
+
+// Estatísticas acumuladas da semana corrente (recap "wrapped" ao avançar).
+export interface StatsSemana {
+  partidas: number;
+  vitorias: number;
+  melhorKda?: KDA;
+  melhorNota: number;
+  lpLiquido: number;
+  dropsPorRaridade: Record<number, number>;
+}
+
 export interface CareerState {
   player: Player;
   dinheiro: number;
@@ -221,4 +240,7 @@ export interface CareerState {
   pity?: number; // puxadas desde o último 5★
   liga?: LigaState; // temporada/campeonato do time atual (Fase 8)
   coachAtivo?: boolean; // assinatura de coach (XP passivo semanal, custa upkeep)
+  diario?: EstadoDiario; // streak de login + puxada grátis (ausente em saves antigos)
+  statsSemana?: StatsSemana; // stats da semana corrente (recap ao avançar)
+  statsSemanaAnterior?: StatsSemana; // pra comparação ↑↓ no recap
 }

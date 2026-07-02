@@ -7,6 +7,8 @@ import PlayerCard from "@/components/PlayerCard";
 import PainelSemana from "@/components/PainelSemana";
 import HistoricoPartidas from "@/components/HistoricoPartidas";
 import ResumoSemanaModal from "@/components/ResumoSemanaModal";
+import DailyHub from "@/components/DailyHub";
+import RecapSemanal from "@/components/RecapSemanal";
 import { timeDe } from "@/data/times";
 import { proximoConfrontoJogador } from "@/engine/liga";
 import { versaoPatch } from "@/engine/patch";
@@ -25,6 +27,9 @@ export default function DashboardPage() {
   const sincronizarLiga = useCareer((s) => s.sincronizarLiga);
   const ultimoResumo = useCareer((s) => s.ultimoResumo);
   const limparResumo = useCareer((s) => s.limparResumo);
+  const recapSemanal = useCareer((s) => s.recapSemanal);
+  const limparRecap = useCareer((s) => s.limparRecap);
+  const registrarLogin = useCareer((s) => s.registrarLogin);
   const sair = useCareer((s) => s.sair);
   const coinpoints = useProfile((s) => s.perfil?.coinpoints ?? 0);
   const novosItens = useInventory((s) => s.novos);
@@ -38,6 +43,11 @@ export default function DashboardPage() {
   useEffect(() => {
     sincronizarLiga();
   }, [sincronizarLiga]);
+
+  // primeira abertura do dia → registra o streak e abre o Daily Hub
+  useEffect(() => {
+    if (career) registrarLogin();
+  }, [career, registrarLogin]);
 
   if (!career) {
     return <main className="flex min-h-screen items-center justify-center text-sm text-suave">Carregando…</main>;
@@ -168,7 +178,13 @@ export default function DashboardPage() {
         </Link>
       </p>
 
-      {ultimoResumo && <ResumoSemanaModal resumo={ultimoResumo} onFechar={limparResumo} />}
+      {/* ordem: recap "wrapped" primeiro → depois o resumo da semana → Daily Hub por cima de tudo */}
+      {recapSemanal ? (
+        <RecapSemanal recap={recapSemanal} onFechar={limparRecap} />
+      ) : (
+        ultimoResumo && <ResumoSemanaModal resumo={ultimoResumo} onFechar={limparResumo} />
+      )}
+      <DailyHub />
     </main>
   );
 }

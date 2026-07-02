@@ -26,6 +26,7 @@ import { construirBanco } from "@/engine/champions";
 import { efeitoLendas, sinergiasAtivas, type ResultadoPuxada } from "@/engine/gacha";
 import type { ChampionDef } from "@/engine/types";
 import { buscarCampeoes, type Campeao } from "@/lib/ddragon";
+import { chaveDia, puxadaGratisDisponivel } from "@/engine/diario";
 import { useCareer } from "@/store/careerStore";
 import { useProfile } from "@/store/profileStore";
 
@@ -34,6 +35,7 @@ export default function GachaPage() {
   const career = useCareer((s) => s.career);
   const recarregar = useCareer((s) => s.recarregarAtual);
   const puxarGacha = useCareer((s) => s.puxarGacha);
+  const puxarGratis = useCareer((s) => s.puxarGratis);
   const ganharCampeao = useCareer((s) => s.ganharCampeao);
   const equiparLenda = useCareer((s) => s.equiparLenda);
   const perfil = useProfile((s) => s.perfil);
@@ -110,6 +112,16 @@ export default function GachaPage() {
     setAnim({ cartas: r.map(cartaLenda), pity: { antes: pityAntes, depois: pityDepois, max: GACHA.pity5 } });
   }
 
+  async function puxarDiaria() {
+    const pityAntes = useCareer.getState().career?.pity ?? 0;
+    const r = await puxarGratis();
+    if (!r) return;
+    const pityDepois = useCareer.getState().career?.pity ?? 0;
+    setAnim({ cartas: r.map(cartaLenda), pity: { antes: pityAntes, depois: pityDepois, max: GACHA.pity5 } });
+  }
+
+  const temGratis = puxadaGratisDisponivel(career, chaveDia(Date.now()));
+
   async function puxarCampeao() {
     if (banco.length === 0 || ps < GACHA.custoCampeao) return;
     // campeões mais fortes (meta) são mais raros de cair.
@@ -160,6 +172,16 @@ export default function GachaPage() {
       {/* ---- Puxar Lendas ---- */}
       <section className="flex flex-col gap-2">
         <h2 className="font-pixel text-[11px] text-rosa">CARTAS DE LENDA</h2>
+        {temGratis && (
+          <button
+            type="button"
+            onClick={puxarDiaria}
+            className="relative border-2 border-amber-300 bg-amber-300/10 py-3 font-pixel text-[11px] text-amber-300 transition hover:bg-amber-300 hover:text-fundo"
+          >
+            🎁 PUXADA GRÁTIS DE HOJE
+            <span className="absolute -right-1.5 -top-1.5 grid h-4 w-4 place-items-center bg-rosa font-pixel text-[8px] text-fundo">!</span>
+          </button>
+        )}
         <div className="grid grid-cols-2 gap-2">
           <button
             type="button"

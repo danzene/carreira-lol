@@ -3,6 +3,7 @@ import { ITENS_ECON, SLOTS_GEAR, type Item, type SlotGear } from "@/data/itens";
 import { cerimoniaDeDrop } from "@/engine/cerimonias";
 import { efeitoItens, gerarItem, rerollAfixos } from "@/engine/itens";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabaseClient";
+import { rastrear } from "@/lib/telemetria";
 import { useCerimonias } from "./cerimoniaStore";
 import { useProfile } from "./profileStore";
 import { usePasse } from "./passeStore";
@@ -122,6 +123,7 @@ export const useInventory = create<InventoryStore>((set, get) => {
       set({ itens: [...get().itens, item], ultimoDrop: item, novos: get().novos + 1 });
       persistir();
       useCerimonias.getState().emitir(cerimoniaDeDrop(item));
+      rastrear("drop_item", { raridade: item.raridade, iLvl: item.iLvl });
       return item;
     },
 

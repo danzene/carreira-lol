@@ -5,6 +5,7 @@ import AuthGate from "@/components/AuthGate";
 import CeremonyManager from "@/components/ceremony/CeremonyManager";
 import HeaderHud from "@/components/HeaderHud";
 import Guardiao from "@/components/Guardiao";
+import TelemetriaTela from "@/components/TelemetriaTela";
 
 // Fonte bitmap só pra títulos/HUD; o corpo usa fonte legível do sistema.
 const pixel = Press_Start_2P({
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {children}
           </AuthGate>
           <CeremonyManager />
+          <TelemetriaTela />
         </Guardiao>
       </body>
     </html>

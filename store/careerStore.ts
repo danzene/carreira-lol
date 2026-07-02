@@ -14,7 +14,6 @@ import {
   bootcampCoreia,
   processarSemanaEconomia,
   sessaoMental as sessaoMentalEngine,
-  upgradeEquip as upgradeEquipEngine,
 } from "@/engine/economia";
 import {
   adicionarOfertas,
@@ -56,11 +55,12 @@ import { cerimoniasDeUnlocks, migrarUnlocks } from "@/engine/unlocks";
 import { gerarItem } from "@/engine/itens";
 import { SLOTS_GEAR } from "@/data/itens";
 import { criarRng } from "@/engine/rng";
+import { rastrear, rastrearSessao } from "@/lib/telemetria";
 import { useCerimonias } from "./cerimoniaStore";
 import { useProfile } from "./profileStore";
 import { useInventory } from "./inventoryStore";
 import { usePasse } from "./passeStore";
-import type { AtributoKey, CareerState, Equip, MatchResult, OpcoesCarreira, Player, StatsSemana, TraitId } from "@/engine/types";
+import type { AtributoKey, CareerState, MatchResult, OpcoesCarreira, Player, StatsSemana, TraitId } from "@/engine/types";
 import {
   apagarSlot,
   definirSlotAtual,
@@ -116,7 +116,6 @@ interface CareerStore {
   bootcamp: () => boolean;
   alternarCoach: () => void;
   sessaoMental: () => boolean;
-  upgradeEquip: (tipo: Equip["tipo"]) => boolean;
   puxarGacha: (qtd: number) => Promise<ResultadoPuxada[] | null>;
   ganharCampeao: (championId: string) => Promise<ResultadoCampeao | null>;
   equiparLenda: (id: string) => void;
@@ -160,7 +159,9 @@ export const useCareer = create<CareerStore>((set, get) => ({
     const { career: c0, slotId } = get();
     if (!c0) return;
     const r = registrarLoginDiario(c0, chaveDia(Date.now()));
+    rastrearSessao({ semana: c0.semanaAtual, temporada: c0.temporada, elo: c0.player.rankSoloq.elo, streak: r.streak });
     if (r.evento === "mesmo_dia") return;
+    rastrear("streak_dia", { streak: r.streak, evento: r.evento });
     set({ career: r.career, dailyHub: { streak: r.streak, evento: r.evento } });
     if (slotId) salvarSlot(slotId, r.career);
     if (marcoStreak(r.streak)) {
@@ -200,6 +201,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
     usePasse.getState().progredir("booster");
+    rastrear("gacha_puxada", { qtd: 1, melhor: Math.max(...r.resultados.map((x) => x.raridade)), pity: novo.pity ?? 0, gratis: true });
     return r.resultados;
   },
 
@@ -238,10 +240,13 @@ export const useCareer = create<CareerStore>((set, get) => ({
     if (resultado.vitoria) novo = { ...novo, dinheiro: novo.dinheiro + bonusVitoria(career) };
     novo = comConquistas(novo);
     useCerimonias.getState().emitir(cerimoniaDeElo(career.player.rankSoloq.elo, novo.player.rankSoloq.elo));
-    useCerimonias.getState().emitir(cerimoniasDeUnlocks(career, novo));
+    const unlocks = cerimoniasDeUnlocks(career, novo);
+    useCerimonias.getState().emitir(unlocks);
+    for (const u of unlocks) if (u.tipo === "FEATURE_UNLOCKED") rastrear("feature_desbloqueada", { feature: u.feature });
     const rec = atualizarRecords(novo, resultado);
     novo = rec.career;
     useCerimonias.getState().emitir(rec.cerimonias);
+    rastrear("partida_fim", { modo: "soloq", vitoria: resultado.vitoria, nota: resultado.notaPerformance, elo: novo.player.rankSoloq.elo });
     void useProfile.getState().ajustar(resultado.vitoria ? GACHA.porVitoria : GACHA.porDerrota, "partida");
     if (resultado.vitoria) {
       const drop = useInventory.getState().dropDePartida(iLvlDe(career));
@@ -341,7 +346,9 @@ export const useCareer = create<CareerStore>((set, get) => ({
       temporada: antes.temporada,
     };
     novo = fecharSemanaStats(novo);
-    useCerimonias.getState().emitir(cerimoniasDeUnlocks(antes, novo));
+    const unlocksSemana = cerimoniasDeUnlocks(antes, novo);
+    useCerimonias.getState().emitir(unlocksSemana);
+    for (const u of unlocksSemana) if (u.tipo === "FEATURE_UNLOCKED") rastrear("feature_desbloqueada", { feature: u.feature });
 
     set({ career: novo, ultimoResumo: resumo, recapSemanal: recap });
     if (slotId) salvarSlot(slotId, novo);
@@ -377,16 +384,6 @@ export const useCareer = create<CareerStore>((set, get) => ({
     return true;
   },
 
-  upgradeEquip: (tipo) => {
-    const { career, slotId } = get();
-    if (!career) return false;
-    const novo = upgradeEquipEngine(career, tipo);
-    if (!novo) return false;
-    set({ career: novo });
-    if (slotId) salvarSlot(slotId, novo);
-    return true;
-  },
-
   puxarGacha: async (qtd) => {
     const { career, slotId } = get();
     if (!career) return null;
@@ -399,6 +396,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
     usePasse.getState().progredir("booster");
+    rastrear("gacha_puxada", { qtd, melhor: Math.max(...r.resultados.map((x) => x.raridade)), pity: novo.pity ?? 0, gratis: false });
     return r.resultados;
   },
 
@@ -482,6 +480,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
     if (resultado.vitoria) usePasse.getState().progredir("vencer");
     novo = consumirCarga(novo, agora);
     novo = comConquistas(novo);
+    rastrear("partida_fim", { modo: "liga", vitoria: resultado.vitoria, nota: resultado.notaPerformance, elo: novo.player.rankSoloq.elo });
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
   },
@@ -506,6 +505,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
     usePasse.getState().progredir("jogar");
     if (resultado.vitoria) usePasse.getState().progredir("vencer");
     novo = comConquistas(novo);
+    rastrear("partida_fim", { modo: "evento", vitoria: resultado.vitoria, nota: resultado.notaPerformance, elo: novo.player.rankSoloq.elo });
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
   },
@@ -558,6 +558,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
     if (resultado.vitoria) usePasse.getState().progredir("vencer");
     novo = consumirCarga(novo, agora);
     novo = comConquistas(novo);
+    rastrear("partida_fim", { modo: "torneio", vitoria: resultado.vitoria, nota: resultado.notaPerformance, elo: novo.player.rankSoloq.elo });
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
   },

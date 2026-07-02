@@ -1,10 +1,10 @@
-import { ECONOMIA, EQUIP_INFO, EQUIP_MAX_NIVEL } from "@/data/economia";
+import { ECONOMIA } from "@/data/economia";
 import { LOOP } from "@/data/loop";
 import { mod } from "@/data/opcoes";
 import { efeitoLendas } from "./gacha";
-import type { Attributes, AtributoKey, CareerState, Equip } from "./types";
+import type { Attributes, AtributoKey, CareerState } from "./types";
 
-// Economia (PURO): salário, bônus, coach e crafting de periféricos.
+// Economia (PURO): salário, bônus e coach.
 
 function clamp(v: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, v));
@@ -27,17 +27,6 @@ export function salarioSemanal(career: CareerState): number {
 export function bonusVitoria(career: CareerState): number {
   const base = career.contratoAtual?.bonusPorVitoria ?? ECONOMIA.bonusBaseVitoria;
   return Math.round(base * mod(career.opcoes).dinheiro * efeitoLendas(career).dinheiroMult);
-}
-
-// Soma os bônus de atributo de todos os periféricos.
-export function bonusEquipamentos(equipamentos: Equip[]): Partial<Attributes> {
-  const b: Partial<Attributes> = {};
-  for (const e of equipamentos) {
-    for (const [k, v] of Object.entries(e.bonus) as [AtributoKey, number][]) {
-      b[k] = (b[k] ?? 0) + v;
-    }
-  }
-  return b;
 }
 
 // Renda + coach, ao avançar a semana.
@@ -92,23 +81,5 @@ export function alternarCoach(career: CareerState): CareerState {
   return { ...career, coachAtivo: !(career.coachAtivo ?? false) };
 }
 
-export function nivelEquip(career: CareerState, tipo: Equip["tipo"]): number {
-  return career.equipamentos.find((e) => e.tipo === tipo)?.nivel ?? 0;
-}
-
-export function custoUpgrade(nivelAtual: number): number {
-  return ECONOMIA.custoEquipBase + nivelAtual * ECONOMIA.custoEquipPorNivel;
-}
-
-export function upgradeEquip(career: CareerState, tipo: Equip["tipo"]): CareerState | null {
-  const nivel = nivelEquip(career, tipo);
-  if (nivel >= EQUIP_MAX_NIVEL) return null;
-  const custo = custoUpgrade(nivel);
-  if (career.dinheiro < custo) return null;
-
-  const info = EQUIP_INFO[tipo];
-  const novoNivel = nivel + 1;
-  const novo: Equip = { tipo, nivel: novoNivel, bonus: { [info.atributo]: round2(info.bonusPorNivel * novoNivel) } };
-  const equipamentos = [...career.equipamentos.filter((e) => e.tipo !== tipo), novo];
-  return { ...career, dinheiro: career.dinheiro - custo, equipamentos };
-}
+// (Os periféricos antigos foram REMOVIDOS — o setup agora são os itens ARPG.
+//  Saves com periféricos são reembolsados em $ na migração: normalizarCareer.)

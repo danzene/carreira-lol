@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { poderDeSnapshot, simularDuelo, snapshotDePlayer, type DueloResult, type PlayerSnapshot } from "@/engine/duelo";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabaseClient";
+import { rastrear } from "@/lib/telemetria";
 import { useCareer } from "./careerStore";
 import { useProfile } from "./profileStore";
 
@@ -179,6 +180,7 @@ export const useDuelo = create<DueloStore>((set, get) => ({
         criadoEm: new Date().toISOString(),
       };
       set({ ultimoResultado: resultado, historico: [registro, ...get().historico].slice(0, 20) });
+      rastrear("duelo_fim", { venceu: resultado.vencedorChave === meu.uid, poderRival: op.poder });
       void get().carregar(); // atualiza ranking/histórico do servidor em segundo plano
       return resultado;
     } catch {

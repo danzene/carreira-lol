@@ -1,14 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { ECONOMIA, EQUIP_MAX_NIVEL } from "@/data/economia";
-import { atributosIniciais, criarCareerState, criarPlayer } from "./player";
-import {
-  alternarCoach,
-  bonusEquipamentos,
-  bootcampCoreia,
-  processarSemanaEconomia,
-  sessaoMental,
-  upgradeEquip,
-} from "./economia";
+import { ECONOMIA } from "@/data/economia";
+import { atributosIniciais, criarCareerState, criarPlayer, normalizarCareer } from "./player";
+import { alternarCoach, bootcampCoreia, processarSemanaEconomia, sessaoMental } from "./economia";
 import type { CareerState } from "./types";
 
 function carreira(dinheiro = 500): CareerState {
@@ -54,19 +47,17 @@ describe("economia + equipamentos", () => {
     expect(bootcampCoreia(carreira(100))).toBeNull();
   });
 
-  it("upgrade de periférico sobe nível, dá bônus e custa; respeita o teto", () => {
-    let c = carreira(99999);
-    const r = upgradeEquip(c, "MOUSE");
-    expect(r).not.toBeNull();
-    if (!r) return;
-    expect(r.equipamentos.find((e) => e.tipo === "MOUSE")?.nivel).toBe(1);
-    expect(bonusEquipamentos(r.equipamentos).mecanica).toBeGreaterThan(0);
-
-    c = r;
-    for (let i = 1; i < EQUIP_MAX_NIVEL; i++) {
-      const up = upgradeEquip(c, "MOUSE");
-      if (up) c = up;
-    }
-    expect(upgradeEquip(c, "MOUSE")).toBeNull(); // no teto
+  it("periféricos antigos são REEMBOLSADOS em $ na migração (sistema removido)", () => {
+    const c = carreira(500);
+    // save antigo com mouse nível 2 (investiu 200 + 450 = 650) e headset nível 1 (200)
+    c.equipamentos = [
+      { tipo: "MOUSE", nivel: 2, bonus: { mecanica: 4 } },
+      { tipo: "HEADSET", nivel: 1, bonus: { comunicacao: 2 } },
+    ];
+    const m = normalizarCareer(c);
+    expect(m.equipamentos).toEqual([]);
+    expect(m.dinheiro).toBe(500 + 650 + 200);
+    // idempotente: migrar de novo não paga de novo
+    expect(normalizarCareer(m).dinheiro).toBe(m.dinheiro);
   });
 });

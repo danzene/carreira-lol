@@ -11,7 +11,9 @@ import {
   type PasseState,
 } from "@/engine/passe";
 import { cerimoniasDePasse } from "@/engine/cerimonias";
+import { nivelDoPasse } from "@/engine/passe";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabaseClient";
+import { rastrear } from "@/lib/telemetria";
 import { useCerimonias } from "./cerimoniaStore";
 import { useInventory } from "./inventoryStore";
 import { useProfile } from "./profileStore";
@@ -88,6 +90,7 @@ export const usePasse = create<PasseStore>((set, get) => {
       const novo = progredirPasse(p, tipo, qtd);
       if (novo === p) return;
       useCerimonias.getState().emitir(cerimoniasDePasse(p, novo));
+      if (nivelDoPasse(novo.pp) > nivelDoPasse(p.pp)) rastrear("passe_nivel", { nivel: nivelDoPasse(novo.pp) });
       set({ passe: novo });
       persistir();
     },

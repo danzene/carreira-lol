@@ -105,15 +105,27 @@ export function criarCareerState(player: Player, opcoes: OpcoesCarreira = OPCOES
   };
 }
 
+// Reembolso dos periféricos antigos (sistema removido): devolve em $ TUDO que foi
+// investido. Custos históricos: nível N custava 200 + (N-1)*250 → total = 200N + 125N(N-1).
+function reembolsoPerifericos(bruto: CareerState): number {
+  if (!Array.isArray(bruto.equipamentos) || bruto.equipamentos.length === 0) return 0;
+  return bruto.equipamentos.reduce((soma, e) => {
+    const n = typeof e?.nivel === "number" ? Math.max(0, e.nivel) : 0;
+    return soma + 200 * n + 125 * n * (n - 1);
+  }, 0);
+}
+
 // 🩹 Migração de save (PURO): saves antigos/parciais (localStorage de versões velhas ou
 // nuvem incompleta) ganham TODOS os campos obrigatórios com defaults sãos — o jogo
-// nunca crasha por campo faltando. Roda em todo carregamento de slot.
+// nunca crasha por campo faltando. Também converte sistemas removidos (periféricos → $).
+// Roda em todo carregamento de slot.
 export function normalizarCareer(bruto: CareerState): CareerState {
   const p = (bruto.player ?? {}) as Partial<Player>;
+  const reembolso = reembolsoPerifericos(bruto);
   return {
     ...bruto,
-    dinheiro: typeof bruto.dinheiro === "number" ? bruto.dinheiro : INICIO.dinheiro,
-    equipamentos: Array.isArray(bruto.equipamentos) ? bruto.equipamentos : [],
+    dinheiro: (typeof bruto.dinheiro === "number" ? bruto.dinheiro : INICIO.dinheiro) + reembolso,
+    equipamentos: [], // periféricos antigos saíram do jogo (reembolsados acima)
     contratoAtual: bruto.contratoAtual ?? null,
     semanaAtual: typeof bruto.semanaAtual === "number" ? bruto.semanaAtual : 1,
     temporada: typeof bruto.temporada === "number" ? bruto.temporada : 1,

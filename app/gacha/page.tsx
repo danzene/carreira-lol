@@ -24,7 +24,7 @@ function descricaoPassivo(p: { chave: string; valor: number }): string {
   return `+${p.valor}${pct ? "%" : ""} ${d?.rotulo ?? p.chave}`;
 }
 import { construirBanco } from "@/engine/champions";
-import { efeitoLendas, sinergiasAtivas, type ResultadoPuxada } from "@/engine/gacha";
+import { efeitoLendas, sinergiasAtivas, sortearCampeaoBooster, type ResultadoPuxada } from "@/engine/gacha";
 import type { ChampionDef } from "@/engine/types";
 import { buscarCampeoes, type Campeao } from "@/lib/ddragon";
 import { chaveDia, puxadaGratisDisponivel } from "@/engine/diario";
@@ -125,19 +125,10 @@ export default function GachaPage() {
 
   async function puxarCampeao() {
     if (banco.length === 0 || ps < GACHA.custoCampeao) return;
-    // campeões mais fortes (meta) são mais raros de cair.
-    const maxF = Math.max(...banco.map((b) => b.forcaMetaBase));
-    const pesos = banco.map((b) => Math.max(1, maxF - b.forcaMetaBase + 4));
-    const total = pesos.reduce((a, b) => a + b, 0);
-    let x = Math.random() * total;
-    let escolhido = banco[0];
-    for (let i = 0; i < banco.length; i++) {
-      x -= pesos[i];
-      if (x <= 0) {
-        escolhido = banco[i];
-        break;
-      }
-    }
+    // sorteio no ENGINE (seedado) — a seed nasce aqui na borda, como padrão do repo
+    const seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
+    const escolhido = sortearCampeaoBooster(banco, seed);
+    if (!escolhido) return;
     const res = await ganharCampeao(escolhido.id);
     if (!res) return;
     const camp = campMap.get(escolhido.id);

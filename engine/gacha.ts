@@ -12,7 +12,7 @@ import {
   type Raridade,
 } from "@/data/gacha";
 import { criarRng, entre, type Rng } from "./rng";
-import type { Attributes, AtributoKey, CareerState, LendaPossuida, SubstatValor } from "./types";
+import type { Attributes, AtributoKey, CareerState, ChampionDef, LendaPossuida, SubstatValor } from "./types";
 
 // Scout Gacha (PURO): puxadas, rolagem de substats, duplicata → nível e efeitos das lendas.
 
@@ -101,6 +101,21 @@ export interface ResultadoCampeao {
   championId: string;
   novo: boolean;
   pontos: number;
+}
+
+// Sorteia o campeão do Booster (PURO, seedado): sorteio PONDERADO — quanto mais forte
+// no meta, mais raro de cair. (Antes vivia na página com Math.random — débito quitado.)
+export function sortearCampeaoBooster(banco: ChampionDef[], seed: number): ChampionDef | null {
+  if (banco.length === 0) return null;
+  const rng = criarRng(seed >>> 0);
+  const maxF = Math.max(...banco.map((b) => b.forcaMetaBase));
+  const pesos = banco.map((b) => Math.max(1, maxF - b.forcaMetaBase + 4));
+  let alvo = rng() * pesos.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < banco.length; i++) {
+    alvo -= pesos[i];
+    if (alvo <= 0) return banco[i];
+  }
+  return banco[banco.length - 1];
 }
 
 // Carta de Campeão: entra no pool (ou sobe a maestria). O custo (CoinPoints) é cobrado no

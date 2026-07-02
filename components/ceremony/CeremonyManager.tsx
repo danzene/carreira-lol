@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DURACOES, duracaoAntecipacao, tierDeItem, tierDeLenda, TIERS_JUICE, type TierJuice } from "@/data/juice";
 import { raridadeItemDef, slotDef } from "@/data/itens";
 import { melhorRaridade, type Cerimonia } from "@/engine/cerimonias";
 import { alternarMute, somMutado, tocarSom, tocarSomTier, type SomId } from "@/lib/som";
+import { rastrear } from "@/lib/telemetria";
 import { useCerimonias } from "@/store/cerimoniaStore";
 import PixelBurst from "@/components/juice/PixelBurst";
 import CerimoniaDrop from "./CerimoniaDrop";
@@ -187,11 +188,22 @@ function Toast({ c, onFechar }: { c: Cerimonia; onFechar: () => void }) {
 export default function CeremonyManager() {
   const fila = useCerimonias((s) => s.fila);
   const toasts = useCerimonias((s) => s.toasts);
-  const dispensar = useCerimonias((s) => s.dispensar);
+  const dispensarBase = useCerimonias((s) => s.dispensar);
   const removerToast = useCerimonias((s) => s.removerToast);
 
   const atual = fila[0];
   const chave = `${atual?.tipo}-${fila.length}`;
+
+  // telemetria: fechar em <1.5s = "pulou a cerimônia" (mede quando o juice cansa)
+  const abertaEm = useRef(0);
+  useEffect(() => {
+    abertaEm.current = Date.now();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chave]);
+  const dispensar = () => {
+    if (atual && Date.now() - abertaEm.current < 1500) rastrear("cerimonia_pulada", { tipo: atual.tipo });
+    dispensarBase();
+  };
 
   // cerimônias especializadas (Fase 1); o resto cai no frame genérico
   let fullscreen: React.ReactNode = null;

@@ -1,8 +1,29 @@
 import { describe, expect, it } from "vitest";
 import { GACHA } from "@/data/gacha";
-import { efeitoLendas, equipar, ganharCampeao, puxar } from "./gacha";
+import { efeitoLendas, equipar, ganharCampeao, puxar, sortearCampeaoBooster } from "./gacha";
 import { atributosIniciais, criarCareerState, criarPlayer } from "./player";
-import type { CareerState } from "./types";
+import type { CareerState, ChampionDef } from "./types";
+
+describe("sortearCampeaoBooster (débito Math.random quitado)", () => {
+  const champ = (id: string, forca: number): ChampionDef => ({
+    id,
+    nome: id,
+    classes: ["MAGO"],
+    rolesValidas: ["MID"],
+    perfil: { dano: 50, resistencia: 50, cc: 50, mobilidade: 50, sustain: 50 },
+    forcaMetaBase: forca,
+  });
+
+  it("é determinístico e PONDERADO: o fraco cai bem mais que o forte no meta", () => {
+    const banco = [champ("Forte", 70), champ("Fraco", 40)];
+    expect(sortearCampeaoBooster(banco, 9)?.id).toBe(sortearCampeaoBooster(banco, 9)?.id);
+    let fraco = 0;
+    for (let s = 0; s < 400; s++) if (sortearCampeaoBooster(banco, s)?.id === "Fraco") fraco++;
+    expect(fraco).toBeGreaterThan(250); // peso fraco=34 vs forte=4 → ~89%
+    expect(fraco).toBeLessThan(400); // mas o forte AINDA cai
+    expect(sortearCampeaoBooster([], 1)).toBeNull();
+  });
+});
 
 function carreira(): CareerState {
   return criarCareerState(

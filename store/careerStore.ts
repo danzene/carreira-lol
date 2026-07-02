@@ -48,6 +48,7 @@ import {
   type EventoLogin,
 } from "@/engine/diario";
 import { acumularDrop, acumularPartida, fecharSemanaStats, statsVazias } from "@/engine/statsSemana";
+import { cerimoniasDeUnlocks, migrarUnlocks } from "@/engine/unlocks";
 import { gerarItem } from "@/engine/itens";
 import { SLOTS_GEAR } from "@/data/itens";
 import { criarRng } from "@/engine/rng";
@@ -199,7 +200,8 @@ export const useCareer = create<CareerStore>((set, get) => ({
   },
 
   iniciarCarreira: (player, opcoes) => {
-    const career = inicializarTempo(criarCareerState(player, opcoes), Date.now());
+    // carreira NOVA joga com unlock progressivo (saves antigos viram legacy na migração)
+    const career = inicializarTempo({ ...criarCareerState(player, opcoes), unlocksLegacy: false }, Date.now());
     const slotId = gerarId();
     salvarSlot(slotId, career);
     definirSlotAtual(slotId);
@@ -211,7 +213,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
     const slot = lerSlot(slotId);
     if (!slot) return false;
     definirSlotAtual(slotId);
-    const state = inicializarTempo(slot.state, Date.now()); // garante relógios de recarga
+    const state = migrarUnlocks(inicializarTempo(slot.state, Date.now())); // relógios + migração de unlocks
     set({ career: state, slotId });
     if (state !== slot.state) salvarSlot(slotId, state);
     return true;
@@ -231,6 +233,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
     if (resultado.vitoria) novo = { ...novo, dinheiro: novo.dinheiro + bonusVitoria(career) };
     novo = comConquistas(novo);
     useCerimonias.getState().emitir(cerimoniaDeElo(career.player.rankSoloq.elo, novo.player.rankSoloq.elo));
+    useCerimonias.getState().emitir(cerimoniasDeUnlocks(career, novo));
     void useProfile.getState().ajustar(resultado.vitoria ? GACHA.porVitoria : GACHA.porDerrota, "partida");
     if (resultado.vitoria) {
       const drop = useInventory.getState().dropDePartida(iLvlDe(career));
@@ -330,6 +333,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
       temporada: antes.temporada,
     };
     novo = fecharSemanaStats(novo);
+    useCerimonias.getState().emitir(cerimoniasDeUnlocks(antes, novo));
 
     set({ career: novo, ultimoResumo: resumo, recapSemanal: recap });
     if (slotId) salvarSlot(slotId, novo);

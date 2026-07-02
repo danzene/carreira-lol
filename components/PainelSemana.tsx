@@ -5,6 +5,7 @@ import { type ReactNode, useEffect, useState } from "react";
 import { ATRIBUTOS, TRACOS } from "@/data/config";
 import { LOOP } from "@/data/loop";
 import { energiaAgora, proximoUsoEm, usosRestantes } from "@/engine/tempo";
+import { featureLiberada } from "@/engine/unlocks";
 import type { AtributoKey, CareerState, TraitId } from "@/engine/types";
 import { useCareer } from "@/store/careerStore";
 import AnimacaoAcao, { type TipoAcao } from "./AnimacaoAcao";
@@ -106,8 +107,18 @@ export default function PainelSemana({ career }: { career: CareerState }) {
         </Link>
         <Atividade rotulo={<IconeAcao acao="treino" label="TREINO" />} sub={`−${LOOP.custoTreino}`} disabled={energia < LOOP.custoTreino} onClick={() => setPainel((p) => (p === "focado" ? null : "focado"))} />
         <Atividade rotulo={<IconeAcao acao="especial" label="ESPECIAL" />} sub={`−${LOOP.custoEspecial}`} disabled={energia < LOOP.custoEspecial} onClick={() => setPainel((p) => (p === "especial" ? null : "especial"))} />
-        <Atividade rotulo={<IconeAcao acao="stream" label="STREAM" />} sub={`−${LOOP.custoStream} +$`} disabled={energia < LOOP.custoStream} onClick={live} />
-        <Atividade rotulo={<IconeAcao acao="mental" label="MENTAL" />} sub={`−${LOOP.custoAlteracao}`} disabled={energia < LOOP.custoAlteracao} onClick={() => setPainel((p) => (p === "mental" ? null : "mental"))} />
+        <Atividade
+          rotulo={<IconeAcao acao="stream" label="STREAM" />}
+          sub={featureLiberada(career, "stream") ? `−${LOOP.custoStream} +$` : "🔒 semana 2"}
+          disabled={!featureLiberada(career, "stream") || energia < LOOP.custoStream}
+          onClick={live}
+        />
+        <Atividade
+          rotulo={<IconeAcao acao="mental" label="MENTAL" />}
+          sub={featureLiberada(career, "mental") ? `−${LOOP.custoAlteracao}` : "🔒 semana 2"}
+          disabled={!featureLiberada(career, "mental") || energia < LOOP.custoAlteracao}
+          onClick={() => setPainel((p) => (p === "mental" ? null : "mental"))}
+        />
       </div>
 
       {(painel === "focado" || painel === "especial") && (

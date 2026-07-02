@@ -241,6 +241,7 @@ export interface CareerState {
   liga?: LigaState; // temporada/campeonato do time atual (Fase 8)
   coachAtivo?: boolean; // assinatura de coach (XP passivo semanal, custa upkeep)
   diario?: EstadoDiario; // streak de login + puxada grátis (ausente em saves antigos)
+  unlocksLegacy?: boolean; // save antigo = features todas destravadas (migração)
   statsSemana?: StatsSemana; // stats da semana corrente (recap ao avançar)
   statsSemanaAnterior?: StatsSemana; // pra comparação ↑↓ no recap
 }

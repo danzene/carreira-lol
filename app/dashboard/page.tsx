@@ -17,8 +17,10 @@ import { useCareer } from "@/store/careerStore";
 import { useProfile } from "@/store/profileStore";
 import { useInventory } from "@/store/inventoryStore";
 import { usePasse } from "@/store/passeStore";
-import { RECOMPENSAS_FREE } from "@/data/passe";
-import { nivelDoPasse, podeResgatar } from "@/engine/passe";
+import { nivelDoPasse } from "@/engine/passe";
+import { getBadges } from "@/engine/badges";
+import { chaveDia } from "@/engine/diario";
+import { defUnlock, featureLiberada, type FeatureId } from "@/engine/unlocks";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -34,7 +36,7 @@ export default function DashboardPage() {
   const coinpoints = useProfile((s) => s.perfil?.coinpoints ?? 0);
   const novosItens = useInventory((s) => s.novos);
   const passe = usePasse((s) => s.passe);
-  const resgataveis = passe ? RECOMPENSAS_FREE.filter((r) => podeResgatar(passe, r)).length : 0;
+  const badges = getBadges(career, passe, novosItens, chaveDia(Date.now()));
 
   useEffect(() => {
     if (!career && !recarregarAtual()) router.replace("/");
@@ -103,39 +105,56 @@ export default function DashboardPage() {
         🧪 PATCH {versaoPatch(career.patchVigente)} · VER MUDANÇAS
       </Link>
 
-      <Link
-        href="/gacha"
-        className="border-2 border-rosa bg-rosa/10 px-4 py-3 text-center font-pixel text-[11px] text-rosa transition hover:bg-rosa hover:text-fundo"
-      >
-        🎰 CARREIRA BOOSTER · 🪙 {coinpoints}
-      </Link>
+      {featureLiberada(career, "booster") ? (
+        <Link
+          href="/gacha"
+          className="relative border-2 border-rosa bg-rosa/10 px-4 py-3 text-center font-pixel text-[11px] text-rosa transition hover:bg-rosa hover:text-fundo"
+        >
+          🎰 CARREIRA BOOSTER · 🪙 {coinpoints}
+          {badges.booster && <PontoBadge />}
+        </Link>
+      ) : (
+        <Cadeado id="booster" />
+      )}
 
-      <Link
-        href="/passe"
-        className="relative border-2 border-amber-300 bg-amber-300/10 px-4 py-3 text-center font-pixel text-[11px] text-amber-300 transition hover:bg-amber-300 hover:text-fundo"
-      >
-        🎟️ PASSE DE BATALHA{passe ? ` · Nv ${nivelDoPasse(passe.pp)}` : ""}
-        {resgataveis > 0 && (
-          <span className="absolute -right-1.5 -top-1.5 grid h-5 min-w-[20px] place-items-center border-2 border-fundo bg-rosa px-1 font-pixel text-[10px] text-fundo">
-            {resgataveis}
-          </span>
-        )}
-      </Link>
+      {featureLiberada(career, "passe") ? (
+        <Link
+          href="/passe"
+          className="relative border-2 border-amber-300 bg-amber-300/10 px-4 py-3 text-center font-pixel text-[11px] text-amber-300 transition hover:bg-amber-300 hover:text-fundo"
+        >
+          🎟️ PASSE DE BATALHA{passe ? ` · Nv ${nivelDoPasse(passe.pp)}` : ""}
+          {badges.passe > 0 && (
+            <span className="absolute -right-1.5 -top-1.5 grid h-5 min-w-[20px] animate-pulse place-items-center border-2 border-fundo bg-rosa px-1 font-pixel text-[10px] text-fundo">
+              {badges.passe}
+            </span>
+          )}
+        </Link>
+      ) : (
+        <Cadeado id="passe" />
+      )}
 
-      <Link
-        href="/online"
-        className="border-2 border-ciano bg-ciano/10 px-4 py-3 text-center font-pixel text-[11px] text-ciano transition hover:bg-ciano hover:text-fundo"
-      >
-        ⚔️ ONLINE · DUELO 1v1
-      </Link>
+      {featureLiberada(career, "online") ? (
+        <Link
+          href="/online"
+          className="border-2 border-ciano bg-ciano/10 px-4 py-3 text-center font-pixel text-[11px] text-ciano transition hover:bg-ciano hover:text-fundo"
+        >
+          ⚔️ ONLINE · DUELO 1v1
+        </Link>
+      ) : (
+        <Cadeado id="online" />
+      )}
 
       <div className="grid grid-cols-2 gap-2">
-        <Link
-          href="/loja"
-          className="border-2 border-borda bg-painel px-2 py-3 text-center font-pixel text-[11px] text-ciano transition hover:border-ciano"
-        >
-          💰 LOJA
-        </Link>
+        {featureLiberada(career, "loja") ? (
+          <Link
+            href="/loja"
+            className="border-2 border-borda bg-painel px-2 py-3 text-center font-pixel text-[11px] text-ciano transition hover:border-ciano"
+          >
+            💰 LOJA
+          </Link>
+        ) : (
+          <Cadeado id="loja" compacto />
+        )}
         <Link
           href="/propostas"
           className={`border-2 px-2 py-3 text-center font-pixel text-[11px] transition ${
@@ -158,17 +177,21 @@ export default function DashboardPage() {
         >
           🏅 CONQUISTAS
         </Link>
-        <Link
-          href="/inventario"
-          className="relative border-2 border-borda bg-painel px-2 py-3 text-center font-pixel text-[11px] text-ciano transition hover:border-ciano"
-        >
-          🎒 INVENTÁRIO
-          {novosItens > 0 && (
-            <span className="absolute -right-1.5 -top-1.5 grid h-5 min-w-[20px] place-items-center border-2 border-fundo bg-rosa px-1 font-pixel text-[10px] text-fundo">
-              {novosItens}
-            </span>
-          )}
-        </Link>
+        {featureLiberada(career, "itens") ? (
+          <Link
+            href="/inventario"
+            className="relative border-2 border-borda bg-painel px-2 py-3 text-center font-pixel text-[11px] text-ciano transition hover:border-ciano"
+          >
+            🎒 INVENTÁRIO
+            {badges.inventario > 0 && (
+              <span className="absolute -right-1.5 -top-1.5 grid h-5 min-w-[20px] animate-pulse place-items-center border-2 border-fundo bg-rosa px-1 font-pixel text-[10px] text-fundo">
+                {badges.inventario}
+              </span>
+            )}
+          </Link>
+        ) : (
+          <Cadeado id="itens" compacto />
+        )}
       </div>
 
       <p className="text-center font-pixel text-[10px] text-borda">CARREIRA LoL · v1.0 🏁</p>
@@ -186,6 +209,22 @@ export default function DashboardPage() {
       )}
       <DailyHub />
     </main>
+  );
+}
+
+// Ponto vermelho pulsante: "tem coisa pra pegar aqui".
+function PontoBadge() {
+  return <span className="absolute -right-1.5 -top-1.5 h-3.5 w-3.5 animate-pulse border-2 border-fundo bg-rosa" />;
+}
+
+// Feature ainda bloqueada: banner com cadeado + condição de destravar.
+function Cadeado({ id, compacto = false }: { id: FeatureId; compacto?: boolean }) {
+  const u = defUnlock(id);
+  return (
+    <div className={`border-2 border-borda bg-painel/40 text-center opacity-75 ${compacto ? "px-2 py-3" : "px-4 py-3"}`}>
+      <p className="font-pixel text-[11px] text-suave">🔒 {u.nome.toUpperCase()}</p>
+      <p className="mt-1 text-[10px] text-suave">{u.condicao}</p>
+    </div>
   );
 }
 

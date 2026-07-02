@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import AnimacaoGacha, { type CartaRevelada } from "@/components/AnimacaoGacha";
 import AnimatedNumber from "@/components/juice/AnimatedNumber";
+import PixelizedImage from "@/components/PixelizedImage";
 import {
   GACHA,
   LENDAS,
@@ -269,13 +270,21 @@ export default function GachaPage() {
                 <div className="relative">
                   {tem ? (
                     <>
-                      <img src={imagemCarta(l.id)} alt={l.nome} loading="lazy" className="img-hd block aspect-[2/3] w-full" />
+                      <PixelizedImage src={imagemCarta(l.id)} alt={l.nome} larguraPixel={120} className="block aspect-[2/3] w-full" />
                       {l.raridade >= RARIDADE_HOLO && <div className="holo-sheen" />}
                     </>
                   ) : (
-                    <div className="flex aspect-[2/3] w-full flex-col items-center justify-center gap-1 bg-fundo">
-                      <span className="font-pixel text-2xl text-borda">?</span>
-                      <span className="font-pixel text-[10px] text-suave">{"★".repeat(l.raridade)}</span>
+                    // não obtida: silhueta escurecida + estrelas + dica de obtenção
+                    <div className="relative flex aspect-[2/3] w-full flex-col items-center justify-center gap-1 bg-fundo">
+                      <PixelizedImage
+                        src={imagemCarta(l.id)}
+                        alt="Lenda não obtida"
+                        larguraPixel={64}
+                        className="absolute inset-0 block h-full w-full opacity-30"
+                        style={{ filter: "brightness(0.3) grayscale(1)" }}
+                      />
+                      <span className="relative font-pixel text-[11px] text-suave">{"★".repeat(l.raridade)}</span>
+                      <span className="relative bg-fundo/80 px-1 text-[10px] text-suave">🔒 no Booster</span>
                     </div>
                   )}
                   {eq && <span className="absolute right-1 top-1 bg-ciano px-1 text-[9px] font-bold text-fundo">EQUIP</span>}

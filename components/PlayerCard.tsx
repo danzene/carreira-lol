@@ -119,7 +119,7 @@ export default function PlayerCard({ career }: { career: CareerState }) {
                   <div className="h-14 w-14 animate-pulse border-2 border-borda bg-borda" />
                 )}
                 <span className="w-full truncate text-center text-[12px] text-suave">{c?.nome ?? m.championId}</span>
-                <span className="font-pixel text-[10px] text-borda">M{Math.round(m.pontos)}</span>
+                <span className="font-pixel text-[10px] text-suave/80">M{Math.round(m.pontos)}</span>
               </div>
             );
           })}

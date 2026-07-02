@@ -28,7 +28,7 @@ export default function Loja({ career }: { career: CareerState }) {
         <span className="text-sm text-suave">Caixa</span>
         <span className="font-pixel text-sm text-emerald-400">${career.dinheiro}</span>
       </div>
-      <p className="text-[11px] text-borda">
+      <p className="text-[11px] text-suave">
         Salário: ${ECONOMIA.rendaBaseSemanal}/sem · bônus vitória: ${ECONOMIA.bonusBaseVitoria} · coach:{" "}
         {career.coachAtivo ? "ativo" : "inativo"}
       </p>

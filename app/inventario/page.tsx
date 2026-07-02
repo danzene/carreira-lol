@@ -91,7 +91,7 @@ export default function InventarioPage() {
             ) : (
               <div key={sl.slot} className="slot-vazio flex min-h-[96px] flex-col items-center justify-center gap-1 border-2 border-borda bg-painel/40 p-2 text-center">
                 <span className="text-2xl opacity-25">{sl.emoji}</span>
-                <span className="font-pixel text-[10px] text-borda">{sl.nome}</span>
+                <span className="font-pixel text-[10px] text-suave">{sl.nome}</span>
                 <span className="text-[10px] text-suave">vazio</span>
               </div>
             );

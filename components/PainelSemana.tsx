@@ -148,7 +148,7 @@ export default function PainelSemana({ career }: { career: CareerState }) {
         <div className="mt-3 border-2 border-borda bg-fundo/40 p-3">
           <p className="mb-2 text-xs text-suave">Ganhar um traço novo (até {LOOP.maxTracos}):</p>
           {tracosDisponiveis.length === 0 ? (
-            <p className="text-xs text-borda">Nenhum traço novo disponível.</p>
+            <p className="text-xs text-suave">Nenhum traço novo disponível.</p>
           ) : (
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {tracosDisponiveis.map((t) => (
@@ -169,7 +169,7 @@ export default function PainelSemana({ career }: { career: CareerState }) {
 
       {aviso && <p className="mt-2 text-xs text-amber-400">{aviso}</p>}
 
-      <p className="mt-3 text-center text-[11px] text-borda">
+      <p className="mt-3 text-center text-[11px] text-suave">
         A energia regenera sozinha (2h pra encher). Avançar/descansar a semana têm limite por tempo.
       </p>
       <div className="mt-1 grid grid-cols-2 gap-2">

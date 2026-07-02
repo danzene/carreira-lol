@@ -80,66 +80,49 @@ export default function DashboardPage() {
       <LigaBanner career={career} />
 
       {career.torneioAtual && (
-        <Link
+        <CardNav
           href="/torneio"
-          className="border-2 border-amber-300 bg-amber-300/10 px-4 py-3 text-center font-pixel text-[11px] text-amber-300 transition hover:bg-amber-300 hover:text-fundo"
-        >
-          🌍 {career.torneioAtual.nome.toUpperCase()} ·{" "}
-          {career.torneioAtual.bracket.fase === "ENCERRADA" ? "RESULTADO" : "JOGAR"}
-        </Link>
+          icone="🌍"
+          titulo={career.torneioAtual.nome.toUpperCase()}
+          sub={career.torneioAtual.bracket.fase === "ENCERRADA" ? "veja o resultado" : "partida internacional te esperando"}
+          cor="ambar"
+        />
       )}
 
       {career.eventoAtual && (
-        <Link
-          href="/draft?evento=1"
-          className="border-2 border-amber-300 bg-amber-300/10 px-4 py-3 text-center font-pixel text-[11px] text-amber-300 transition hover:bg-amber-300 hover:text-fundo"
-        >
-          ⭐ EVENTO: {career.eventoAtual.nome}
-        </Link>
+        <CardNav href="/draft?evento=1" icone="⭐" titulo={`EVENTO: ${career.eventoAtual.nome}`} sub="desafio especial disponível" cor="ambar" />
       )}
 
-      <Link
-        href="/patch"
-        className="border-2 border-borda bg-painel px-4 py-3 text-center font-pixel text-[11px] text-ciano transition hover:border-ciano"
-      >
-        🧪 PATCH {versaoPatch(career.patchVigente)} · VER MUDANÇAS
-      </Link>
+      <CardNav href="/patch" icone="🧪" titulo={`PATCH ${versaoPatch(career.patchVigente)}`} sub="ver mudanças do meta" cor="neutro" />
 
       {featureLiberada(career, "booster") ? (
-        <Link
+        <CardNav
           href="/gacha"
-          className="relative border-2 border-rosa bg-rosa/10 px-4 py-3 text-center font-pixel text-[11px] text-rosa transition hover:bg-rosa hover:text-fundo"
-        >
-          🎰 CARREIRA BOOSTER · 🪙 {coinpoints}
-          {badges.booster && <PontoBadge />}
-        </Link>
+          icone="🎰"
+          titulo="CARREIRA BOOSTER"
+          sub={`🪙 ${coinpoints} CoinPoints${badges.booster ? " · puxada grátis hoje!" : ""}`}
+          cor="rosa"
+          ponto={badges.booster}
+        />
       ) : (
         <Cadeado id="booster" />
       )}
 
       {featureLiberada(career, "passe") ? (
-        <Link
+        <CardNav
           href="/passe"
-          className="relative border-2 border-amber-300 bg-amber-300/10 px-4 py-3 text-center font-pixel text-[11px] text-amber-300 transition hover:bg-amber-300 hover:text-fundo"
-        >
-          🎟️ PASSE DE BATALHA{passe ? ` · Nv ${nivelDoPasse(passe.pp)}` : ""}
-          {badges.passe > 0 && (
-            <span className="absolute -right-1.5 -top-1.5 grid h-5 min-w-[20px] animate-pulse place-items-center border-2 border-fundo bg-rosa px-1 font-pixel text-[10px] text-fundo">
-              {badges.passe}
-            </span>
-          )}
-        </Link>
+          icone="🎟️"
+          titulo="PASSE DE BATALHA"
+          sub={passe ? `nível ${nivelDoPasse(passe.pp)} de 60` : "missões e recompensas"}
+          cor="ambar"
+          contagem={badges.passe}
+        />
       ) : (
         <Cadeado id="passe" />
       )}
 
       {featureLiberada(career, "online") ? (
-        <Link
-          href="/online"
-          className="border-2 border-ciano bg-ciano/10 px-4 py-3 text-center font-pixel text-[11px] text-ciano transition hover:bg-ciano hover:text-fundo"
-        >
-          ⚔️ ONLINE · DUELO 1v1
-        </Link>
+        <CardNav href="/online" icone="⚔️" titulo="ONLINE · DUELO 1v1" sub="enfrente players reais" cor="ciano" />
       ) : (
         <Cadeado id="online" />
       )}
@@ -212,9 +195,49 @@ export default function DashboardPage() {
   );
 }
 
-// Ponto vermelho pulsante: "tem coisa pra pegar aqui".
-function PontoBadge() {
-  return <span className="absolute -right-1.5 -top-1.5 h-3.5 w-3.5 animate-pulse border-2 border-fundo bg-rosa" />;
+// Card de NAVEGAÇÃO: ícone grande à esquerda, título, subtítulo de contexto e badge.
+// (Ação principal = JOGAR, no PainelSemana; aqui é navegação — hierarquia distinta.)
+const CORES_CARD = {
+  rosa: "border-rosa bg-rosa/10",
+  ciano: "border-ciano bg-ciano/10",
+  ambar: "border-amber-300 bg-amber-300/10",
+  neutro: "border-borda bg-painel hover:border-ciano",
+} as const;
+const TITULO_CARD = { rosa: "text-rosa", ciano: "text-ciano", ambar: "text-amber-300", neutro: "text-ciano" } as const;
+
+function CardNav({
+  href,
+  icone,
+  titulo,
+  sub,
+  cor,
+  contagem = 0,
+  ponto = false,
+}: {
+  href: string;
+  icone: string;
+  titulo: string;
+  sub: string;
+  cor: keyof typeof CORES_CARD;
+  contagem?: number;
+  ponto?: boolean;
+}) {
+  return (
+    <Link href={href} className={`relative flex items-center gap-3 border-2 px-4 py-3 transition hover:brightness-125 ${CORES_CARD[cor]}`}>
+      <span className="text-2xl">{icone}</span>
+      <span className="min-w-0 flex-1">
+        <span className={`block truncate font-pixel text-[11px] ${TITULO_CARD[cor]}`}>{titulo}</span>
+        <span className="block truncate text-[11px] text-suave">{sub}</span>
+      </span>
+      <span className="font-pixel text-[10px] text-suave">▸</span>
+      {contagem > 0 && (
+        <span className="absolute -right-1.5 -top-1.5 grid h-5 min-w-[20px] animate-pulse place-items-center border-2 border-fundo bg-rosa px-1 font-pixel text-[10px] text-fundo">
+          {contagem}
+        </span>
+      )}
+      {ponto && contagem === 0 && <span className="absolute -right-1.5 -top-1.5 h-3.5 w-3.5 animate-pulse border-2 border-fundo bg-rosa" />}
+    </Link>
+  );
 }
 
 // Feature ainda bloqueada: banner com cadeado + condição de destravar.
@@ -232,20 +255,11 @@ function LigaBanner({ career }: { career: CareerState }) {
   const liga = career.liga;
   const adv = proximoConfrontoJogador(liga);
   let texto: string;
-  if (!career.contratoAtual) texto = "sem time";
+  if (!career.contratoAtual) texto = "sem time — veja as propostas";
   else if (!liga) texto = "—";
-  else if (liga.fase === "ENCERRADA") texto = "temporada encerrada";
+  else if (liga.fase === "ENCERRADA") texto = "temporada encerrada · veja o resultado";
   else if (adv) texto = `próx: vs ${timeDe(adv)?.nome ?? adv}`;
-  else texto = liga.fase === "PLAYOFFS" ? "playoffs" : "em andamento";
+  else texto = liga.fase === "PLAYOFFS" ? "playoffs em disputa!" : "temporada em andamento";
   const destaque = !!adv || liga?.fase === "ENCERRADA";
-  return (
-    <Link
-      href="/liga"
-      className={`border-2 px-4 py-3 text-center font-pixel text-[11px] transition ${
-        destaque ? "border-rosa bg-rosa/10 text-rosa" : "border-borda bg-painel text-ciano hover:border-ciano"
-      }`}
-    >
-      🏆 LIGA · {texto}
-    </Link>
-  );
+  return <CardNav href="/liga" icone="🏆" titulo="LIGA" sub={texto} cor={destaque ? "rosa" : "neutro"} />;
 }

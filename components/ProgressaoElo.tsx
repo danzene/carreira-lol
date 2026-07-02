@@ -101,7 +101,7 @@ export default function ProgressaoElo({ rank }: { rank: RankSoloq }) {
         <div className="h-1.5 border border-borda bg-fundo">
           <div className="h-full" style={{ width: `${progressoGeral}%`, backgroundColor: cor }} />
         </div>
-        <div className="mt-0.5 flex justify-between text-[10px] text-borda">
+        <div className="mt-0.5 flex justify-between text-[10px] text-suave">
           <span>Ferro IV</span>
           <span>{progressoGeral}% da escalada</span>
           <span>Desafiante</span>

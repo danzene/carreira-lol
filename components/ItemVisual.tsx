@@ -20,7 +20,7 @@ function LinhaAfixo({ rotulo, valor, base = false }: { rotulo: string; valor: nu
     <div className="flex items-center justify-between gap-2">
       <span className={`text-[11px] ${base ? "text-suave" : "text-texto"}`}>
         {rotulo}
-        {base && <span className="text-[10px] text-borda"> · base</span>}
+        {base && <span className="text-[10px] text-suave/80"> · base</span>}
       </span>
       <span className="font-pixel text-[10px]" style={{ color: base ? "#9a90c0" : "#19e6e0" }}>
         +{valor}

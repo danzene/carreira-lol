@@ -723,7 +723,7 @@ export default function BatalhaCanvas({
         ) : (
           linhas.map((l, i) => (
             <p key={i} className={l.lado === "azul" ? "text-ciano" : l.lado === "vermelho" ? "text-rosa" : "text-suave"}>
-              <span className="text-borda">{l.minuto}:00</span> · {l.txt}
+              <span className="text-suave">{l.minuto}:00</span> · {l.txt}
             </p>
           ))
         )}

@@ -10,7 +10,9 @@ import {
   renovarMissoes,
   type PasseState,
 } from "@/engine/passe";
+import { cerimoniasDePasse } from "@/engine/cerimonias";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabaseClient";
+import { useCerimonias } from "./cerimoniaStore";
 import { useInventory } from "./inventoryStore";
 import { useProfile } from "./profileStore";
 
@@ -84,6 +86,7 @@ export const usePasse = create<PasseStore>((set, get) => {
       if (!p) return;
       const novo = progredirPasse(p, tipo, qtd);
       if (novo === p) return;
+      useCerimonias.getState().emitir(cerimoniasDePasse(p, novo));
       set({ passe: novo });
       persistir();
     },

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Press_Start_2P } from "next/font/google";
 import "./globals.css";
 import AuthGate from "@/components/AuthGate";
+import CeremonyManager from "@/components/ceremony/CeremonyManager";
 
 // Fonte bitmap só pra títulos/HUD; o corpo usa fonte legível do sistema.
 const pixel = Press_Start_2P({
@@ -21,6 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="pt-BR" className={pixel.variable}>
       <body className="min-h-screen bg-fundo text-texto antialiased">
         <AuthGate>{children}</AuthGate>
+        <CeremonyManager />
       </body>
     </html>
   );

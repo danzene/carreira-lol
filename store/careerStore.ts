@@ -36,6 +36,8 @@ import { GACHA } from "@/data/gacha";
 import { equipar, ganharCampeao as ganharCampeaoEngine, puxar, type ResultadoCampeao, type ResultadoPuxada } from "@/engine/gacha";
 import { cargasPartida, consumirCarga, inicializarTempo, registrarUso, sincronizarEnergia, usosRestantes } from "@/engine/tempo";
 import { idxElo } from "@/engine/elo";
+import { cerimoniaDeElo, cerimoniasDeConquistas } from "@/engine/cerimonias";
+import { useCerimonias } from "./cerimoniaStore";
 import { useProfile } from "./profileStore";
 import { useInventory } from "./inventoryStore";
 import { usePasse } from "./passeStore";
@@ -102,6 +104,13 @@ function iLvlDe(c: CareerState): number {
   return Math.max(10, Math.min(60, Math.round((c.player.rankSoloq.mmr - 800) / 50) + 10));
 }
 
+// Aplica conquistas e emite as cerimônias das novas (borda store→apresentação).
+function comConquistas(c: CareerState): CareerState {
+  const { career, novas } = verificarConquistas(c);
+  useCerimonias.getState().emitir(cerimoniasDeConquistas(novas));
+  return career;
+}
+
 export const useCareer = create<CareerStore>((set, get) => ({
   career: null,
   slotId: null,
@@ -138,7 +147,8 @@ export const useCareer = create<CareerStore>((set, get) => ({
     const career = sincronizarEnergia(c0, Date.now());
     let novo = gastarEnergiaSoloq(aplicarResultado(career, resultado));
     if (resultado.vitoria) novo = { ...novo, dinheiro: novo.dinheiro + bonusVitoria(career) };
-    novo = verificarConquistas(novo).career;
+    novo = comConquistas(novo);
+    useCerimonias.getState().emitir(cerimoniaDeElo(career.player.rankSoloq.elo, novo.player.rankSoloq.elo));
     void useProfile.getState().ajustar(resultado.vitoria ? GACHA.porVitoria : GACHA.porDerrota, "partida");
     if (resultado.vitoria) void useInventory.getState().dropDePartida(iLvlDe(career));
     usePasse.getState().progredir("jogar");
@@ -206,6 +216,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
 
     const conq = verificarConquistas(novo);
     novo = conq.career;
+    useCerimonias.getState().emitir(cerimoniasDeConquistas(conq.novas));
 
     novo =
       modo === "descanso"
@@ -278,7 +289,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
     if (!pago) return null; // saldo insuficiente / offline
     const seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
     const r = puxar(career, qtd, seed);
-    const novo = verificarConquistas(r.career).career;
+    const novo = comConquistas(r.career);
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
     usePasse.getState().progredir("booster");
@@ -291,7 +302,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
     const pago = await useProfile.getState().ajustar(-GACHA.custoCampeao, "campeao");
     if (!pago) return null;
     const r = ganharCampeaoEngine(career, championId);
-    const novo = verificarConquistas(r.career).career;
+    const novo = comConquistas(r.career);
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
     usePasse.getState().progredir("booster");
@@ -312,7 +323,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
     const seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
     let novo = assinarContratoEngine(career, timeId);
     novo = garantirLiga({ ...novo, liga: undefined }, seed); // nova temporada no novo tier
-    novo = verificarConquistas(novo).career;
+    novo = comConquistas(novo);
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
   },
@@ -350,7 +361,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
     usePasse.getState().progredir("campeonato");
     if (resultado.vitoria) usePasse.getState().progredir("vencer");
     novo = consumirCarga(novo, agora);
-    novo = verificarConquistas(novo).career;
+    novo = comConquistas(novo);
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
   },
@@ -374,7 +385,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
     void useProfile.getState().ajustar(resultado.vitoria ? GACHA.porVitoria : GACHA.porDerrota, "evento");
     usePasse.getState().progredir("jogar");
     if (resultado.vitoria) usePasse.getState().progredir("vencer");
-    novo = verificarConquistas(novo).career;
+    novo = comConquistas(novo);
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
   },
@@ -423,7 +434,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
     usePasse.getState().progredir("campeonato");
     if (resultado.vitoria) usePasse.getState().progredir("vencer");
     novo = consumirCarga(novo, agora);
-    novo = verificarConquistas(novo).career;
+    novo = comConquistas(novo);
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
   },
@@ -445,7 +456,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
       titulosInternacionais: titulos,
       torneioAtual: undefined,
     };
-    novo = verificarConquistas(novo).career;
+    novo = comConquistas(novo);
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
   },

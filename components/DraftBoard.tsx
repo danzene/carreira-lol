@@ -14,6 +14,7 @@ import {
   vocePica,
   type EstadoDraft,
 } from "@/engine/draft";
+import { counterComp, counterLanes, type MatchupRota, type PickRota } from "@/engine/counters";
 import { buscarCampeoes, type Campeao } from "@/lib/ddragon";
 import type { ChampionDef, Role } from "@/engine/types";
 
@@ -31,6 +32,8 @@ export interface JogarInfo {
   icone?: string;
   timeAzul: LutadorInfo[];
   timeVermelho: LutadorInfo[];
+  counterLane: number; // matchup da SUA rota (-2..+2)
+  counterComp: number; // counter total da comp (-10..+10)
 }
 
 export default function DraftBoard({
@@ -95,6 +98,16 @@ export default function DraftBoard({
   }, [estado, banco, fim, seuTurno, passo, comfort]);
 
   const fc = useMemo(() => (fim ? forcaComp(estado, banco) : null), [fim, estado, banco]);
+
+  // matchups de counter por rota (só quando o draft fecha)
+  const matchups = useMemo<MatchupRota[] | null>(() => {
+    if (!fim) return null;
+    const paraPicks = (ids: string[]): PickRota[] =>
+      atribuirRoles(ids, defMap)
+        .filter((s): s is { role: Role; id: string } => s.id !== null)
+        .map((s) => ({ championId: s.id, rota: s.role }));
+    return counterLanes(paraPicks(estado.picks.azul), paraPicks(estado.picks.vermelho), banco);
+  }, [fim, estado, defMap, banco]);
   const seuChamp = useMemo(() => {
     if (!fim) return null;
     const r = atribuirRoles(estado.picks.azul, defMap).find((s) => s.role === rota)?.id;
@@ -118,6 +131,8 @@ export default function DraftBoard({
     if (!fc) return;
     const rolesAzul = atribuirRoles(estado.picks.azul, defMap);
     const rolesVerm = atribuirRoles(estado.picks.vermelho, defMap);
+    const lanes = matchups ?? [];
+    const minhaLane = lanes.find((l) => l.rota === rota)?.delta ?? 0;
     const lut = (role: Role, id: string | null): LutadorInfo => ({
       championId: id ?? "",
       icone: id ? campMap[id]?.icone : undefined,
@@ -132,6 +147,8 @@ export default function DraftBoard({
       icone: campMap[seu]?.icone,
       timeAzul: rolesAzul.map((s) => lut(s.role, s.id)),
       timeVermelho: rolesVerm.map((s) => lut(s.role, s.id)),
+      counterLane: minhaLane,
+      counterComp: counterComp(lanes),
     });
   }
 
@@ -192,6 +209,43 @@ export default function DraftBoard({
               <span className="text-ciano">{Math.round(maestria[seuChamp] ?? 0)}</span>
               {(maestria[seuChamp] ?? 0) >= 60 ? " 🔥 domínio alto, força extra" : (maestria[seuChamp] ?? 0) === 0 ? " (campeão novo)" : ""}
             </p>
+          )}
+
+          {/* matchups de counter por rota (classe vs classe, estilo LoL) */}
+          {matchups && (
+            <div className="mt-3 border-t-2 border-borda pt-3">
+              <h3 className="mb-2 font-pixel text-[10px] text-suave">MATCHUPS · COUNTERS</h3>
+              <div className="grid grid-cols-5 gap-1">
+                {matchups.map((mu) => {
+                  const sua = mu.rota === rota;
+                  const cor = mu.delta > 0 ? "text-emerald-400" : mu.delta < 0 ? "text-rosa" : "text-suave";
+                  return (
+                    <div
+                      key={mu.rota}
+                      className={`flex flex-col items-center gap-0.5 border-2 py-1.5 ${sua ? "border-ciano bg-ciano/10" : "border-borda"}`}
+                      title={`${ROTULO_ROLE[mu.rota]}: ${mu.delta > 0 ? "vantagem sua" : mu.delta < 0 ? "você é counterado" : "neutro"}`}
+                    >
+                      <span className="font-pixel text-[9px] text-suave">{ROTULO_ROLE[mu.rota]}</span>
+                      <span className={`font-pixel text-[11px] ${cor}`}>
+                        {mu.delta > 0 ? `↑${mu.delta}` : mu.delta < 0 ? `↓${Math.abs(mu.delta)}` : "•"}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+              {(() => {
+                const minha = matchups.find((l) => l.rota === rota)?.delta ?? 0;
+                const total = counterComp(matchups);
+                return (
+                  <p className="mt-2 text-center text-[11px]">
+                    <span className={minha > 0 ? "text-emerald-400" : minha < 0 ? "text-rosa" : "text-suave"}>
+                      {minha > 0 ? "⚔ Você COUNTERA sua lane!" : minha < 0 ? "⚠ Você está sendo counterado na lane" : "Sua lane está neutra"}
+                    </span>
+                    <span className="text-suave"> · comp {total > 0 ? `+${total}` : total} </span>
+                  </p>
+                );
+              })()}
+            </div>
           )}
           <button
             type="button"

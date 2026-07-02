@@ -17,6 +17,8 @@ export interface ContextoPartida {
   forcaTimeInimigo?: number; // força do time adversário (partida oficial)
   bonusInimigo?: number; // dificuldade (Fase 11): força extra do inimigo
   dificuldadeElo?: number; // soloq: penalidade de vitória pelo elo (ajuda embaixo, aperta em cima)
+  counterLane?: number; // matchup da SUA rota vs o pick inimigo (-2..+2)
+  counterComp?: number; // counter total da comp, soma das rotas (-10..+10)
 }
 
 function clamp(v: number, min: number, max: number): number {
@@ -110,14 +112,19 @@ export function simularPartida(player: Player, ctx: ContextoPartida, seed: numbe
   const estab = (player.atributos.consistencia + player.atributos.mental) / 2;
   const { forca: tForca, ruidoMult } = modTracos(player.tracos, ctx.comp < ctx.compInimigo);
   const amp = (SIMULACAO.ruidoMax - (SIMULACAO.ruidoMax - SIMULACAO.ruidoMin) * (estab / 100)) * ruidoMult;
-  const forcaFinal = clamp(base + tForca + entre(rng, -amp, amp), 0, 100);
+  // matchup da SUA lane: ser counterado te derruba, counterar te levanta (nota/KDA sentem)
+  const laneEdge = (ctx.counterLane ?? 0) * SIMULACAO.pesoCounterLane;
+  const forcaFinal = clamp(base + tForca + laneEdge + entre(rng, -amp, amp), 0, 100);
 
-  // vitória: vantagem do draft + sua aresta individual + força relativa dos times − dificuldade
+  // vitória: draft + sua aresta individual + força dos times + counters da comp +
+  // maestria no campeão (dominar o campeão ganha jogo) − dificuldade
   const vantagem =
     ctx.comp -
     ctx.compInimigo +
     (forcaFinal - 50) * 0.5 +
-    (fTimeAliado - fTimeInimigo) * SIMULACAO.pesoForcaTimeVitoria -
+    (fTimeAliado - fTimeInimigo) * SIMULACAO.pesoForcaTimeVitoria +
+    (ctx.counterComp ?? 0) * SIMULACAO.pesoCounterComp +
+    (maestria(player, ctx.championId) - 40) * SIMULACAO.pesoMaestriaVitoria -
     (ctx.bonusInimigo ?? 0) -
     (ctx.dificuldadeElo ?? 0);
   const vitoria = rng() < 1 / (1 + Math.exp(-SIMULACAO.sensibilidadeVitoria * vantagem));

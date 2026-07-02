@@ -33,6 +33,10 @@ export const SIMULACAO = {
   maestriaVitoria: 4, // maestria ganha no campeão jogado ao vencer
   maestriaDerrota: 1.5, // maestria ganha mesmo perdendo
   maestriaMax: 100,
+  // ---- counters + maestria decisiva (LoL competitivo) ----
+  pesoCounterComp: 1.1, // vantagem de vitória por ponto de counter da comp (soma das rotas)
+  pesoCounterLane: 3, // força individual por ponto de matchup da SUA lane (você brilha/sofre)
+  pesoMaestriaVitoria: 0.05, // vantagem direta por ponto de maestria acima de 40 (dominar campeão ganha jogo)
 } as const;
 
 export const ELO_LADDER = [

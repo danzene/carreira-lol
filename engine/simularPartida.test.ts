@@ -66,6 +66,37 @@ describe("motor de partida", () => {
     expect(comVantagem).toBeGreaterThan(comDesvantagem);
   });
 
+  it("counters da comp e da lane pesam na vitória e na nota", () => {
+    const p = playerCom(50);
+    let counterando = 0;
+    let counterado = 0;
+    const notasCounter: number[] = [];
+    const notasCounterado: number[] = [];
+    for (let s = 0; s < 300; s++) {
+      const rC = simularPartida(p, { ...ctx, counterComp: 6, counterLane: 2 }, s);
+      const rX = simularPartida(p, { ...ctx, counterComp: -6, counterLane: -2 }, s);
+      if (rC.vitoria) counterando++;
+      if (rX.vitoria) counterado++;
+      notasCounter.push(rC.notaPerformance);
+      notasCounterado.push(rX.notaPerformance);
+    }
+    expect(counterando).toBeGreaterThan(counterado);
+    expect(media(notasCounter)).toBeGreaterThan(media(notasCounterado)); // lane counterada = nota pior
+  });
+
+  it("maestria alta no campeão aumenta a chance de vitória (mesmos atributos)", () => {
+    const base = playerCom(50);
+    const mestre: Player = { ...base, pool: [{ championId: "A", pontos: 95 }] };
+    const novato: Player = { ...base, pool: [{ championId: "A", pontos: 5 }] };
+    let vMestre = 0;
+    let vNovato = 0;
+    for (let s = 0; s < 300; s++) {
+      if (simularPartida(mestre, ctx, s).vitoria) vMestre++;
+      if (simularPartida(novato, ctx, s).vitoria) vNovato++;
+    }
+    expect(vMestre).toBeGreaterThan(vNovato);
+  });
+
   it("traço TILTAVEL aumenta a variância da nota vs FRIO", () => {
     const tilt = Array.from({ length: 250 }, (_, s) => simularPartida(playerCom(50, "TILTAVEL"), ctx, s).notaPerformance);
     const frio = Array.from({ length: 250 }, (_, s) => simularPartida(playerCom(50, "FRIO"), ctx, s).notaPerformance);

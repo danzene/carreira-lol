@@ -181,6 +181,8 @@ function DraftFlow() {
             forcaTimeInimigo: adversarioId ? forcaTimeDe(adversarioId) : undefined,
             bonusInimigo: mod(career.opcoes).forcaInimigo + (evento && career.eventoAtual ? career.eventoAtual.bonusInimigo : 0),
             dificuldadeElo: !oficial && !internacional && !evento ? dificuldadeSoloq(career.player.rankSoloq.elo) : 0,
+            counterLane: info.counterLane,
+            counterComp: info.counterComp,
           }}
           times={{ azul: info.timeAzul, vermelho: info.timeVermelho }}
           onFim={aoFim}

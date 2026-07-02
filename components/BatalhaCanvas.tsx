@@ -101,12 +101,14 @@ interface Estado {
   minions: MinionRT[];
   efeitos: Efeito[];
   placar: { azul: number; vermelho: number };
+  ouro: { azul: number; vermelho: number }; // ouro simulado (passivo + eventos)
   minuto: number;
   clock: number;
   idx: number;
   shake: number;
   proxWave: number;
   proxCs: number;
+  proxSync: number;
   foco: { ativo: boolean; local: Ponto; ate: number; ids: Set<string> };
   pit: { dragao: number; barao: number }; // clock em que a criatura RENASCE (0 = viva)
   fim: boolean;
@@ -152,8 +154,14 @@ export default function BatalhaCanvas({
       roteiro.combatentes.filter((c) => c.time === time).map((c) => ({ id: c.id, ehVoce: c.ehVoce, icone: iconePorId[c.id] }));
     return { azul: mk("azul"), vermelho: mk("vermelho") };
   }, [roteiro, iconePorId]);
-  const [marcador, setMarcador] = useState<{ placar: { azul: number; vermelho: number }; minuto: number; mortos: string[] }>({
+  const [marcador, setMarcador] = useState<{
+    placar: { azul: number; vermelho: number };
+    ouro: { azul: number; vermelho: number };
+    minuto: number;
+    mortos: string[];
+  }>({
     placar: { azul: 0, vermelho: 0 },
+    ouro: { azul: 2500, vermelho: 2500 },
     minuto: 0,
     mortos: [],
   });
@@ -208,18 +216,30 @@ export default function BatalhaCanvas({
       minions: [],
       efeitos: [],
       placar: { azul: 0, vermelho: 0 },
+      ouro: { azul: 2500, vermelho: 2500 },
       minuto: 0,
       clock: 0,
       idx: 0,
       shake: 0,
       proxWave: 0,
       proxCs: 0,
+      proxSync: 0,
       foco: { ativo: false, local: { x: 0.5, y: 0.5 }, ate: 0, ids: new Set() },
       pit: { dragao: 0, barao: 0 },
       fim: false,
     };
 
     const champPorId = new Map(est.champs.map((c) => [c.comb.id, c]));
+
+    // retratos dos campeões (identifica cada rota no mapa; fallback = sprite genérico)
+    const retratos = new Map<string, HTMLImageElement>();
+    for (const c of roteiro.combatentes) {
+      const url = iconePorId[c.id];
+      if (!url) continue;
+      const img = new Image();
+      img.src = url;
+      retratos.set(c.id, img);
+    }
     const vivos = (time?: "azul" | "vermelho") =>
       est.champs.filter((c) => c.estado !== "morto" && (!time || c.comb.time === time));
 
@@ -227,6 +247,7 @@ export default function BatalhaCanvas({
     function sincronizar() {
       setMarcador({
         placar: { azul: est.placar.azul, vermelho: est.placar.vermelho },
+        ouro: { azul: Math.round(est.ouro.azul), vermelho: Math.round(est.ouro.vermelho) },
         minuto: est.minuto,
         mortos: est.champs.filter((c) => c.estado === "morto").map((c) => c.comb.id),
       });
@@ -279,6 +300,7 @@ export default function BatalhaCanvas({
           est.foco = { ativo: true, local, ate: est.clock + 2.6, ids: new Set(vivos().map((c) => c.comb.id)) };
           if (ev.objetivo) est.pit[ev.objetivo] = est.clock + 40; // criatura some e renasce depois
           const cor = ev.objetivo === "barao" ? COR.barao : COR.dragao;
+          if (ev.vencedor) est.ouro[ev.vencedor] += ev.objetivo === "barao" ? 1500 : 600;
           flutuante(local, ev.objetivo === "barao" ? "BARÃO" : "DRAGÃO", cor, 8);
           est.efeitos.push({ tipo: "explosao", x: local.x, y: local.y, cor, vida: 1.2, max: 1.2, raio: 0.16 });
           narrar(
@@ -296,6 +318,7 @@ export default function BatalhaCanvas({
               .sort((a, b) => (t0.time === "azul" ? b.prog - a.prog : a.prog - b.prog))[0];
             if (alvo) {
               alvo.viva = false;
+              est.ouro[t0.time === "azul" ? "vermelho" : "azul"] += 800; // quem derrubou fatura
               const p = { x: alvo.x, y: alvo.y };
               particulas(p, COR.suave, 14, 0.1);
               est.efeitos.push({ tipo: "explosao", x: p.x, y: p.y, cor: COR.ouro, vida: 0.9, max: 0.9, raio: 0.1 });
@@ -345,6 +368,7 @@ export default function BatalhaCanvas({
       }
       if (abate.matadorId.startsWith("azul")) est.placar.azul++;
       else est.placar.vermelho++;
+      est.ouro[abate.matadorId.startsWith("azul") ? "azul" : "vermelho"] += 300;
       flutuante(local, "ABATE!", COR.ouro, 7);
       narrar(texto ?? "Abate", abate.matadorId.startsWith("azul") ? "azul" : "vermelho");
       est.shake = Math.max(est.shake, 2.2);
@@ -362,6 +386,17 @@ export default function BatalhaCanvas({
     function atualizar(dt: number) {
       if (!est.fim) est.clock += dt;
       let mudou = false;
+
+      // ouro passivo (farm/minions) + sync periódico do HUD
+      if (!est.fim) {
+        est.ouro.azul += dt * 1400;
+        est.ouro.vermelho += dt * 1400;
+        est.proxSync -= dt;
+        if (est.proxSync <= 0) {
+          est.proxSync = 0.5;
+          mudou = true;
+        }
+      }
 
       // eventos
       while (est.idx < roteiro.eventos.length && roteiro.eventos[est.idx].t <= est.clock) {
@@ -704,24 +739,61 @@ export default function BatalhaCanvas({
     function desenharDragao() {
       const [x, y0] = S(BATALHA.dragao);
       const y = y0 + Math.sin(est.clock * 2.2) * 0.8;
-      const asa = Math.sin(est.clock * 6) > 0 ? 1 : 0;
-      r(x - 3, y - 3, 6, 3, COR.dragao); // corpo
-      r(x - 5, y - 2, 2, 1, COR.dragao); // cauda
-      r(x + 3, y - 4, 2, 2, COR.dragao); // cabeça
-      r(x + 4, y - 4, 1, 1, COR.branco); // olho
-      r(x - 2, y - 5 - asa, 3, 2, "#f2a35c"); // asa batendo
-      if (Math.sin(est.clock * 1.4) > 0.75) r(x + 5, y - 3, 1, 1, COR.ouro); // baforada
+      const asa = Math.sin(est.clock * 5) > 0 ? 1 : 0;
+      // brasas flutuando no pit
+      if (Math.sin(est.clock * 3.1) > 0.3) r(x - 7, y + 1, 1, 1, COR.dragao);
+      if (Math.sin(est.clock * 2.3 + 2) > 0.4) r(x + 7, y - 1, 1, 1, "#f2a35c");
+      // cauda com espinho
+      r(x - 7, y - 2, 3, 1, "#b3541e");
+      r(x - 8, y - 3, 2, 1, "#f2a35c");
+      // corpo
+      r(x - 4, y - 4, 7, 4, COR.dragao);
+      r(x - 4, y - 4, 7, 1, "#b3541e"); // dorso escuro
+      r(x - 3, y - 1, 5, 1, "#f2a35c"); // barriga clara
+      // asas batendo (2 frames)
+      r(x - 3, y - 7 - asa, 4, 3, "#b3541e");
+      r(x - 2, y - 8 - asa, 2, 1, "#f2a35c");
+      // pescoço + cabeça com chifre
+      r(x + 3, y - 6, 2, 3, COR.dragao);
+      r(x + 4, y - 7, 3, 3, COR.dragao);
+      r(x + 5, y - 8, 1, 1, "#b3541e"); // chifre
+      r(x + 6, y - 6, 1, 1, COR.ouro); // olho brilhando
+      // patas
+      r(x - 3, y, 2, 1, "#b3541e");
+      r(x + 1, y, 2, 1, "#b3541e");
+      // baforada de fogo
+      if (Math.sin(est.clock * 1.4) > 0.6) {
+        r(x + 7, y - 6, 2, 1, COR.ouro);
+        r(x + 9, y - 7, 1, 1, COR.branco);
+      }
     }
 
     function desenharBarao() {
       const [x, y0] = S(BATALHA.barao);
       const y = y0 + Math.sin(est.clock * 1.6) * 0.7;
-      r(x - 5, y - 1, 3, 3, "#6b48b8"); // cauda
-      r(x - 2, y - 3, 3, 4, COR.barao); // meio
-      r(x + 1, y - 5, 3, 5, COR.barao); // torso erguido
-      r(x + 1, y - 7, 1, 2, "#c9adff"); // espinhos
-      r(x + 3, y - 7, 1, 2, "#c9adff");
-      r(x + 2, y - 5, 1, 1, COR.branco); // olho
+      const boca = Math.sin(est.clock * 3) > 0 ? 1 : 0;
+      // aura arcana
+      if (Math.sin(est.clock * 2.4) > 0.2) {
+        r(x - 8, y - 3, 1, 1, "#c9adff");
+        r(x + 7, y - 6, 1, 1, "#c9adff");
+      }
+      if (Math.sin(est.clock * 1.9 + 1) > 0.4) r(x - 6, y - 9, 1, 1, "#c9adff");
+      // segmentos da cauda
+      r(x - 7, y - 1, 3, 3, "#6b48b8");
+      r(x - 5, y - 3, 4, 4, COR.barao);
+      // torso erguido
+      r(x - 1, y - 9, 4, 9, COR.barao);
+      r(x - 1, y - 9, 1, 9, "#6b48b8"); // sombra lateral
+      // espinhos das costas
+      r(x - 2, y - 10, 1, 2, "#c9adff");
+      r(x, y - 12, 1, 2, "#c9adff");
+      r(x + 2, y - 11, 1, 2, "#c9adff");
+      // cabeça + mandíbulas abrindo
+      r(x + 1, y - 12, 3, 3, COR.barao);
+      r(x + 3, y - 13, 2, 1 + boca, "#c9adff"); // mandíbula de cima
+      r(x + 3, y - 9 + boca, 2, 1, "#c9adff"); // de baixo
+      r(x + 2, y - 12, 1, 1, COR.branco); // olho
+      r(x + 1, y - 10, 1, 1, COR.vermelho); // olho menor
     }
 
     function desenharNexus(p: Ponto, time: "azul" | "vermelho", vivo: boolean) {
@@ -791,9 +863,6 @@ export default function BatalhaCanvas({
       const corCorpo = c.flash > 0 ? COR.branco : cc.corpo;
       r(x0 - 2, y - 6, 4, 4, corCorpo);
       r(x0 - 2, y - 6, 4, 1, cc.escuro);
-      // cabeça
-      r(x0 - 2, y - 9, 4, 3, COR.pele);
-      r(x0 + (c.facing > 0 ? 0 : -1), y - 8, 1, 1, "#221"); // olho
       // arma por arquétipo
       const arq = arquetipoDe(c.comb.rota);
       const ax = x0 + c.facing * 3;
@@ -807,15 +876,30 @@ export default function BatalhaCanvas({
       } else {
         r(ax, y - 7, 2, 3, "#bfe6ff"); // escudo (suporte)
       }
-      // barra de vida
-      if (c.hp < 1) {
-        r(x - 3, y - 12, 6, 1, "#3a1320");
-        r(x - 3, y - 12, 6 * c.hp, 1, c.hp > 0.4 ? "#46d36a" : COR.vermelho);
-      }
-      // estrela (você)
-      if (c.comb.ehVoce) {
-        r(x - 1, y - 13, 2, 2, COR.ouro);
-        r(x - 2, y - 12, 4, 1, COR.ouro);
+      // RETRATO do campeão no lugar da cabeça (identifica cada rota no mapa)
+      const img = retratos.get(c.comb.id);
+      if (img && img.complete && img.naturalWidth > 0) {
+        const corMoldura = c.flash > 0 ? COR.branco : c.comb.ehVoce ? COR.ouro : cc.corpo;
+        r(x0 - 5, y - 16, 10, 10, corMoldura); // moldura (ouro = você)
+        ctx!.drawImage(img, Math.round(x0 - 4), Math.round(y - 15), 8, 8);
+        // barra de vida acima do retrato
+        if (c.hp < 1) {
+          r(x - 4, y - 18, 8, 1, "#3a1320");
+          r(x - 4, y - 18, 8 * c.hp, 1, c.hp > 0.4 ? "#46d36a" : COR.vermelho);
+        }
+        if (c.comb.ehVoce) r(x - 1, y - 19, 2, 2, COR.ouro); // pip "você"
+      } else {
+        // fallback: cabeça genérica
+        r(x0 - 2, y - 9, 4, 3, COR.pele);
+        r(x0 + (c.facing > 0 ? 0 : -1), y - 8, 1, 1, "#221"); // olho
+        if (c.hp < 1) {
+          r(x - 3, y - 12, 6, 1, "#3a1320");
+          r(x - 3, y - 12, 6 * c.hp, 1, c.hp > 0.4 ? "#46d36a" : COR.vermelho);
+        }
+        if (c.comb.ehVoce) {
+          r(x - 1, y - 13, 2, 2, COR.ouro);
+          r(x - 2, y - 12, 4, 1, COR.ouro);
+        }
       }
     }
 
@@ -888,7 +972,7 @@ export default function BatalhaCanvas({
     };
 
     return () => cancelAnimationFrame(raf);
-  }, [roteiro]);
+  }, [roteiro, iconePorId]);
 
   function pular() {
     const c = canvasRef.current as (HTMLCanvasElement & { __pular?: () => void }) | null;
@@ -916,6 +1000,16 @@ export default function BatalhaCanvas({
             <span className="text-rosa">{marcador.placar.vermelho}</span>
           </div>
           <div className="mt-1 font-pixel text-[11px] text-suave">{`${marcador.minuto}:00`}</div>
+          <div className="mt-0.5 font-pixel text-[9px] leading-none">
+            <span className="text-amber-300">💰</span>{" "}
+            <span className={marcador.ouro.azul >= marcador.ouro.vermelho ? "text-ciano" : "text-suave"}>
+              {(marcador.ouro.azul / 1000).toFixed(1)}k
+            </span>
+            <span className="text-suave"> · </span>
+            <span className={marcador.ouro.vermelho > marcador.ouro.azul ? "text-rosa" : "text-suave"}>
+              {(marcador.ouro.vermelho / 1000).toFixed(1)}k
+            </span>
+          </div>
         </div>
         <div className="flex gap-1">
           {roster.vermelho.map((c) => (

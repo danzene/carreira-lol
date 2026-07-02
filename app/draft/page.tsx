@@ -163,6 +163,7 @@ function DraftFlow() {
             rota={career.player.rota}
             patch={career.patchVigente}
             proibidos={proibidos}
+            modo={oficial || internacional ? "competitivo" : "soloq"}
             onJogar={aoJogar}
           />
         </>

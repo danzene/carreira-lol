@@ -13,7 +13,9 @@ import {
   passoAtual,
   vocePica,
   type EstadoDraft,
+  type ModoDraft,
 } from "@/engine/draft";
+import { criarRng } from "@/engine/rng";
 import { counterComp, counterLanes, type MatchupRota, type PickRota } from "@/engine/counters";
 import { buscarCampeoes, type Campeao } from "@/lib/ddragon";
 import type { ChampionDef, Role } from "@/engine/types";
@@ -43,6 +45,7 @@ export default function DraftBoard({
   rota,
   patch = 1,
   proibidos = [],
+  modo = "soloq",
   onJogar,
 }: {
   comfort: string[];
@@ -51,12 +54,15 @@ export default function DraftBoard({
   rota: Role;
   patch?: number;
   proibidos?: string[];
+  modo?: ModoDraft; // soloq = picks variados (gente real); competitivo = meta-slave
   onJogar: (info: JogarInfo) => void;
 }) {
   const [campeoes, setCampeoes] = useState<Campeao[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [estado, setEstado] = useState<EstadoDraft>(() => iniciarDraft());
   const [busca, setBusca] = useState("");
+  // RNG seedado por draft (borda) — cada partida tem um "lobby" diferente
+  const [rng] = useState(() => criarRng((Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0));
 
   useEffect(() => {
     buscarCampeoes()
@@ -91,11 +97,13 @@ export default function DraftBoard({
     if (banco.length === 0 || fim || seuTurno || !passo) return;
     const comfortDoTime = passo.time === "azul" ? comfort : [];
     const t = setTimeout(() => {
-      const escolha = escolhaIA(estado, banco, comfortDoTime);
+      // seu coach draft "sério" mesmo em soloq quando pega os seus picks (conforto)
+      const modoDoPasso = passo.time === "azul" && comfortDoTime.length > 0 ? "competitivo" : modo;
+      const escolha = escolhaIA(estado, banco, comfortDoTime, modoDoPasso, rng);
       if (escolha) setEstado((e) => aplicarEscolha(e, escolha));
     }, 650);
     return () => clearTimeout(t);
-  }, [estado, banco, fim, seuTurno, passo, comfort]);
+  }, [estado, banco, fim, seuTurno, passo, comfort, modo, rng]);
 
   const fc = useMemo(() => (fim ? forcaComp(estado, banco) : null), [fim, estado, banco]);
 

@@ -9,6 +9,7 @@ import {
   passosCoach,
   vocePica,
 } from "./draft";
+import { criarRng } from "./rng";
 import type { ChampionDef, Role } from "./types";
 
 function def(id: string, roles: Role[], meta = 50): ChampionDef {
@@ -50,6 +51,25 @@ describe("draft (pick & ban)", () => {
       const id = escolhaIA(e, BANCO);
       expect(e.usados).not.toContain(id);
       e = aplicarEscolha(e, id);
+    }
+  });
+
+  it("SOLOQ varia entre partidas; COMPETITIVO fica nos melhores da meta", () => {
+    // soloq: seeds diferentes → lobbies diferentes (nem sempre os mesmos picks)
+    const draftCom = (seed: number) => {
+      const rng = criarRng(seed);
+      let e = iniciarDraft();
+      while (!draftCompleto(e)) e = aplicarEscolha(e, escolhaIA(e, BANCO, [], "soloq", rng));
+      return [...e.picks.azul, ...e.picks.vermelho].join(",");
+    };
+    const distintos = new Set([draftCom(1), draftCom(2), draftCom(3), draftCom(4)]);
+    expect(distintos.size).toBeGreaterThan(1);
+
+    // competitivo: o primeiro ban é sempre um dos 3 mais fortes da meta
+    const topMeta = [...BANCO].sort((a, b) => b.forcaMetaBase - a.forcaMetaBase).slice(0, 3).map((c) => c.id);
+    for (let s = 0; s < 10; s++) {
+      const ban = escolhaIA(iniciarDraft(), BANCO, [], "competitivo", criarRng(s));
+      expect(topMeta).toContain(ban);
     }
   });
 

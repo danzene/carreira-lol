@@ -1,7 +1,11 @@
+import type { Rng } from "./rng";
 import type { ChampionDef, Role } from "./types";
 
 // Draft 5v5 (pick & ban). PURO: recebe estado → devolve estado.
 // "azul" = seu time; "vermelho" = inimigo.
+// Dois clima de draft: SOLOQ (cada um joga do seu jeito — one-tricks, conforto,
+// bans "pessoais" → partidas variadas) vs COMPETITIVO (meta-slave: melhores picks/bans).
+export type ModoDraft = "soloq" | "competitivo";
 
 export type TimeDraft = "azul" | "vermelho";
 export type FaseDraft = "ban" | "pick";
@@ -86,14 +90,29 @@ function rolesCobertas(ids: string[], map: Map<string, ChampionDef>): Set<Role> 
 }
 
 // Escolha da IA (inimigo, ou coach do seu time). `comfort` só pesa pro coach.
-export function escolhaIA(e: EstadoDraft, banco: ChampionDef[], comfort: string[] = []): string {
+// `modo` muda o clima: soloq sorteia (meta pesa, mas todo mundo aparece);
+// competitivo mira os melhores. `rng` default 0 = determinístico (compatível).
+export function escolhaIA(
+  e: EstadoDraft,
+  banco: ChampionDef[],
+  comfort: string[] = [],
+  modo: ModoDraft = "competitivo",
+  rng: Rng = () => 0,
+): string {
   const passo = passoAtual(e);
   if (!passo) return "";
   const disp = banco.filter((c) => disponivel(e, c.id));
   if (disp.length === 0) return "";
 
   if (passo.fase === "ban") {
-    return [...disp].sort((a, b) => b.forcaMetaBase - a.forcaMetaBase)[0].id;
+    const porMeta = [...disp].sort((a, b) => b.forcaMetaBase - a.forcaMetaBase);
+    if (modo === "soloq") {
+      // soloq: geralmente bane algo forte da meta (top 12), mas 25% é ban "pessoal"
+      // (aquele campeão que te tiltou na última partida)
+      if (rng() < 0.25) return porMeta[Math.floor(rng() * Math.min(30, porMeta.length))].id;
+      return porMeta[Math.floor(rng() * Math.min(12, porMeta.length))].id;
+    }
+    return porMeta[Math.floor(rng() * Math.min(3, porMeta.length))].id; // alvo nos 3 do topo
   }
 
   const map = lookup(banco);
@@ -102,8 +121,22 @@ export function escolhaIA(e: EstadoDraft, banco: ChampionDef[], comfort: string[
   let cands = disp.filter((c) => c.rolesValidas.some((r) => faltam.includes(r)));
   if (cands.length === 0) cands = disp;
 
+  if (modo === "soloq") {
+    // soloq real: sorteio PONDERADO pela meta — os fortes aparecem mais, mas
+    // one-tricks e picks de conforto surgem toda hora (nenhuma partida é igual)
+    const minF = Math.min(...cands.map((c) => c.forcaMetaBase));
+    const pesos = cands.map((c) => Math.pow(c.forcaMetaBase - minF + 4, 1.6));
+    let alvo = rng() * pesos.reduce((a, b) => a + b, 0);
+    for (let i = 0; i < cands.length; i++) {
+      alvo -= pesos[i];
+      if (alvo <= 0) return cands[i].id;
+    }
+    return cands[cands.length - 1].id;
+  }
+
   const score = (c: ChampionDef) => c.forcaMetaBase + (comfort.includes(c.id) ? 8 : 0);
-  return [...cands].sort((a, b) => score(b) - score(a) || a.id.localeCompare(b.id))[0].id;
+  const top = [...cands].sort((a, b) => score(b) - score(a) || a.id.localeCompare(b.id));
+  return top[Math.floor(rng() * Math.min(3, top.length))].id; // roda entre os 3 melhores
 }
 
 interface StatsTime {

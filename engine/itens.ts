@@ -1,7 +1,10 @@
 import {
   AFIXOS,
+  NOMES_BASE,
+  PREFIXOS_RARIDADE,
   RARIDADES_ITEM,
   SETS,
+  SUFIXOS_AFIXO,
   defAfixo,
   faixaAfixo,
   raridadeItemDef,
@@ -30,7 +33,8 @@ function sortearRaridade(rng: Rng, sorte = 0): RaridadeItem {
 }
 
 function rolarAfixos(raridade: RaridadeItem, iLvl: number, rng: Rng): Afixo[] {
-  const qtd = raridadeItemDef(raridade).afixos;
+  // 12% dos itens vêm "abençoados" com 1 afixo EXTRA (mais RNG, mais caça ao god roll)
+  const qtd = raridadeItemDef(raridade).afixos + (rng() < 0.12 ? 1 : 0);
   const pool = [...AFIXOS];
   const out: Afixo[] = [];
   for (let i = 0; i < qtd && pool.length > 0; i++) {
@@ -39,6 +43,16 @@ function rolarAfixos(raridade: RaridadeItem, iLvl: number, rng: Rng): Afixo[] {
     out.push({ chave: def.chave, valor: Math.round(entre(rng, min, max)) });
   }
   return out;
+}
+
+// Nome procedural: [prefixo da raridade] base do slot [sufixo do afixo mais forte].
+function nomear(slot: SlotGear, raridade: RaridadeItem, afixos: Afixo[], rng: Rng): string {
+  const base = NOMES_BASE[slot][Math.floor(rng() * NOMES_BASE[slot].length)];
+  const prefixos = PREFIXOS_RARIDADE[raridade];
+  const prefixo = prefixos[Math.floor(rng() * prefixos.length)];
+  const top = [...afixos].sort((a, b) => b.valor - a.valor)[0];
+  const sufixo = top && raridade >= 2 ? SUFIXOS_AFIXO[top.chave] ?? "" : "";
+  return [prefixo, base, sufixo].filter(Boolean).join(" ");
 }
 
 export interface OpcoesGerar {
@@ -57,12 +71,15 @@ export function gerarItem(slot: SlotGear, iLvl: number, seed: number, opc: Opcoe
   const setChance = opc.setChance ?? (raridade >= 4 ? 0.5 : raridade === 3 ? 0.25 : 0.1);
   const setId: SetId | undefined = rng() < setChance ? SETS[Math.floor(rng() * SETS.length)].id : undefined;
   const id = `it_${(seed >>> 0).toString(36)}_${Math.floor(rng() * 1e9).toString(36)}`;
-  return { id, slot, raridade, iLvl, implicito, afixos, setId };
+  const nome = nomear(slot, raridade, afixos, rng);
+  return { id, slot, raridade, iLvl, implicito, afixos, setId, nome };
 }
 
 // Re-sorteia os afixos aleatórios do item (caça ao roll perfeito). Mantém id/slot/raridade/iLvl.
 export function rerollAfixos(item: Item, seed: number): Item {
-  return { ...item, afixos: rolarAfixos(item.raridade, item.iLvl, criarRng(seed >>> 0)) };
+  const rng = criarRng(seed >>> 0);
+  const afixos = rolarAfixos(item.raridade, item.iLvl, rng);
+  return { ...item, afixos, nome: nomear(item.slot, item.raridade, afixos, rng) };
 }
 
 // ---- Efeito dos itens equipados (atributos + especiais + sets) ----
@@ -73,6 +90,7 @@ export interface EfeitoItens {
   energiaMult: number;
   maestriaMult: number;
   bonusComp: number;
+  sorte: number; // % de chance extra de drop (cap 25)
   sets: { id: SetId; nome: string; pecas: number }[];
 }
 
@@ -84,10 +102,11 @@ function aplicar(ef: EfeitoItens, chave: string, valor: number): void {
   else if (tipo === "energia") ef.energiaMult += valor / 100;
   else if (tipo === "maestria") ef.maestriaMult += valor / 100;
   else if (tipo === "comp") ef.bonusComp += valor;
+  else if (tipo === "sorte") ef.sorte += valor;
 }
 
 export function efeitoItens(equipados: Item[]): EfeitoItens {
-  const ef: EfeitoItens = { atributos: {}, xpMult: 1, dinheiroMult: 1, energiaMult: 1, maestriaMult: 1, bonusComp: 0, sets: [] };
+  const ef: EfeitoItens = { atributos: {}, xpMult: 1, dinheiroMult: 1, energiaMult: 1, maestriaMult: 1, bonusComp: 0, sorte: 0, sets: [] };
   const contagem: Partial<Record<SetId, number>> = {};
 
   for (const it of equipados) {
@@ -108,5 +127,6 @@ export function efeitoItens(equipados: Item[]): EfeitoItens {
     ef.atributos[k] = Math.round((ef.atributos[k] ?? 0) * 10) / 10;
   });
   ef.bonusComp = Math.round(ef.bonusComp);
+  ef.sorte = Math.min(25, Math.round(ef.sorte)); // cap: build de farm ajuda, não quebra
   return ef;
 }

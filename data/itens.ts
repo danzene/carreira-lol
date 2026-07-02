@@ -50,7 +50,7 @@ export function raridadeItemDef(n: RaridadeItem): RaridadeItemDef {
 }
 
 // ---- Afixos sorteáveis (atributo soma direto; especiais têm % próprio) ----
-export type TipoAfixo = "atributo" | "xp" | "dinheiro" | "energia" | "maestria" | "comp";
+export type TipoAfixo = "atributo" | "xp" | "dinheiro" | "energia" | "maestria" | "comp" | "sorte";
 
 export interface DefAfixo {
   chave: string;
@@ -72,6 +72,7 @@ export const AFIXOS: DefAfixo[] = [
   { chave: "energia", rotulo: "Regen energia", tipo: "energia" },
   { chave: "maestria", rotulo: "Maestria/partida", tipo: "maestria" },
   { chave: "comp", rotulo: "Draft", tipo: "comp" },
+  { chave: "sorte", rotulo: "Sorte (drops)", tipo: "sorte" },
 ];
 
 export function defAfixo(chave: string): DefAfixo | undefined {
@@ -83,6 +84,7 @@ export function faixaAfixo(tipo: TipoAfixo, iLvl: number): [number, number] {
   const e = iLvl / 10; // iLvl 10 = 1x
   if (tipo === "atributo") return [Math.max(1, Math.round(e)), Math.max(2, Math.round(4 * e))];
   if (tipo === "comp") return [1, Math.max(1, Math.round(1.5 * e))];
+  if (tipo === "sorte") return [1, Math.max(2, Math.round(2.5 * e))]; // % de drop extra (raro e valioso)
   return [Math.max(2, Math.round(2 * e)), Math.max(4, Math.round(8 * e))]; // xp/dinheiro/energia/maestria (%)
 }
 
@@ -121,7 +123,43 @@ export interface Item {
   implicito: Afixo; // fixo do slot
   afixos: Afixo[]; // aleatórios (RNG)
   setId?: SetId;
+  nome?: string; // nome procedural (ausente em itens antigos → fallback)
 }
+
+// ---- Nomes procedurais (variedade visual: base por slot + prefixo por raridade + sufixo do afixo top) ----
+export const NOMES_BASE: Record<SlotGear, string[]> = {
+  MOUSE: ["Mouse Óptico", "Mouse a Laser", "Mouse Pro"],
+  TECLADO: ["Teclado Mecânico", "Teclado 60%", "Teclado Óptico"],
+  HEADSET: ["Headset 7.1", "Headset Sem Fio", "Headset Pro"],
+  MONITOR: ["Monitor 144Hz", "Monitor 240Hz", "Monitor Curvo"],
+  CADEIRA: ["Cadeira Gamer", "Cadeira Ergonômica", "Trono Gamer"],
+  MOUSEPAD: ["Mousepad Speed", "Mousepad Control", "Mousepad XL"],
+};
+
+export const PREFIXOS_RARIDADE: Record<RaridadeItem, string[]> = {
+  1: ["", "", "Usado"],
+  2: ["Polido", "Firme", "Afiado"],
+  3: ["Feroz", "Arcano", "Vibrante"],
+  4: ["Radiante", "Colossal", "Sombrio"],
+  5: ["Transcendente", "Celestial", "Primordial"],
+};
+
+export const SUFIXOS_AFIXO: Record<string, string> = {
+  mecanica: "das Mãos Rápidas",
+  macro: "do Estrategista",
+  laning: "da Lane Vencida",
+  teamfight: "do Confronto",
+  consistencia: "da Constância",
+  mental: "da Mente Fria",
+  comunicacao: "do Shotcaller",
+  championPool: "do Versátil",
+  xp: "do Aprendiz",
+  dinheiro: "do Magnata",
+  energia: "da Vitalidade",
+  maestria: "do Virtuoso",
+  comp: "do Draft Perfeito",
+  sorte: "da Fortuna",
+};
 
 // Economia do sistema de itens (em CoinPoints). Tunável.
 export const ITENS_ECON = {
@@ -130,7 +168,7 @@ export const ITENS_ECON = {
   dropChanceVitoria: 0.25, // chance de cair item ao vencer uma partida
 } as const;
 
-// Nome de exibição do item (ex.: "Épico Mouse").
+// Nome de exibição do item — usa o nome procedural; itens antigos caem no fallback.
 export function nomeItem(item: Item): string {
-  return `${raridadeItemDef(item.raridade).nome} ${slotDef(item.slot).nome}`;
+  return item.nome ?? `${raridadeItemDef(item.raridade).nome} ${slotDef(item.slot).nome}`;
 }

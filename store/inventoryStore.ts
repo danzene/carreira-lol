@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { ITENS_ECON, SLOTS_GEAR, type Item, type SlotGear } from "@/data/itens";
 import { cerimoniaDeDrop } from "@/engine/cerimonias";
-import { gerarItem, rerollAfixos } from "@/engine/itens";
+import { efeitoItens, gerarItem, rerollAfixos } from "@/engine/itens";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabaseClient";
 import { useCerimonias } from "./cerimoniaStore";
 import { useProfile } from "./profileStore";
@@ -112,10 +112,13 @@ export const useInventory = create<InventoryStore>((set, get) => {
     },
 
     // Drop ao vencer: chance de cair um item de slot aleatório no iLvl dado.
+    // O afixo SORTE dos itens equipados aumenta a chance de drop e puxa raridade.
     dropDePartida: (iLvl, sorte = 0) => {
-      if (Math.random() > ITENS_ECON.dropChanceVitoria) return null;
+      const { itens: meusItens, equipado: meuEquip } = get();
+      const sorteBuild = efeitoItens(itensEquipadosDe(meusItens, meuEquip)).sorte;
+      if (Math.random() > ITENS_ECON.dropChanceVitoria + sorteBuild / 100) return null;
       const slot = SLOTS_GEAR[Math.floor(Math.random() * SLOTS_GEAR.length)].slot;
-      const item = gerarItem(slot, iLvl, seedAgora(), { sorte });
+      const item = gerarItem(slot, iLvl, seedAgora(), { sorte: sorte + sorteBuild / 300 });
       set({ itens: [...get().itens, item], ultimoDrop: item, novos: get().novos + 1 });
       persistir();
       useCerimonias.getState().emitir(cerimoniaDeDrop(item));

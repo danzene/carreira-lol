@@ -1,12 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
-import { ITENS_ECON, SLOTS_GEAR, defAfixo, nomeItem } from "@/data/itens";
+import { useEffect, useState } from "react";
+import { ITENS_ECON, SLOTS_GEAR, defAfixo, nomeItem, raridadeItemDef, type RaridadeItem } from "@/data/itens";
 import { efeitoItens } from "@/engine/itens";
 import ItemVisual, { classeBrilho, estiloCartaItem } from "@/components/ItemVisual";
+import PixelBurst from "@/components/juice/PixelBurst";
+import { tocarSom } from "@/lib/som";
 import { itensEquipadosDe, useInventory } from "@/store/inventoryStore";
 import { useProfile } from "@/store/profileStore";
+
+// ♻ Efeito rápido de desmonte: o item "vira" fragmentos (partículas da cor da raridade)
+// e os CoinPoints sobem flutuando. Auto-some em ~1s, nunca bloqueia.
+function FxDesmonte({ raridade, seed }: { raridade: RaridadeItem; seed: number }) {
+  const cor = raridadeItemDef(raridade).cor;
+  return (
+    <div className="pointer-events-none fixed inset-0 z-[85] flex items-center justify-center">
+      <div className="relative flex flex-col items-center">
+        <PixelBurst cores={[cor, "#ffd34d", "#9a90c0"]} qtd={30} seed={seed} tamanho={150} />
+        <span className="pop-estouro absolute top-1/2 font-pixel text-sm text-amber-300" style={{ textShadow: "0 0 12px #ffd34d88" }}>
+          ♻ +{ITENS_ECON.coinsDesmonte}
+        </span>
+      </div>
+    </div>
+  );
+}
 
 export default function InventarioPage() {
   const itens = useInventory((s) => s.itens);
@@ -19,6 +37,14 @@ export default function InventarioPage() {
   const reroll = useInventory((s) => s.reroll);
   const desmontar = useInventory((s) => s.desmontar);
   const coinpoints = useProfile((s) => s.perfil?.coinpoints ?? 0);
+  const [fx, setFx] = useState<{ raridade: RaridadeItem; seed: number } | null>(null);
+
+  function desmontarComFx(id: string, raridade: RaridadeItem) {
+    desmontar(id);
+    tocarSom("moeda");
+    setFx({ raridade, seed: (Date.now() & 0xffff) + raridade });
+    setTimeout(() => setFx(null), 1000);
+  }
 
   useEffect(() => {
     carregar();
@@ -38,6 +64,7 @@ export default function InventarioPage() {
   if (ef.energiaMult > 1) poder.push(`Energia +${Math.round((ef.energiaMult - 1) * 100)}%`);
   if (ef.maestriaMult > 1) poder.push(`Maestria +${Math.round((ef.maestriaMult - 1) * 100)}%`);
   if (ef.bonusComp > 0) poder.push(`Draft +${ef.bonusComp}`);
+  if (ef.sorte > 0) poder.push(`Sorte +${ef.sorte}% drops`);
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-5 px-4 py-6">
@@ -133,7 +160,7 @@ export default function InventarioPage() {
                   <button
                     type="button"
                     onClick={() => {
-                      if (window.confirm(`Desmontar ${nomeItem(it)}? Você ganha 🪙${ITENS_ECON.coinsDesmonte}.`)) desmontar(it.id);
+                      if (window.confirm(`Desmontar ${nomeItem(it)}? Você ganha 🪙${ITENS_ECON.coinsDesmonte}.`)) desmontarComFx(it.id, it.raridade);
                     }}
                     className="border-2 border-borda py-1.5 font-pixel text-[9px] text-rosa transition hover:border-rosa"
                     title="Desmontar por CoinPoints"
@@ -146,6 +173,8 @@ export default function InventarioPage() {
           </div>
         )}
       </section>
+
+      {fx && <FxDesmonte raridade={fx.raridade} seed={fx.seed} />}
     </main>
   );
 }

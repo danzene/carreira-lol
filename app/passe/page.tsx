@@ -33,6 +33,10 @@ function CartaRecompensa({ r, passe, onResgatar }: { r: Recompensa; passe: Passe
   const resgatada = (r.trilha === "free" ? passe.resgatadasFree : passe.resgatadasPremium).includes(r.nivel);
   const pode = podeResgatar(passe, r);
   const bloqueadoPorPremium = r.trilha === "premium" && !passe.premium;
+  const ppAlvo = (r.nivel - 1) * PASSE.ppPorNivel; // PP para atingir este nível
+  const falta = Math.max(0, ppAlvo - passe.pp);
+  const alcancado = falta === 0;
+  const pct = ppAlvo <= 0 ? 100 : Math.min(100, (passe.pp / ppAlvo) * 100);
   return (
     <div
       className={`flex w-24 shrink-0 flex-col items-center gap-1 border-2 p-2 text-center ${
@@ -48,8 +52,16 @@ function CartaRecompensa({ r, passe, onResgatar }: { r: Recompensa; passe: Passe
       <span className="font-pixel text-[8px] text-suave">NÍVEL {r.nivel}</span>
       <span className="text-2xl">{ICONE_REC[r.tipo]}</span>
       <span className="text-[9px] leading-tight text-texto">{r.rotulo}</span>
+      <div className="h-1.5 w-full overflow-hidden border border-borda bg-fundo">
+        <div
+          className={`h-full ${alcancado ? "bg-emerald-500" : bloqueadoPorPremium ? "bg-amber-300/70" : "bg-gradient-to-r from-rosa to-ciano"}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
       {resgatada ? (
         <span className="font-pixel text-[7px] text-emerald-400">✓ RESGATADO</span>
+      ) : !alcancado ? (
+        <span className="text-[7px] text-suave">faltam {falta} PP</span>
       ) : pode ? (
         <button
           type="button"

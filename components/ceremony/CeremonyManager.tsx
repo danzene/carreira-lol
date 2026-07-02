@@ -73,6 +73,10 @@ function apresentar(c: Cerimonia): Apresentacao {
     }
     case "MISSION_COMPLETED":
       return { emoji: "✓", titulo: c.texto, sub: `+${c.pp} PP`, tier: 2, som: "missao" };
+    case "RIVAL_DECLARED":
+      return { emoji: "😤", titulo: "RIVALIDADE!", sub: c.nome, detalhe: "Duas derrotas seguidas pra eles. Hora do troco.", tier: 4, som: "rebaixamento" };
+    case "RIVAL_DEFEATED":
+      return { emoji: "🏴", titulo: "RIVAL SUPERADO!", sub: c.nome, detalhe: "Você virou o jogo — a rixa acabou.", tier: 4, som: "conquista" };
   }
 }
 

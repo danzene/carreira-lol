@@ -26,8 +26,12 @@ import {
 import {
   encerrarTemporada as encerrarTemporadaEngine,
   garantirLiga,
+  proximoConfrontoJogador,
   registrarResultadoJogador,
 } from "@/engine/liga";
+import { aplicarBonusRival, ehRival, registrarConfronto, RIVAL } from "@/engine/rivais";
+import { atualizarRecords } from "@/engine/records";
+import { timeDe } from "@/data/times";
 import { gerarEvento, premioEvento } from "@/engine/eventos";
 import { verificarConquistas } from "@/engine/conquistas";
 import { sortearAcontecimento } from "@/engine/acontecimentos";
@@ -234,6 +238,9 @@ export const useCareer = create<CareerStore>((set, get) => ({
     novo = comConquistas(novo);
     useCerimonias.getState().emitir(cerimoniaDeElo(career.player.rankSoloq.elo, novo.player.rankSoloq.elo));
     useCerimonias.getState().emitir(cerimoniasDeUnlocks(career, novo));
+    const rec = atualizarRecords(novo, resultado);
+    novo = rec.career;
+    useCerimonias.getState().emitir(rec.cerimonias);
     void useProfile.getState().ajustar(resultado.vitoria ? GACHA.porVitoria : GACHA.porDerrota, "partida");
     if (resultado.vitoria) {
       const drop = useInventory.getState().dropDePartida(iLvlDe(career));
@@ -448,14 +455,25 @@ export const useCareer = create<CareerStore>((set, get) => ({
     if (!c0) return;
     const agora = Date.now();
     if (cargasPartida(c0, agora) < 1) return; // sem carga de partida (a UI já desabilita)
+    const adversario = proximoConfrontoJogador(c0.liga); // quem você enfrentou nesta rodada
+    const eraRival = !!adversario && ehRival(c0, adversario);
     const semRank = { ...resultado, lpDelta: 0 }; // partida oficial não mexe no elo de soloq
     let novo = acumularPartida(aplicarResultado(c0, semRank), semRank); // partida de campeonato NÃO gasta energia
     if (resultado.vitoria) novo = { ...novo, dinheiro: novo.dinheiro + bonusVitoria(c0) };
     const seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
     novo = registrarResultadoJogador(novo, resultado.vitoria, seed);
+    // rivalidade: 2 derrotas seguidas viram rival; vencer o rival dá bônus + drop com sorte
+    if (adversario) {
+      if (eraRival && resultado.vitoria) novo = aplicarBonusRival(novo);
+      const rv = registrarConfronto(novo, adversario, resultado.vitoria);
+      novo = rv.career;
+      const nomeAdv = timeDe(adversario)?.nome ?? adversario;
+      if (rv.evento === "virou_rival") useCerimonias.getState().emitir({ tipo: "RIVAL_DECLARED", nome: nomeAdv });
+      if (rv.evento === "superado") useCerimonias.getState().emitir({ tipo: "RIVAL_DEFEATED", nome: nomeAdv });
+    }
     void useProfile.getState().ajustar(resultado.vitoria ? GACHA.porVitoria : GACHA.porDerrota, "liga");
     if (resultado.vitoria) {
-      const drop = useInventory.getState().dropDePartida(iLvlDe(c0), 0.05);
+      const drop = useInventory.getState().dropDePartida(iLvlDe(c0), eraRival ? 0.05 + RIVAL.bonusSorteDrop : 0.05);
       if (drop) novo = acumularDrop(novo, drop.raridade);
     }
     usePasse.getState().progredir("jogar");

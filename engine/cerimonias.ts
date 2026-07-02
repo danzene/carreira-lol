@@ -17,7 +17,9 @@ export type Cerimonia =
   | { tipo: "MISSION_COMPLETED"; texto: string; pp: number; escopo: "diaria" | "semanal" }
   | { tipo: "ACHIEVEMENT_UNLOCKED"; id: string; nome: string; emoji: string; desc: string }
   | { tipo: "FEATURE_UNLOCKED"; feature: string; nome: string; desc: string }
-  | { tipo: "STREAK_MILESTONE"; dias: number; recompensa: string };
+  | { tipo: "STREAK_MILESTONE"; dias: number; recompensa: string }
+  | { tipo: "RIVAL_DECLARED"; nome: string }
+  | { tipo: "RIVAL_DEFEATED"; nome: string };
 
 export type TipoCerimonia = Cerimonia["tipo"];
 
@@ -31,6 +33,8 @@ export const CERIMONIAS_FULLSCREEN: TipoCerimonia[] = [
   "ACHIEVEMENT_UNLOCKED",
   "FEATURE_UNLOCKED",
   "STREAK_MILESTONE",
+  "RIVAL_DECLARED",
+  "RIVAL_DEFEATED",
 ];
 
 export function ehFullscreen(c: Cerimonia): boolean {

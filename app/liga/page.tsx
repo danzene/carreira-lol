@@ -9,6 +9,7 @@ import { ORDEM_TIER, VOCE } from "@/data/liga";
 import { regiaoDoPais } from "@/data/regioes";
 import { timeDe } from "@/data/times";
 import { premio, proximoConfrontoJogador } from "@/engine/liga";
+import { ehRival } from "@/engine/rivais";
 import type { ConfrontoPO, LigaState } from "@/engine/types";
 import { useCareer } from "@/store/careerStore";
 
@@ -117,6 +118,15 @@ export default function LigaPage() {
               </p>
               {adversario ? (
                 <>
+                  {ehRival(career, adversario) && (
+                    <div className="mt-2 flex items-center gap-2 border-2 border-rosa bg-rosa/15 px-3 py-2">
+                      <span className="text-xl">😤</span>
+                      <div>
+                        <p className="font-pixel text-[11px] text-rosa">RIVALIDADE</p>
+                        <p className="text-[11px] text-texto">Vença pra dar o troco: +moral, +$ e mais chance de drop!</p>
+                      </div>
+                    </div>
+                  )}
                   <p className="mt-2 text-sm text-texto">
                     Próxima partida oficial: <span className="text-rosa">{nomeTime(adversario)}</span>
                   </p>

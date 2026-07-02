@@ -85,6 +85,14 @@ export default function OnlinePage() {
   const minhaLinha = ranking.find((r) => r.nick === nick);
   const semCarreira = !career;
 
+  // rival online (derivado do histórico do servidor): saldo de derrotas − vitórias ≥ 2
+  const saldoContra = new Map<string, number>();
+  for (const h of historico) {
+    const rivalNick = h.souDesafiante ? h.oponenteNick : h.desafianteNick;
+    saldoContra.set(rivalNick, (saldoContra.get(rivalNick) ?? 0) + (h.euGanhei ? -1 : 1));
+  }
+  const ehRivalOnline = (n: string) => (saldoContra.get(n) ?? 0) >= 2;
+
   async function handleDesafiar(op: LadderLinha) {
     if (semCarreira || duelando) return;
     setDuelando(true);
@@ -184,9 +192,15 @@ export default function OnlinePage() {
           <p className="text-[11px] text-suave">Ninguém publicou snapshot ainda. Seja o primeiro — volte depois pra encontrar rivais.</p>
         ) : (
           ladder.map((op) => (
-            <div key={op.userId} className="flex items-center justify-between border-2 border-borda bg-painel p-3">
+            <div
+              key={op.userId}
+              className={`flex items-center justify-between border-2 p-3 ${ehRivalOnline(op.nick) ? "border-rosa bg-rosa/10" : "border-borda bg-painel"}`}
+            >
               <div>
-                <p className="font-pixel text-[11px] text-texto">{op.nick}</p>
+                <p className="font-pixel text-[11px] text-texto">
+                  {op.nick}
+                  {ehRivalOnline(op.nick) && <span className="ml-2 bg-rosa px-1 font-pixel text-[9px] text-fundo">😤 RIVAL</span>}
+                </p>
                 <p className="mt-1 text-[10px] text-suave">
                   {op.snapshot.rota} · {op.snapshot.elo}
                 </p>

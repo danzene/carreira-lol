@@ -242,6 +242,8 @@ export interface CareerState {
   coachAtivo?: boolean; // assinatura de coach (XP passivo semanal, custa upkeep)
   diario?: EstadoDiario; // streak de login + puxada grátis (ausente em saves antigos)
   unlocksLegacy?: boolean; // save antigo = features todas destravadas (migração)
+  rivais?: Record<string, import("./rivais").RivalState>; // rivalidades por timeId (campeonato)
+  records?: import("./records").CareerRecords; // Hall da Carreira (marcos permanentes)
   statsSemana?: StatsSemana; // stats da semana corrente (recap ao avançar)
   statsSemanaAnterior?: StatsSemana; // pra comparação ↑↓ no recap
 }

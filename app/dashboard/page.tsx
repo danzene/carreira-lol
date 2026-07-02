@@ -155,10 +155,10 @@ export default function DashboardPage() {
           📋 TIER
         </Link>
         <Link
-          href="/conquistas"
+          href="/hall"
           className="border-2 border-borda bg-painel px-2 py-3 text-center font-pixel text-[11px] text-ciano transition hover:border-ciano"
         >
-          🏅 CONQUISTAS
+          🏛️ HALL
         </Link>
         {featureLiberada(career, "itens") ? (
           <Link

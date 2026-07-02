@@ -34,6 +34,18 @@ describe("apresentação de elo", () => {
     expect(dificuldadeSoloq("Diamante I")).toBeGreaterThan(dificuldadeSoloq("Prata IV"));
   });
 
+  it("curva em duas fases: favorável até o Platina, rampa exponencial depois (com teto)", () => {
+    // toda a subida até o Platina IV é favorável ou neutra
+    expect(dificuldadeSoloq("Ouro IV")).toBeLessThan(0);
+    expect(dificuldadeSoloq("Platina IV")).toBeLessThanOrEqual(0);
+    // a rampa ACELERA: o salto Esmeralda→Diamante é maior que Platina→Esmeralda
+    const saltoBaixo = dificuldadeSoloq("Esmeralda IV") - dificuldadeSoloq("Platina IV");
+    const saltoAlto = dificuldadeSoloq("Diamante IV") - dificuldadeSoloq("Esmeralda IV");
+    expect(saltoAlto).toBeGreaterThan(saltoBaixo);
+    // teto: Desafiante é duríssimo mas não absurdo
+    expect(dificuldadeSoloq("Desafiante")).toBeLessThan(30);
+  });
+
   it("proximoStreak conta vitórias/derrotas seguidas e reseta ao virar", () => {
     expect(proximoStreak(0, true)).toBe(1);
     expect(proximoStreak(2, true)).toBe(3);

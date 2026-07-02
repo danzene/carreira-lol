@@ -7,9 +7,14 @@ export function idxElo(elo: string): number {
   return i < 0 ? 0 : i;
 }
 
-// Penalidade de vitória na soloq pelo elo: negativa no elo baixo (ajuda), positiva no alto (aperta).
+// Penalidade de vitória na soloq pelo elo. Curva em duas fases: suave (favorável) até o
+// Platina; do Platina I em diante soma uma rampa quadrática — sem build/counters não sobe.
 export function dificuldadeSoloq(elo: string): number {
-  return (idxElo(elo) - DIFICULDADE_ELO.pivo) * DIFICULDADE_ELO.fator;
+  const idx = idxElo(elo);
+  const suave = (idx - DIFICULDADE_ELO.pivo) * DIFICULDADE_ELO.fator;
+  const acima = Math.max(0, idx - DIFICULDADE_ELO.rampaInicio);
+  const rampa = Math.min(DIFICULDADE_ELO.rampaMax, acima * acima * DIFICULDADE_ELO.rampaFator);
+  return suave + rampa;
 }
 
 export function eloDeMmr(mmr: number): { elo: string; lp: number } {

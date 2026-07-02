@@ -60,7 +60,13 @@ export const RANK = {
   streakBonusMax: 12, // teto do bônus de sequência (estilo LoL: quente sobe rápido, frio cai rápido)
 } as const;
 
-// Dificuldade da SOLOQ por elo: ajuda no elo baixo, aperta conforme você sobe. Os atributos/
-// itens/maestria do personagem precisam acompanhar a barra subindo.
-// `pivo` = índice do elo neutro na ELO_LADDER; `fator` = pontos de vantagem por degrau de elo.
-export const DIFICULDADE_ELO = { pivo: 12, fator: 0.8 } as const;
+// Dificuldade da SOLOQ por elo — curva em DUAS fases (progressão exponencial com tempo):
+// até o Platina o jogo AJUDA (subir é acessível); do Platina pra cima entra uma rampa
+// quadrática — cartas de Lenda, itens bons, counters e draft viram obrigatórios.
+export const DIFICULDADE_ELO = {
+  pivo: 16, // Platina IV = ponto neutro (tudo abaixo é favorável)
+  fator: 0.8, // inclinação da parte suave
+  rampaInicio: 19, // Platina I: daqui pra cima a exigência acelera
+  rampaFator: 0.3, // intensidade da rampa quadrática
+  rampaMax: 14, // teto da rampa (Desafiante é duríssimo, não impossível)
+} as const;

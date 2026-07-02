@@ -4,12 +4,14 @@
 export const PASSE = {
   niveis: 60,
   porPagina: 10, // 6 páginas de 10 níveis
-  ppPorNivel: 100, // Pontos de Passe por nível
-  duracaoDias: 42, // temporada ~6 semanas
+  ppPorNivel: 100, // Pontos de Passe por nível → 6000 PP fecha o passe (nível 60)
+  duracaoDias: 42, // temporada ~6 semanas (casual tem tempo; dedicado fecha em ~1 semana)
   premiumBonusPP: 0.1, // +10% PP com o passe premium (aplicado na fatia de monetização)
-  qtdDiarias: 3, // missões diárias ativas
-  qtdSemanais: 2, // missões semanais ativas
+  qtdDiarias: 5, // TODAS as diárias ativas (ritmo previsível: dedicado fecha em ~1 semana)
+  qtdSemanais: 5, // TODAS as semanais ativas
 } as const;
+// Ritmo alvo: diárias somam ~650 PP/dia e as semanais ~2000 PP/semana.
+// 7 dias × 650 + 2000 ≈ 6550 PP > 6000 → dá pra fechar o passe todo em ~1 semana fazendo tudo.
 
 export const paginas = PASSE.niveis / PASSE.porPagina; // 6
 
@@ -26,20 +28,20 @@ export interface DefMissao {
 }
 
 export const MISSOES_DIARIAS: DefMissao[] = [
-  { tipo: "jogar", texto: "Jogue 3 partidas", escopo: "diaria", alvo: 3, pp: 50 },
-  { tipo: "vencer", texto: "Vença 1 partida", escopo: "diaria", alvo: 1, pp: 40 },
-  { tipo: "treinar", texto: "Treine 2 vezes", escopo: "diaria", alvo: 2, pp: 30 },
-  { tipo: "stream", texto: "Faça 1 stream", escopo: "diaria", alvo: 1, pp: 30 },
-  { tipo: "booster", texto: "Puxe 1× no Carreira Booster", escopo: "diaria", alvo: 1, pp: 40 },
-];
+  { tipo: "jogar", texto: "Jogue 3 partidas", escopo: "diaria", alvo: 3, pp: 150 },
+  { tipo: "vencer", texto: "Vença 1 partida", escopo: "diaria", alvo: 1, pp: 130 },
+  { tipo: "treinar", texto: "Treine 2 vezes", escopo: "diaria", alvo: 2, pp: 110 },
+  { tipo: "stream", texto: "Faça 1 stream", escopo: "diaria", alvo: 1, pp: 110 },
+  { tipo: "booster", texto: "Puxe 1× no Carreira Booster", escopo: "diaria", alvo: 1, pp: 150 },
+]; // soma ~650 PP/dia
 
 export const MISSOES_SEMANAIS: DefMissao[] = [
-  { tipo: "vencer", texto: "Vença 10 partidas", escopo: "semanal", alvo: 10, pp: 200 },
-  { tipo: "campeonato", texto: "Jogue 3 partidas de campeonato", escopo: "semanal", alvo: 3, pp: 180 },
-  { tipo: "jogar", texto: "Jogue 20 partidas", escopo: "semanal", alvo: 20, pp: 150 },
-  { tipo: "equipar_item", texto: "Equipe um item", escopo: "semanal", alvo: 1, pp: 120 },
-  { tipo: "subir_elo", texto: "Suba 2 divisões de elo", escopo: "semanal", alvo: 2, pp: 200 },
-];
+  { tipo: "vencer", texto: "Vença 10 partidas", escopo: "semanal", alvo: 10, pp: 450 },
+  { tipo: "campeonato", texto: "Jogue 3 partidas de campeonato", escopo: "semanal", alvo: 3, pp: 400 },
+  { tipo: "jogar", texto: "Jogue 20 partidas", escopo: "semanal", alvo: 20, pp: 350 },
+  { tipo: "equipar_item", texto: "Equipe um item", escopo: "semanal", alvo: 1, pp: 300 },
+  { tipo: "subir_elo", texto: "Suba 2 divisões de elo", escopo: "semanal", alvo: 2, pp: 500 },
+]; // soma ~2000 PP/semana
 
 // ---- Recompensas ----
 export type TipoRecompensa = "coinpoints" | "item" | "ingresso" | "moldura";

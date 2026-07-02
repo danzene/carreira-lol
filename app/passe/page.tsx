@@ -96,6 +96,7 @@ export default function PassePage() {
   const nivel = nivelDoPasse(passe.pp);
   const pctNivel = nivel >= PASSE.niveis ? 100 : (ppNoNivel(passe.pp) / PASSE.ppPorNivel) * 100;
   const falta = ppParaProximo(passe.pp);
+  const resgataveis = [...RECOMPENSAS_FREE, ...RECOMPENSAS_PREMIUM].filter((r) => podeResgatar(passe, r));
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col gap-5 px-4 py-6">
@@ -123,6 +124,16 @@ export default function PassePage() {
         </div>
         <p className="mt-1 text-right text-[9px] text-suave">{falta > 0 ? `${falta} PP pro próximo nível` : "Nível máximo 👑"}</p>
       </div>
+
+      {resgataveis.length > 1 && (
+        <button
+          type="button"
+          onClick={() => resgataveis.forEach((r) => resgatar(r))}
+          className="border-2 border-amber-300 bg-amber-300/10 py-2 font-pixel text-[10px] text-amber-300 transition hover:bg-amber-300 hover:text-fundo"
+        >
+          🎁 RESGATAR TUDO ({resgataveis.length})
+        </button>
+      )}
 
       {/* missões */}
       <section className="flex flex-col gap-2">

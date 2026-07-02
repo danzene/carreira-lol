@@ -33,7 +33,7 @@ export default function AnimacaoAcao({
         style={{ borderColor: acento }}
         onClick={(e) => e.stopPropagation()}
       >
-        <p className="mb-2 text-center font-pixel text-[11px]" style={{ color: acento }}>
+        <p className="mb-2 text-center font-pixel text-[12px]" style={{ color: acento }}>
           {titulo}
         </p>
         <video
@@ -50,7 +50,7 @@ export default function AnimacaoAcao({
         <button
           type="button"
           onClick={onFechar}
-          className="mt-3 w-full border-2 py-2 font-pixel text-[10px] transition"
+          className="mt-3 w-full border-2 py-2 font-pixel text-[11px] transition"
           style={{ borderColor: acento, color: acento }}
         >
           {pronto ? "CONTINUAR" : "PULAR"}

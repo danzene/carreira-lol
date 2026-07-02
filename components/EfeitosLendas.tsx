@@ -49,10 +49,10 @@ export default function EfeitosLendas({
 
   return (
     <div className={`border-2 p-3 ${vazio ? "border-borda bg-painel/60" : "border-ciano/40 bg-ciano/5"}`}>
-      <h2 className={`mb-2 font-pixel text-[9px] ${vazio ? "text-suave" : "text-ciano"}`}>✨ {titulo}</h2>
+      <h2 className={`mb-2 font-pixel text-[10px] ${vazio ? "text-suave" : "text-ciano"}`}>✨ {titulo}</h2>
 
       {vazio ? (
-        <p className="text-[10px] text-suave">
+        <p className="text-[11px] text-suave">
           Nada equipado ainda. Equipe lendas no <span className="text-rosa">Carreira Booster</span> e itens no{" "}
           <span className="text-rosa">Inventário</span> pra ganhar bônus na partida.
         </p>
@@ -60,15 +60,15 @@ export default function EfeitosLendas({
         <div className="flex flex-col gap-2">
           {temLendas && (
             <div>
-              <p className="mb-1 font-pixel text-[8px] text-suave">LENDAS ({nL}/3)</p>
+              <p className="mb-1 font-pixel text-[10px] text-suave">LENDAS ({nL}/3)</p>
               <div className="flex flex-wrap gap-1">
                 {lendaLinhas.map((t) => (
-                  <span key={t} className="border border-ciano/40 bg-ciano/10 px-2 py-0.5 text-[10px] text-ciano">
+                  <span key={t} className="border border-ciano/40 bg-ciano/10 px-2 py-0.5 text-[11px] text-ciano">
                     {t}
                   </span>
                 ))}
                 {sinergias.map((t) => (
-                  <span key={t} className="border border-amber-300/40 bg-amber-300/10 px-2 py-0.5 text-[10px] text-amber-300">
+                  <span key={t} className="border border-amber-300/40 bg-amber-300/10 px-2 py-0.5 text-[11px] text-amber-300">
                     ✦ {t}
                   </span>
                 ))}
@@ -77,19 +77,19 @@ export default function EfeitosLendas({
           )}
           {temItens && (
             <div>
-              <p className="mb-1 font-pixel text-[8px] text-suave">ITENS ({itens.length})</p>
+              <p className="mb-1 font-pixel text-[10px] text-suave">ITENS ({itens.length})</p>
               <div className="flex flex-wrap gap-1">
                 {itemLinhas.map((t) => (
                   <span
                     key={t}
-                    className="border px-2 py-0.5 text-[10px]"
+                    className="border px-2 py-0.5 text-[11px]"
                     style={{ color: ROXO, borderColor: "rgba(154,107,255,0.4)", background: "rgba(154,107,255,0.1)" }}
                   >
                     {t}
                   </span>
                 ))}
                 {efi.sets.map((s) => (
-                  <span key={s.id} className="border border-amber-300/40 bg-amber-300/10 px-2 py-0.5 text-[10px] text-amber-300">
+                  <span key={s.id} className="border border-amber-300/40 bg-amber-300/10 px-2 py-0.5 text-[11px] text-amber-300">
                     ⚙ {s.nome} ({s.pecas})
                   </span>
                 ))}

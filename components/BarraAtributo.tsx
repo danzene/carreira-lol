@@ -17,7 +17,7 @@ export default function BarraAtributo({
           <div className="h-full bg-gradient-to-r from-rosa to-ciano" style={{ width: `${valor}%` }} />
         )}
       </div>
-      <span className="w-7 shrink-0 text-right font-pixel text-[10px] text-texto">{esconder ? "?" : Math.round(valor)}</span>
+      <span className="w-7 shrink-0 text-right font-pixel text-[11px] text-texto">{esconder ? "?" : Math.round(valor)}</span>
     </div>
   );
 }

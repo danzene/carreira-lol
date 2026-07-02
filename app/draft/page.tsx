@@ -135,7 +135,7 @@ function DraftFlow() {
       <header className="flex items-center justify-between">
         <div>
           <h1 className="font-pixel text-sm text-ciano">{titulo}</h1>
-          <p className="mt-1 text-[10px] text-suave">
+          <p className="mt-1 text-[11px] text-suave">
             {internacional && adversario
               ? `vs ${adversario.nome}`
               : evento && career.eventoAtual
@@ -147,7 +147,7 @@ function DraftFlow() {
         </div>
         <Link
           href={oficial ? "/liga" : internacional ? "/torneio" : "/dashboard"}
-          className="border-2 border-borda px-3 py-1.5 text-[10px] text-suave transition hover:text-texto"
+          className="border-2 border-borda px-3 py-1.5 text-[11px] text-suave transition hover:text-texto"
         >
           Voltar
         </Link>
@@ -192,13 +192,13 @@ function DraftFlow() {
           <ResultadoPartida resultado={resultado} icone={info?.icone} elo={career.player.rankSoloq.elo} atributos={career.player.atributos} />
           {ultimoDrop && (
             <div className={`item-card border-2 bg-painel p-3 ${classeBrilho(ultimoDrop.raridade)}`} style={estiloCartaItem(ultimoDrop.raridade)}>
-              <p className="mb-2 text-center font-pixel text-[9px]" style={{ color: corRaridade(ultimoDrop.raridade) }}>
+              <p className="mb-2 text-center font-pixel text-[10px]" style={{ color: corRaridade(ultimoDrop.raridade) }}>
                 🎁 ITEM DROPADO!
               </p>
               <ItemVisual item={ultimoDrop} />
               <Link
                 href="/inventario"
-                className="mt-3 block border-2 border-borda py-1.5 text-center font-pixel text-[8px] text-suave transition hover:border-ciano hover:text-ciano"
+                className="mt-3 block border-2 border-borda py-1.5 text-center font-pixel text-[10px] text-suave transition hover:border-ciano hover:text-ciano"
               >
                 VER NO INVENTÁRIO
               </Link>
@@ -208,21 +208,21 @@ function DraftFlow() {
             {internacional ? (
               <Link
                 href="/torneio"
-                className="border-2 border-amber-300 bg-amber-300/10 px-6 py-2 font-pixel text-[10px] text-amber-300 transition hover:bg-amber-300 hover:text-fundo"
+                className="border-2 border-amber-300 bg-amber-300/10 px-6 py-2 font-pixel text-[11px] text-amber-300 transition hover:bg-amber-300 hover:text-fundo"
               >
                 VOLTAR AO TORNEIO
               </Link>
             ) : evento ? (
               <Link
                 href="/dashboard"
-                className="border-2 border-amber-300 bg-amber-300/10 px-6 py-2 font-pixel text-[10px] text-amber-300 transition hover:bg-amber-300 hover:text-fundo"
+                className="border-2 border-amber-300 bg-amber-300/10 px-6 py-2 font-pixel text-[11px] text-amber-300 transition hover:bg-amber-300 hover:text-fundo"
               >
                 VOLTAR
               </Link>
             ) : oficial ? (
               <Link
                 href="/liga"
-                className="border-2 border-rosa bg-rosa/10 px-6 py-2 font-pixel text-[10px] text-rosa transition hover:bg-rosa hover:text-fundo"
+                className="border-2 border-rosa bg-rosa/10 px-6 py-2 font-pixel text-[11px] text-rosa transition hover:bg-rosa hover:text-fundo"
               >
                 VOLTAR À LIGA
               </Link>
@@ -235,10 +235,10 @@ function DraftFlow() {
                   type="button"
                   onClick={denovo}
                   disabled={!podeReplay}
-                  className="flex flex-col items-center border-2 border-rosa bg-rosa/10 px-6 py-2 font-pixel text-[10px] text-rosa transition hover:bg-rosa hover:text-fundo disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-rosa/10 disabled:hover:text-rosa"
+                  className="flex flex-col items-center border-2 border-rosa bg-rosa/10 px-6 py-2 font-pixel text-[11px] text-rosa transition hover:bg-rosa hover:text-fundo disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-rosa/10 disabled:hover:text-rosa"
                 >
                   {podeReplay ? "JOGAR DE NOVO" : "SEM ENERGIA"}
-                  <span className="text-[7px] font-normal opacity-80">−{LOOP.custoSoloq}⚡</span>
+                  <span className="text-[9px] font-normal opacity-80">−{LOOP.custoSoloq}⚡</span>
                 </button>
               </>
             )}

@@ -40,30 +40,30 @@ export default function InventarioPage() {
   if (ef.bonusComp > 0) poder.push(`Draft +${ef.bonusComp}`);
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col gap-5 px-4 py-6">
+    <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-5 px-4 py-6">
       <header className="flex items-center justify-between">
         <div>
           <h1 className="font-pixel text-sm text-ciano">INVENTÁRIO</h1>
-          <p className="mt-1 text-[10px] text-suave">🪙 {coinpoints} CoinPoints · monte seu set</p>
+          <p className="mt-1 text-[11px] text-suave">🪙 {coinpoints} CoinPoints · monte seu set</p>
         </div>
-        <Link href="/dashboard" className="border-2 border-borda px-3 py-1.5 text-[10px] text-suave transition hover:text-texto">
+        <Link href="/dashboard" className="border-2 border-borda px-3 py-1.5 text-[11px] text-suave transition hover:text-texto">
           Voltar
         </Link>
       </header>
 
       <div className="border-2 border-ciano/40 bg-ciano/5 p-3">
-        <h2 className="mb-2 font-pixel text-[9px] text-ciano">⚡ PODER DO GEAR</h2>
+        <h2 className="mb-2 font-pixel text-[10px] text-ciano">⚡ PODER DO GEAR</h2>
         {poder.length === 0 && ef.sets.length === 0 ? (
-          <p className="text-[10px] text-suave">Equipe itens pra somar bônus na partida.</p>
+          <p className="text-[11px] text-suave">Equipe itens pra somar bônus na partida.</p>
         ) : (
           <div className="flex flex-wrap gap-1">
             {poder.map((t) => (
-              <span key={t} className="border px-2 py-0.5 text-[10px]" style={{ color: "#9a6bff", borderColor: "rgba(154,107,255,0.4)", background: "rgba(154,107,255,0.1)" }}>
+              <span key={t} className="border px-2 py-0.5 text-[11px]" style={{ color: "#9a6bff", borderColor: "rgba(154,107,255,0.4)", background: "rgba(154,107,255,0.1)" }}>
                 {t}
               </span>
             ))}
             {ef.sets.map((s) => (
-              <span key={s.id} className="border border-amber-300/50 bg-amber-300/10 px-2 py-0.5 text-[10px] text-amber-300">
+              <span key={s.id} className="border border-amber-300/50 bg-amber-300/10 px-2 py-0.5 text-[11px] text-amber-300">
                 ⚙ {s.nome} ({s.pecas})
               </span>
             ))}
@@ -72,7 +72,7 @@ export default function InventarioPage() {
       </div>
 
       <section className="flex flex-col gap-2">
-        <h2 className="font-pixel text-[10px] text-suave">EQUIPADO</h2>
+        <h2 className="font-pixel text-[11px] text-suave">EQUIPADO</h2>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {SLOTS_GEAR.map((sl) => {
             const id = equipado[sl.slot];
@@ -83,7 +83,7 @@ export default function InventarioPage() {
                 <button
                   type="button"
                   onClick={() => desequipar(sl.slot)}
-                  className="mt-2 w-full border border-borda py-1 font-pixel text-[7px] text-suave transition hover:border-rosa hover:text-rosa"
+                  className="mt-2 w-full border border-borda py-1 font-pixel text-[9px] text-suave transition hover:border-rosa hover:text-rosa"
                 >
                   DESEQUIPAR
                 </button>
@@ -91,8 +91,8 @@ export default function InventarioPage() {
             ) : (
               <div key={sl.slot} className="slot-vazio flex min-h-[96px] flex-col items-center justify-center gap-1 border-2 border-borda bg-painel/40 p-2 text-center">
                 <span className="text-2xl opacity-25">{sl.emoji}</span>
-                <span className="font-pixel text-[8px] text-borda">{sl.nome}</span>
-                <span className="text-[8px] text-suave">vazio</span>
+                <span className="font-pixel text-[10px] text-borda">{sl.nome}</span>
+                <span className="text-[10px] text-suave">vazio</span>
               </div>
             );
           })}
@@ -100,13 +100,13 @@ export default function InventarioPage() {
       </section>
 
       <section className="flex flex-col gap-2">
-        <h2 className="font-pixel text-[10px] text-suave">MOCHILA ({naMochila.length})</h2>
+        <h2 className="font-pixel text-[11px] text-suave">MOCHILA ({naMochila.length})</h2>
         {carregando ? (
-          <p className="text-[11px] text-suave">Carregando…</p>
+          <p className="text-[12px] text-suave">Carregando…</p>
         ) : naMochila.length === 0 ? (
           <div className="border-2 border-borda bg-painel/40 p-6 text-center">
             <p className="text-2xl opacity-30">🎁</p>
-            <p className="mt-1 text-[11px] text-suave">Mochila vazia. Vença partidas pra dropar itens (liga/torneio dropam melhores).</p>
+            <p className="mt-1 text-[12px] text-suave">Mochila vazia. Vença partidas pra dropar itens (liga/torneio dropam melhores).</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -117,7 +117,7 @@ export default function InventarioPage() {
                   <button
                     type="button"
                     onClick={() => equipar(it.id)}
-                    className="border-2 border-ciano bg-ciano/10 py-1.5 font-pixel text-[7px] text-ciano transition hover:bg-ciano hover:text-fundo"
+                    className="border-2 border-ciano bg-ciano/10 py-1.5 font-pixel text-[9px] text-ciano transition hover:bg-ciano hover:text-fundo"
                   >
                     EQUIPAR
                   </button>
@@ -125,7 +125,7 @@ export default function InventarioPage() {
                     type="button"
                     disabled={coinpoints < ITENS_ECON.custoReroll}
                     onClick={() => reroll(it.id)}
-                    className="border-2 border-borda py-1.5 font-pixel text-[7px] text-suave transition hover:border-suave disabled:opacity-40"
+                    className="border-2 border-borda py-1.5 font-pixel text-[9px] text-suave transition hover:border-suave disabled:opacity-40"
                     title="Re-sortear afixos"
                   >
                     🎲 {ITENS_ECON.custoReroll}
@@ -135,7 +135,7 @@ export default function InventarioPage() {
                     onClick={() => {
                       if (window.confirm(`Desmontar ${nomeItem(it)}? Você ganha 🪙${ITENS_ECON.coinsDesmonte}.`)) desmontar(it.id);
                     }}
-                    className="border-2 border-borda py-1.5 font-pixel text-[7px] text-rosa transition hover:border-rosa"
+                    className="border-2 border-borda py-1.5 font-pixel text-[9px] text-rosa transition hover:border-rosa"
                     title="Desmontar por CoinPoints"
                   >
                     ♻️ +{ITENS_ECON.coinsDesmonte}

@@ -700,7 +700,7 @@ export default function BatalhaCanvas({
             <span className="px-1.5 text-suave">-</span>
             <span className="text-rosa">{marcador.placar.vermelho}</span>
           </div>
-          <div className="mt-1 font-pixel text-[10px] text-suave">{`${marcador.minuto}:00`}</div>
+          <div className="mt-1 font-pixel text-[11px] text-suave">{`${marcador.minuto}:00`}</div>
         </div>
         <div className="flex gap-1">
           {roster.vermelho.map((c) => (
@@ -734,14 +734,14 @@ export default function BatalhaCanvas({
           <button
             type="button"
             onClick={alternarVel}
-            className="border-2 border-borda px-3 py-1 font-pixel text-[9px] text-suave transition hover:text-texto"
+            className="border-2 border-borda px-3 py-1 font-pixel text-[10px] text-suave transition hover:text-texto"
           >
             {vel}x
           </button>
           <button
             type="button"
             onClick={pular}
-            className="border-2 border-borda px-3 py-1 font-pixel text-[9px] text-suave transition hover:text-texto"
+            className="border-2 border-borda px-3 py-1 font-pixel text-[10px] text-suave transition hover:text-texto"
           >
             PULAR ⏭
           </button>
@@ -771,8 +771,8 @@ function Retrato({
         ) : (
           <div className={`h-full w-full ${lado === "azul" ? "bg-ciano/30" : "bg-rosa/30"}`} />
         )}
-        {ehVoce && <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-[9px] leading-none text-amber-300">★</span>}
-        {morto && <span className="absolute inset-0 flex items-center justify-center font-pixel text-[10px] text-rosa">✕</span>}
+        {ehVoce && <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-[10px] leading-none text-amber-300">★</span>}
+        {morto && <span className="absolute inset-0 flex items-center justify-center font-pixel text-[11px] text-rosa">✕</span>}
       </div>
       <div className="h-1 w-7 bg-rosa/30 sm:w-9">{!morto && <div className="h-full w-full bg-emerald-400" />}</div>
     </div>

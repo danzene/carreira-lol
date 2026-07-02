@@ -22,15 +22,15 @@ export default function ConquistasPage() {
   const desbloq = new Set(career.conquistas ?? []);
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col gap-5 px-4 py-6">
+    <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-5 px-4 py-6">
       <header className="flex items-center justify-between">
         <div>
           <h1 className="font-pixel text-sm text-ciano">CONQUISTAS</h1>
-          <p className="mt-1 text-[10px] text-suave">
+          <p className="mt-1 text-[11px] text-suave">
             {desbloq.size} / {CONQUISTAS.length} desbloqueadas
           </p>
         </div>
-        <Link href="/dashboard" className="border-2 border-borda px-3 py-1.5 text-[10px] text-suave transition hover:text-texto">
+        <Link href="/dashboard" className="border-2 border-borda px-3 py-1.5 text-[11px] text-suave transition hover:text-texto">
           Voltar
         </Link>
       </header>
@@ -46,7 +46,7 @@ export default function ConquistasPage() {
               <span className="text-2xl">{ok ? q.emoji : "🔒"}</span>
               <div className="min-w-0">
                 <p className={`text-sm ${ok ? "text-texto" : "text-suave"}`}>{q.nome}</p>
-                <p className="text-[10px] text-suave">{q.desc}</p>
+                <p className="text-[11px] text-suave">{q.desc}</p>
               </div>
             </div>
           );

@@ -43,11 +43,11 @@ export default function PlayerCard({ career }: { career: CareerState }) {
             <span className="mt-1 text-xs text-suave">
               {nac?.bandeira} {player.nacionalidade} · {player.idade} anos
             </span>
-            <span className="mt-0.5 text-[11px] text-ciano">
+            <span className="mt-0.5 text-[12px] text-ciano">
               {career.contratoAtual ? (timeDe(career.contratoAtual.timeId)?.nome ?? career.contratoAtual.timeId) : "Sem time (agente livre)"}
             </span>
             {(career.opcoes?.esconderAtributos || career.opcoes?.fearless) && (
-              <span className="mt-0.5 text-[10px] text-suave">
+              <span className="mt-0.5 text-[11px] text-suave">
                 {career.opcoes?.esconderAtributos ? "🙈 Imersão" : ""}
                 {career.opcoes?.esconderAtributos && career.opcoes?.fearless ? " · " : ""}
                 {career.opcoes?.fearless ? "⚔️ Fearless" : ""}
@@ -56,7 +56,7 @@ export default function PlayerCard({ career }: { career: CareerState }) {
           </div>
           <div className="flex flex-col items-end gap-1">
             <IconeRota rota={player.rota} className="h-8 w-8 text-ciano" />
-            <span className="font-pixel text-[8px] text-suave">{rota?.nome}</span>
+            <span className="font-pixel text-[10px] text-suave">{rota?.nome}</span>
           </div>
         </div>
 
@@ -77,7 +77,7 @@ export default function PlayerCard({ career }: { career: CareerState }) {
 
       {/* traços */}
       <div className="border-2 border-borda bg-painel p-5">
-        <h2 className="mb-3 font-pixel text-[10px] text-suave">TRAÇOS</h2>
+        <h2 className="mb-3 font-pixel text-[11px] text-suave">TRAÇOS</h2>
         <div className="flex flex-wrap gap-2">
           {player.tracos.map((t) => (
             <span key={t} className="border-2 border-ciano/50 bg-ciano/10 px-2 py-1 text-xs text-ciano">
@@ -89,7 +89,7 @@ export default function PlayerCard({ career }: { career: CareerState }) {
 
       {/* atributos */}
       <div className="border-2 border-borda bg-painel p-5">
-        <h2 className="mb-3 font-pixel text-[10px] text-suave">ATRIBUTOS</h2>
+        <h2 className="mb-3 font-pixel text-[11px] text-suave">ATRIBUTOS</h2>
         <div className="flex flex-col gap-2.5">
           {ATRIBUTOS.map((a) => (
             <BarraAtributo
@@ -104,7 +104,7 @@ export default function PlayerCard({ career }: { career: CareerState }) {
 
       {/* pool */}
       <div className="border-2 border-borda bg-painel p-5">
-        <h2 className="mb-3 font-pixel text-[10px] text-suave">CHAMPION POOL</h2>
+        <h2 className="mb-3 font-pixel text-[11px] text-suave">CHAMPION POOL</h2>
         <div className="flex flex-wrap gap-3">
           {[...player.pool]
             .sort((a, b) => b.pontos - a.pontos)
@@ -118,8 +118,8 @@ export default function PlayerCard({ career }: { career: CareerState }) {
                 ) : (
                   <div className="h-14 w-14 animate-pulse border-2 border-borda bg-borda" />
                 )}
-                <span className="w-full truncate text-center text-[11px] text-suave">{c?.nome ?? m.championId}</span>
-                <span className="font-pixel text-[8px] text-borda">M{Math.round(m.pontos)}</span>
+                <span className="w-full truncate text-center text-[12px] text-suave">{c?.nome ?? m.championId}</span>
+                <span className="font-pixel text-[10px] text-borda">M{Math.round(m.pontos)}</span>
               </div>
             );
           })}
@@ -132,9 +132,9 @@ export default function PlayerCard({ career }: { career: CareerState }) {
 function Stat({ rotulo, valor, sub }: { rotulo: string; valor: string; sub?: string }) {
   return (
     <div className="border-2 border-borda bg-fundo/40 px-3 py-2">
-      <p className="font-pixel text-[8px] text-suave">{rotulo}</p>
+      <p className="font-pixel text-[10px] text-suave">{rotulo}</p>
       <p className="mt-1 text-sm font-bold text-texto">{valor}</p>
-      {sub && <p className="text-[10px] text-suave">{sub}</p>}
+      {sub && <p className="text-[11px] text-suave">{sub}</p>}
     </div>
   );
 }
@@ -142,7 +142,7 @@ function Stat({ rotulo, valor, sub }: { rotulo: string; valor: string; sub?: str
 function Medidor({ rotulo, valor }: { rotulo: string; valor: number }) {
   return (
     <div>
-      <div className="mb-1 flex justify-between text-[11px]">
+      <div className="mb-1 flex justify-between text-[12px]">
         <span className="text-suave">{rotulo}</span>
         <span className="text-texto">{Math.round(valor)}</span>
       </div>

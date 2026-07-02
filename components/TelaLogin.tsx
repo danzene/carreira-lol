@@ -53,7 +53,7 @@ export default function TelaLogin() {
       />
 
       <div className="relative flex flex-col items-center gap-4 text-center">
-        <span className="font-pixel text-[10px] tracking-[0.3em] text-ciano">MODO CARREIRA · ESPORTS</span>
+        <span className="font-pixel text-[11px] tracking-[0.3em] text-ciano">MODO CARREIRA · ESPORTS</span>
         <h1
           className="font-pixel text-3xl leading-[1.6] text-rosa sm:text-4xl sm:leading-[1.6]"
           style={{ textShadow: "3px 3px 0 #0b0617, 6px 6px 0 rgba(25,230,224,0.35)" }}
@@ -103,7 +103,7 @@ export default function TelaLogin() {
           {carregando ? "Aguarde…" : modo === "entrar" ? "Entrar" : "Criar conta"}
         </button>
 
-        <div className="my-1 flex items-center gap-3 text-[11px] text-zinc-600">
+        <div className="my-1 flex items-center gap-3 text-[12px] text-zinc-600">
           <span className="h-px flex-1 bg-borda" />
           ou
           <span className="h-px flex-1 bg-borda" />

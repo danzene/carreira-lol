@@ -237,7 +237,7 @@ export default function AnimacaoGacha({ cartas, onFechar }: { cartas: CartaRevel
         style={{ borderColor: cor }}
         onClick={(e) => e.stopPropagation()}
       >
-        <p className="text-center font-pixel text-[10px]" style={{ color: cor }}>
+        <p className="text-center font-pixel text-[11px]" style={{ color: cor }}>
           CARREIRA BOOSTER · {cartas.length}×
         </p>
         <canvas
@@ -259,7 +259,7 @@ export default function AnimacaoGacha({ cartas, onFechar }: { cartas: CartaRevel
         <button
           type="button"
           onClick={onFechar}
-          className="mt-1 w-full border-2 py-2 font-pixel text-[10px] transition"
+          className="mt-1 w-full border-2 py-2 font-pixel text-[11px] transition"
           style={{ borderColor: cor, color: cor }}
         >
           {revelado ? "CONTINUAR" : "..."}
@@ -281,17 +281,17 @@ function CartaRevel({ c, delay, grande }: { c: CartaRevelada; delay: number; gra
           <img src={c.cartaImg} alt={c.nome} className="img-hd block aspect-[2/3] w-full" />
           {c.holo && <div className={`holo-sheen ${c.mitica ? "holo-forte" : ""}`} />}
         </div>
-        <p className="mt-1 truncate text-center text-[11px] text-texto">{c.nome}</p>
-        {c.subtitulo && <p className="truncate text-center text-[8px] text-suave">{c.subtitulo}</p>}
+        <p className="mt-1 truncate text-center text-[12px] text-texto">{c.nome}</p>
+        {c.subtitulo && <p className="truncate text-center text-[10px] text-suave">{c.subtitulo}</p>}
         {c.badge && (
-          <p className="text-center font-pixel text-[8px]" style={{ color: c.cor }}>
+          <p className="text-center font-pixel text-[10px]" style={{ color: c.cor }}>
             {c.badge}
           </p>
         )}
         {grande && c.substats && c.substats.length > 0 && (
           <div className="mt-1 flex flex-wrap justify-center gap-0.5">
             {c.substats.map((s, j) => (
-              <span key={j} className="border border-borda px-1 text-[8px] text-ciano">
+              <span key={j} className="border border-borda px-1 text-[10px] text-ciano">
                 {s.rotulo}+{s.valor}
               </span>
             ))}
@@ -305,13 +305,13 @@ function CartaRevel({ c, delay, grande }: { c: CartaRevelada; delay: number; gra
     <div className={`carta-entra ${grande ? "w-40 max-w-full" : ""}`} style={estilo}>
       <div className="relative overflow-hidden border-2" style={{ borderColor: c.cor }}>
         {c.icone ? <img src={c.icone} alt="" className="block aspect-square w-full" /> : <div className="aspect-square w-full bg-fundo" />}
-        <span className="absolute left-1 top-1 font-pixel text-[8px]" style={{ color: c.cor }}>
+        <span className="absolute left-1 top-1 font-pixel text-[10px]" style={{ color: c.cor }}>
           {"★".repeat(c.raridade)}
         </span>
-        {c.badge && <span className="absolute right-1 top-1 bg-painel px-1 text-[7px] text-amber-300">{c.badge}</span>}
+        {c.badge && <span className="absolute right-1 top-1 bg-painel px-1 text-[9px] text-amber-300">{c.badge}</span>}
       </div>
-      <p className="mt-1 truncate text-center text-[11px] text-texto">{c.nome}</p>
-      {c.subtitulo && <p className="truncate text-center text-[8px] text-suave">{c.subtitulo}</p>}
+      <p className="mt-1 truncate text-center text-[12px] text-texto">{c.nome}</p>
+      {c.subtitulo && <p className="truncate text-center text-[10px] text-suave">{c.subtitulo}</p>}
     </div>
   );
 }

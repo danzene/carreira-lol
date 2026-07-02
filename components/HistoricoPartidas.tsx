@@ -27,13 +27,13 @@ export default function HistoricoPartidas({ partidas }: { partidas: MatchResult[
 
   return (
     <div className="border-2 border-borda bg-painel p-4">
-      <h2 className="mb-3 font-pixel text-[10px] text-suave">ÚLTIMAS PARTIDAS</h2>
+      <h2 className="mb-3 font-pixel text-[11px] text-suave">ÚLTIMAS PARTIDAS</h2>
       <div className="flex flex-col gap-1.5">
         {ult.map((m, i) => {
           const c = map[m.championId];
           return (
             <div key={i} className="flex items-center gap-2 text-xs">
-              <span className={`w-4 text-center font-pixel text-[9px] ${m.vitoria ? "text-ciano" : "text-rosa"}`}>
+              <span className={`w-4 text-center font-pixel text-[10px] ${m.vitoria ? "text-ciano" : "text-rosa"}`}>
                 {m.vitoria ? "V" : "D"}
               </span>
               {c ? (
@@ -46,7 +46,7 @@ export default function HistoricoPartidas({ partidas }: { partidas: MatchResult[
                 {m.kda.k}/{m.kda.d}/{m.kda.a}
               </span>
               <span
-                className={`w-8 text-right font-pixel text-[9px] ${
+                className={`w-8 text-right font-pixel text-[10px] ${
                   m.notaPerformance >= 7 ? "text-ciano" : m.notaPerformance >= 5 ? "text-texto" : "text-rosa"
                 }`}
               >

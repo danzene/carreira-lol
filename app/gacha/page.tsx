@@ -138,72 +138,72 @@ export default function GachaPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col gap-5 px-4 py-6">
+    <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-5 px-4 py-6">
       <header className="flex items-center justify-between">
         <div>
           <h1 className="font-pixel text-xs text-ciano">CARREIRA BOOSTER</h1>
-          <p className="mt-1 text-[10px] text-suave">
+          <p className="mt-1 text-[11px] text-suave">
             🪙 {ps} CoinPoints · pity 5★ {career.pity ?? 0}/{GACHA.pity5}
           </p>
         </div>
-        <Link href="/dashboard" className="border-2 border-borda px-3 py-1.5 text-[10px] text-suave transition hover:text-texto">
+        <Link href="/dashboard" className="border-2 border-borda px-3 py-1.5 text-[11px] text-suave transition hover:text-texto">
           Voltar
         </Link>
       </header>
 
       {/* ---- Puxar Lendas ---- */}
       <section className="flex flex-col gap-2">
-        <h2 className="font-pixel text-[10px] text-rosa">CARTAS DE LENDA</h2>
+        <h2 className="font-pixel text-[11px] text-rosa">CARTAS DE LENDA</h2>
         <div className="grid grid-cols-2 gap-2">
           <button
             type="button"
             disabled={ps < GACHA.custo1}
             onClick={() => puxar(1)}
-            className="border-2 border-ciano bg-ciano/10 py-3 font-pixel text-[10px] text-ciano transition hover:bg-ciano hover:text-fundo disabled:opacity-40"
+            className="border-2 border-ciano bg-ciano/10 py-3 font-pixel text-[11px] text-ciano transition hover:bg-ciano hover:text-fundo disabled:opacity-40"
           >
-            PUXAR 1× <span className="text-[8px]">({GACHA.custo1})</span>
+            PUXAR 1× <span className="text-[10px]">({GACHA.custo1})</span>
           </button>
           <button
             type="button"
             disabled={ps < GACHA.custo10}
             onClick={() => puxar(10)}
-            className="border-2 border-rosa bg-rosa/10 py-3 font-pixel text-[10px] text-rosa transition hover:bg-rosa hover:text-fundo disabled:opacity-40"
+            className="border-2 border-rosa bg-rosa/10 py-3 font-pixel text-[11px] text-rosa transition hover:bg-rosa hover:text-fundo disabled:opacity-40"
           >
-            PUXAR 10× <span className="text-[8px]">({GACHA.custo10})</span>
+            PUXAR 10× <span className="text-[10px]">({GACHA.custo10})</span>
           </button>
         </div>
       </section>
 
       {/* ---- Puxar Campeão ---- */}
       <section className="flex flex-col gap-2">
-        <h2 className="font-pixel text-[10px] text-amber-300">CARTAS DE CAMPEÃO</h2>
+        <h2 className="font-pixel text-[11px] text-amber-300">CARTAS DE CAMPEÃO</h2>
         <button
           type="button"
           disabled={ps < GACHA.custoCampeao || banco.length === 0}
           onClick={puxarCampeao}
-          className="border-2 border-amber-300 bg-amber-300/10 py-3 font-pixel text-[10px] text-amber-300 transition hover:bg-amber-300 hover:text-fundo disabled:opacity-40"
+          className="border-2 border-amber-300 bg-amber-300/10 py-3 font-pixel text-[11px] text-amber-300 transition hover:bg-amber-300 hover:text-fundo disabled:opacity-40"
         >
           {banco.length === 0 ? "CARREGANDO CAMPEÕES…" : (
             <>
-              PUXAR CAMPEÃO <span className="text-[8px]">({GACHA.custoCampeao})</span>
+              PUXAR CAMPEÃO <span className="text-[10px]">({GACHA.custoCampeao})</span>
             </>
           )}
         </button>
-        <p className="text-[9px] text-suave">
+        <p className="text-[10px] text-suave">
           Cada campeão entra na sua pool e ganha maestria. Repetido sobe a maestria — meta fortes são mais raros.
         </p>
       </section>
 
       <div className="border-2 border-borda bg-painel p-3">
-        <h2 className="mb-2 font-pixel text-[10px] text-suave">
+        <h2 className="mb-2 font-pixel text-[11px] text-suave">
           EFEITOS EQUIPADOS ({equipadas.length}/{GACHA.slots})
         </h2>
         {linhasEf.length === 0 ? (
-          <p className="text-[11px] text-suave">Nenhuma lenda equipada. Toque numa carta que você tem pra equipar.</p>
+          <p className="text-[12px] text-suave">Nenhuma lenda equipada. Toque numa carta que você tem pra equipar.</p>
         ) : (
           <div className="flex flex-wrap gap-1">
             {linhasEf.map((t) => (
-              <span key={t} className="border border-ciano/40 bg-ciano/10 px-2 py-0.5 text-[10px] text-ciano">
+              <span key={t} className="border border-ciano/40 bg-ciano/10 px-2 py-0.5 text-[11px] text-ciano">
                 {t}
               </span>
             ))}
@@ -212,7 +212,7 @@ export default function GachaPage() {
         {sinergias.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1 border-t-2 border-borda pt-2">
             {sinergias.map((t) => (
-              <span key={t} className="border border-amber-300/40 bg-amber-300/10 px-2 py-0.5 text-[10px] text-amber-300">
+              <span key={t} className="border border-amber-300/40 bg-amber-300/10 px-2 py-0.5 text-[11px] text-amber-300">
                 ✦ {t}
               </span>
             ))}
@@ -222,7 +222,7 @@ export default function GachaPage() {
 
       {/* ---- Coleção de Lendas ---- */}
       <section className="flex flex-col gap-2">
-        <h2 className="font-pixel text-[10px] text-suave">COLEÇÃO DE LENDAS</h2>
+        <h2 className="font-pixel text-[11px] text-suave">COLEÇÃO DE LENDAS</h2>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {LENDAS.map((l) => {
             const tem = possuidas.get(l.id);
@@ -247,22 +247,22 @@ export default function GachaPage() {
                   ) : (
                     <div className="flex aspect-[2/3] w-full flex-col items-center justify-center gap-1 bg-fundo">
                       <span className="font-pixel text-2xl text-borda">?</span>
-                      <span className="font-pixel text-[8px] text-suave">{"★".repeat(l.raridade)}</span>
+                      <span className="font-pixel text-[10px] text-suave">{"★".repeat(l.raridade)}</span>
                     </div>
                   )}
-                  {eq && <span className="absolute right-1 top-1 bg-ciano px-1 text-[7px] font-bold text-fundo">EQUIP</span>}
+                  {eq && <span className="absolute right-1 top-1 bg-ciano px-1 text-[9px] font-bold text-fundo">EQUIP</span>}
                 </div>
                 <div className="bg-painel p-1.5">
-                  <p className="truncate text-[11px] text-texto">{tem ? l.nome : "???"}</p>
+                  <p className="truncate text-[12px] text-texto">{tem ? l.nome : "???"}</p>
                   {tem && (
                     <>
-                      <p className="text-[8px] text-suave">
+                      <p className="text-[10px] text-suave">
                         {l.estilo} · Nv.{tem.nivel}
                       </p>
-                      <p className="text-[8px] text-amber-300">⚡ {descricaoPassivo(l.passivo)}</p>
+                      <p className="text-[10px] text-amber-300">⚡ {descricaoPassivo(l.passivo)}</p>
                       <div className="mt-0.5 flex flex-wrap gap-0.5">
                         {tem.substats.map((s, j) => (
-                          <span key={j} className="border border-borda px-0.5 text-[7px] text-suave">
+                          <span key={j} className="border border-borda px-0.5 text-[9px] text-suave">
                             {defSub(s.chave)?.rotulo ?? s.chave}+{s.valor}
                           </span>
                         ))}
@@ -278,11 +278,11 @@ export default function GachaPage() {
 
       {/* ---- Coleção de Campeões (pool) ---- */}
       <section className="flex flex-col gap-2">
-        <h2 className="font-pixel text-[10px] text-suave">
+        <h2 className="font-pixel text-[11px] text-suave">
           MEUS CAMPEÕES ({pool.length})
         </h2>
         {pool.length === 0 ? (
-          <p className="text-[11px] text-suave">Puxe cartas de campeão pra montar sua pool.</p>
+          <p className="text-[12px] text-suave">Puxe cartas de campeão pra montar sua pool.</p>
         ) : (
           <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
             {[...pool]
@@ -297,11 +297,11 @@ export default function GachaPage() {
                       <div className="aspect-square w-full bg-fundo" />
                     )}
                     <div className="p-1">
-                      <p className="truncate text-[9px] text-texto">{camp?.nome ?? m.championId}</p>
+                      <p className="truncate text-[10px] text-texto">{camp?.nome ?? m.championId}</p>
                       <div className="mt-0.5 h-1 w-full bg-fundo">
                         <div className="h-full bg-ciano" style={{ width: `${m.pontos}%` }} />
                       </div>
-                      <p className="mt-0.5 text-[7px] text-suave">Maestria {m.pontos}/100</p>
+                      <p className="mt-0.5 text-[9px] text-suave">Maestria {m.pontos}/100</p>
                     </div>
                   </div>
                 );

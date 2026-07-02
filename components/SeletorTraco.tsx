@@ -27,7 +27,7 @@ export default function SeletorTraco({
                 sel ? "border-rosa bg-rosa/10" : "border-borda bg-painel hover:border-suave"
               }`}
             >
-              <p className="font-pixel text-[10px] text-ciano">{t.nome}</p>
+              <p className="font-pixel text-[11px] text-ciano">{t.nome}</p>
               <p className="mt-1.5 text-xs text-suave">{t.desc}</p>
             </button>
           );

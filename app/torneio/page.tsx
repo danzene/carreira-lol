@@ -20,7 +20,7 @@ function LinhaConfronto({ c }: { c: ConfrontoPO }) {
   return (
     <div className="flex items-center justify-between border-2 border-borda bg-fundo/40 px-3 py-2 text-xs">
       <span className={v === c.aId ? "text-amber-300" : v ? "text-suave line-through" : "text-texto"}>{nomeTime(c.aId)}</span>
-      <span className="font-pixel text-[8px] text-borda">VS</span>
+      <span className="font-pixel text-[10px] text-borda">VS</span>
       <span className={v === c.bId ? "text-amber-300" : v ? "text-suave line-through" : "text-texto"}>{nomeTime(c.bId)}</span>
     </div>
   );
@@ -31,14 +31,14 @@ function Playoffs({ liga }: { liga: LigaState }) {
   if (!po) return null;
   return (
     <div className="flex flex-col gap-2">
-      <h2 className="font-pixel text-[10px] text-suave">MATA-MATA</h2>
-      <p className="text-[10px] text-suave">Semifinais</p>
+      <h2 className="font-pixel text-[11px] text-suave">MATA-MATA</h2>
+      <p className="text-[11px] text-suave">Semifinais</p>
       {po.sf.map((c, i) => (
         <LinhaConfronto key={i} c={c} />
       ))}
       {po.final && (
         <>
-          <p className="mt-1 text-[10px] text-suave">Final</p>
+          <p className="mt-1 text-[11px] text-suave">Final</p>
           <LinhaConfronto c={po.final} />
         </>
       )}
@@ -63,13 +63,13 @@ export default function TorneioPage() {
   const t = career.torneioAtual;
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col gap-5 px-4 py-6">
+    <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-5 px-4 py-6">
       <header className="flex items-center justify-between">
         <div>
           <h1 className="font-pixel text-sm text-amber-300">{t ? t.nome.toUpperCase() : "TORNEIO"}</h1>
-          <p className="mt-1 text-[10px] text-suave">Circuito internacional 🌍</p>
+          <p className="mt-1 text-[11px] text-suave">Circuito internacional 🌍</p>
         </div>
-        <Link href="/dashboard" className="border-2 border-borda px-3 py-1.5 text-[10px] text-suave transition hover:text-texto">
+        <Link href="/dashboard" className="border-2 border-borda px-3 py-1.5 text-[11px] text-suave transition hover:text-texto">
           Voltar
         </Link>
       </header>
@@ -99,7 +99,7 @@ function ProximaPartida({ t, career }: { t: TorneioInternacional; career: Career
   const liga = t.bracket;
   return (
     <div className="border-2 border-borda bg-painel p-4">
-      <p className="font-pixel text-[10px] text-amber-300">
+      <p className="font-pixel text-[11px] text-amber-300">
         {liga.fase === "REGULAR" ? `FASE DE GRUPOS · ${liga.rodadaAtual + 1}/${liga.calendario.length}` : "MATA-MATA"}
       </p>
       {adversario ? (
@@ -124,7 +124,7 @@ function Encerramento({ t, aoColetar }: { t: TorneioInternacional; aoColetar: ()
 
   return (
     <div className="border-2 border-amber-300 bg-amber-300/10 p-5 text-center">
-      <p className="font-pixel text-[10px] text-suave">{t.nome.toUpperCase()} ENCERRADO</p>
+      <p className="font-pixel text-[11px] text-suave">{t.nome.toUpperCase()} ENCERRADO</p>
       <p className="mt-3 font-pixel text-sm text-amber-300">
         {venceu ? (t.tipo === "WORLDS" ? "🏆 CAMPEÃO MUNDIAL!" : "🌐 CAMPEÃO DO MSI!") : rotulo}
       </p>
@@ -135,7 +135,7 @@ function Encerramento({ t, aoColetar }: { t: TorneioInternacional; aoColetar: ()
       <button
         type="button"
         onClick={aoColetar}
-        className="mt-4 border-2 border-amber-300 bg-amber-300/10 px-5 py-2 font-pixel text-[10px] text-amber-300 transition hover:bg-amber-300 hover:text-fundo"
+        className="mt-4 border-2 border-amber-300 bg-amber-300/10 px-5 py-2 font-pixel text-[11px] text-amber-300 transition hover:bg-amber-300 hover:text-fundo"
       >
         COLETAR
       </button>

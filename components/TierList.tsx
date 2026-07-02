@@ -79,7 +79,7 @@ export default function TierList() {
 
   return (
     <div className="flex flex-col gap-4">
-      <Link href="/patch" className="text-center font-pixel text-[8px] text-ciano hover:underline">
+      <Link href="/patch" className="text-center font-pixel text-[10px] text-ciano hover:underline">
         META · PATCH {versaoPatch(patch)} · ver notas
       </Link>
       <div className="grid grid-cols-5 gap-2">
@@ -93,7 +93,7 @@ export default function TierList() {
             }`}
           >
             <IconeRota rota={r.chave} className="h-5 w-5" />
-            <span className="text-[10px]">{r.nome}</span>
+            <span className="text-[11px]">{r.nome}</span>
           </button>
         ))}
       </div>
@@ -105,7 +105,7 @@ export default function TierList() {
           <div key={t.nome} className="border-2 border-borda bg-painel p-3">
             <div className="mb-2 flex items-center gap-2">
               <span className={`font-pixel text-sm ${t.cor}`}>{t.nome}</span>
-              <span className="text-[10px] text-suave">({champs.length})</span>
+              <span className="text-[11px] text-suave">({champs.length})</span>
             </div>
             <div className="flex flex-wrap gap-2">
               {champs.map((c) => {
@@ -126,7 +126,7 @@ export default function TierList() {
                       )}
                       {mudancas[c.id] && (
                         <span
-                          className={`absolute -right-1 -top-1 border border-fundo px-0.5 text-[8px] font-bold leading-none ${
+                          className={`absolute -right-1 -top-1 border border-fundo px-0.5 text-[10px] font-bold leading-none ${
                             mudancas[c.id] === "buff" ? "bg-ciano text-fundo" : "bg-rosa text-fundo"
                           }`}
                         >
@@ -134,7 +134,7 @@ export default function TierList() {
                         </span>
                       )}
                     </span>
-                    <span className="w-full truncate text-center text-[9px] text-suave">{c.nome}</span>
+                    <span className="w-full truncate text-center text-[10px] text-suave">{c.nome}</span>
                   </button>
                 );
               })}
@@ -164,21 +164,21 @@ function ChampDetail({ champ, icone, onClose }: { champ: ChampionDef; icone?: st
           {icone && <img src={icone} alt="" width={48} height={48} className="h-12 w-12 border-2 border-borda" />}
           <div className="min-w-0">
             <p className="font-pixel text-xs text-texto">{champ.nome}</p>
-            <p className="text-[10px] text-suave">{champ.classes.join(" · ")}</p>
+            <p className="text-[11px] text-suave">{champ.classes.join(" · ")}</p>
           </div>
           <span className="ml-auto font-pixel text-sm text-ciano">{champ.forcaMetaBase}</span>
         </div>
 
-        <p className="mt-3 text-[10px] text-suave">Rotas: {champ.rolesValidas.join(", ")}</p>
+        <p className="mt-3 text-[11px] text-suave">Rotas: {champ.rolesValidas.join(", ")}</p>
 
         <div className="mt-3 flex flex-col gap-2">
           {linhas.map(([nome, v]) => (
             <div key={nome} className="flex items-center gap-2">
-              <span className="w-24 shrink-0 text-[11px] text-suave">{nome}</span>
+              <span className="w-24 shrink-0 text-[12px] text-suave">{nome}</span>
               <div className="h-2 flex-1 border border-borda bg-fundo">
                 <div className="h-full bg-gradient-to-r from-rosa to-ciano" style={{ width: `${v}%` }} />
               </div>
-              <span className="w-7 text-right font-pixel text-[9px] text-texto">{v}</span>
+              <span className="w-7 text-right font-pixel text-[10px] text-texto">{v}</span>
             </div>
           ))}
         </div>
@@ -186,7 +186,7 @@ function ChampDetail({ champ, icone, onClose }: { champ: ChampionDef; icone?: st
         <button
           type="button"
           onClick={onClose}
-          className="mt-4 w-full border-2 border-borda py-2 text-[10px] text-suave transition hover:text-texto"
+          className="mt-4 w-full border-2 border-borda py-2 text-[11px] text-suave transition hover:text-texto"
         >
           Fechar
         </button>

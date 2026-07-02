@@ -51,12 +51,12 @@ export default function Partida({
         <button
           type="button"
           onClick={() => onFim(resultado)}
-          className="border-2 border-ciano bg-ciano/10 px-6 py-3 font-pixel text-[10px] text-ciano transition hover:bg-ciano hover:text-fundo"
+          className="border-2 border-ciano bg-ciano/10 px-6 py-3 font-pixel text-[11px] text-ciano transition hover:bg-ciano hover:text-fundo"
         >
           VER RESULTADO
         </button>
       ) : (
-        <p className="text-center text-[10px] text-suave">A partida está rolando — acompanhe o auto-battle.</p>
+        <p className="text-center text-[11px] text-suave">A partida está rolando — acompanhe o auto-battle.</p>
       )}
     </div>
   );

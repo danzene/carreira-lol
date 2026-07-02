@@ -18,11 +18,11 @@ export function estiloCartaItem(r: Item["raridade"], tint = true): CSSProperties
 function LinhaAfixo({ rotulo, valor, base = false }: { rotulo: string; valor: number; base?: boolean }) {
   return (
     <div className="flex items-center justify-between gap-2">
-      <span className={`text-[10px] ${base ? "text-suave" : "text-texto"}`}>
+      <span className={`text-[11px] ${base ? "text-suave" : "text-texto"}`}>
         {rotulo}
-        {base && <span className="text-[8px] text-borda"> · base</span>}
+        {base && <span className="text-[10px] text-borda"> · base</span>}
       </span>
-      <span className="font-pixel text-[9px]" style={{ color: base ? "#9a90c0" : "#19e6e0" }}>
+      <span className="font-pixel text-[10px]" style={{ color: base ? "#9a90c0" : "#19e6e0" }}>
         +{valor}
       </span>
     </div>
@@ -41,15 +41,15 @@ export default function ItemVisual({ item }: { item: Item }) {
             {sl.emoji}
           </span>
           <div className="min-w-0">
-            <p className="truncate font-pixel text-[10px] leading-tight" style={{ color: c, textShadow: `0 0 6px ${c}55` }}>
+            <p className="truncate font-pixel text-[11px] leading-tight" style={{ color: c, textShadow: `0 0 6px ${c}55` }}>
               {nomeItem(item)}
             </p>
-            <p className="mt-0.5 text-[8px] text-suave">
+            <p className="mt-0.5 text-[10px] text-suave">
               {rd.nome} · {sl.nome}
             </p>
           </div>
         </div>
-        <span className="shrink-0 border border-borda bg-fundo/60 px-1.5 py-0.5 font-pixel text-[7px] text-suave">iLvl {item.iLvl}</span>
+        <span className="shrink-0 border border-borda bg-fundo/60 px-1.5 py-0.5 font-pixel text-[9px] text-suave">iLvl {item.iLvl}</span>
       </div>
 
       <div className="flex flex-col gap-0.5 border-t-2 border-borda/60 pt-1.5">
@@ -60,7 +60,7 @@ export default function ItemVisual({ item }: { item: Item }) {
       </div>
 
       {item.setId && (
-        <span className="self-start border border-amber-300/50 bg-amber-300/10 px-1.5 py-0.5 text-[8px] text-amber-300">
+        <span className="self-start border border-amber-300/50 bg-amber-300/10 px-1.5 py-0.5 text-[10px] text-amber-300">
           ⚙ Set {setDef(item.setId)?.nome}
         </span>
       )}

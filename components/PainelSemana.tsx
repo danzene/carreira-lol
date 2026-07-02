@@ -71,7 +71,7 @@ export default function PainelSemana({ career }: { career: CareerState }) {
 
   return (
     <div className="border-2 border-borda bg-painel p-5">
-      <h2 className="mb-3 font-pixel text-[10px] text-suave">
+      <h2 className="mb-3 font-pixel text-[11px] text-suave">
         TEMPORADA {career.temporada} · SEMANA {career.semanaAtual}
       </h2>
 
@@ -83,7 +83,7 @@ export default function PainelSemana({ career }: { career: CareerState }) {
         <div className="h-3 border-2 border-borda bg-fundo">
           <div className="h-full bg-gradient-to-r from-rosa to-ciano transition-all" style={{ width: `${energia}%` }} />
         </div>
-        <p className="mt-1 text-right text-[9px] text-suave">
+        <p className="mt-1 text-right text-[10px] text-suave">
           {tempoCheia > 0 ? `🕒 cheia em ${fmt(tempoCheia)}` : "⚡ energia cheia"}
         </p>
       </div>
@@ -92,14 +92,14 @@ export default function PainelSemana({ career }: { career: CareerState }) {
         <Link
           href={podeSoloq ? "/draft" : "#"}
           aria-disabled={!podeSoloq}
-          className={`flex flex-col items-center gap-0.5 border-2 px-2 py-3 text-center font-pixel text-[10px] transition ${
+          className={`flex flex-col items-center gap-0.5 border-2 px-2 py-3 text-center font-pixel text-[11px] transition ${
             podeSoloq
               ? "border-rosa bg-rosa/10 text-rosa hover:bg-rosa hover:text-fundo"
               : "pointer-events-none border-borda text-borda"
           }`}
         >
           ⚔️ JOGAR
-          <span className="text-[7px] font-normal opacity-80">−{LOOP.custoSoloq}</span>
+          <span className="text-[9px] font-normal opacity-80">−{LOOP.custoSoloq}</span>
         </Link>
         <Atividade rotulo={<IconeAcao acao="treino" label="TREINO" />} sub={`−${LOOP.custoTreino}`} disabled={energia < LOOP.custoTreino} onClick={() => setPainel((p) => (p === "focado" ? null : "focado"))} />
         <Atividade rotulo={<IconeAcao acao="especial" label="ESPECIAL" />} sub={`−${LOOP.custoEspecial}`} disabled={energia < LOOP.custoEspecial} onClick={() => setPainel((p) => (p === "especial" ? null : "especial"))} />
@@ -121,7 +121,7 @@ export default function PainelSemana({ career }: { career: CareerState }) {
                 className="flex flex-col items-center gap-0.5 border-2 border-borda bg-painel p-2 text-center transition hover:border-rosa"
               >
                 <span className="text-xs text-texto">{a.nome}</span>
-                <span className="font-pixel text-[10px] text-ciano">{Math.round(career.player.atributos[a.chave])}</span>
+                <span className="font-pixel text-[11px] text-ciano">{Math.round(career.player.atributos[a.chave])}</span>
               </button>
             ))}
           </div>
@@ -142,8 +142,8 @@ export default function PainelSemana({ career }: { career: CareerState }) {
                   onClick={() => mental(t.id)}
                   className="border-2 border-borda bg-painel p-2 text-left transition hover:border-rosa"
                 >
-                  <span className="font-pixel text-[10px] text-ciano">{t.nome}</span>
-                  <span className="mt-1 block text-[11px] text-suave">{t.desc}</span>
+                  <span className="font-pixel text-[11px] text-ciano">{t.nome}</span>
+                  <span className="mt-1 block text-[12px] text-suave">{t.desc}</span>
                 </button>
               ))}
             </div>
@@ -153,7 +153,7 @@ export default function PainelSemana({ career }: { career: CareerState }) {
 
       {aviso && <p className="mt-2 text-xs text-amber-400">{aviso}</p>}
 
-      <p className="mt-3 text-center text-[10px] text-borda">
+      <p className="mt-3 text-center text-[11px] text-borda">
         A energia regenera sozinha (2h pra encher). Avançar/descansar a semana têm limite por tempo.
       </p>
       <div className="mt-1 grid grid-cols-2 gap-2">
@@ -165,10 +165,10 @@ export default function PainelSemana({ career }: { career: CareerState }) {
             setAviso(null);
             setPainel(null);
           }}
-          className="flex flex-col items-center gap-0.5 border-2 border-ciano bg-ciano/10 py-3 font-pixel text-[10px] text-ciano transition hover:bg-ciano hover:text-fundo disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-ciano/10 disabled:hover:text-ciano"
+          className="flex flex-col items-center gap-0.5 border-2 border-ciano bg-ciano/10 py-3 font-pixel text-[11px] text-ciano transition hover:bg-ciano hover:text-fundo disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-ciano/10 disabled:hover:text-ciano"
         >
           ⏭️ AVANÇAR SEMANA
-          <span className="text-[7px] font-normal opacity-80">
+          <span className="text-[9px] font-normal opacity-80">
             {usosAvancar > 0 ? `${usosAvancar}/${LOOP.maxPassesJanela} · +${LOOP.ganhoAvancoEnergia}⚡` : `🔒 ${fmt(liberaAvancar)}`}
           </span>
         </button>
@@ -180,10 +180,10 @@ export default function PainelSemana({ career }: { career: CareerState }) {
             setAviso(null);
             setPainel(null);
           }}
-          className="flex flex-col items-center gap-0.5 border-2 border-borda bg-fundo/40 py-3 font-pixel text-[10px] text-suave transition hover:border-suave disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex flex-col items-center gap-0.5 border-2 border-borda bg-fundo/40 py-3 font-pixel text-[11px] text-suave transition hover:border-suave disabled:cursor-not-allowed disabled:opacity-40"
         >
           😴 DESCANSAR
-          <span className="text-[7px] font-normal opacity-80">
+          <span className="text-[9px] font-normal opacity-80">
             {usosDescansar > 0 ? `${usosDescansar}/${LOOP.maxPassesJanela} · energia cheia` : `🔒 ${fmt(liberaDescansar)}`}
           </span>
         </button>
@@ -229,10 +229,10 @@ function Atividade({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="flex flex-col items-center gap-0.5 border-2 border-borda bg-fundo/40 px-2 py-3 text-center font-pixel text-[10px] text-texto transition hover:border-suave disabled:opacity-40"
+      className="flex flex-col items-center gap-0.5 border-2 border-borda bg-fundo/40 px-2 py-3 text-center font-pixel text-[11px] text-texto transition hover:border-suave disabled:opacity-40"
     >
       {rotulo}
-      <span className="text-[7px] font-normal text-suave">{sub}</span>
+      <span className="text-[9px] font-normal text-suave">{sub}</span>
     </button>
   );
 }

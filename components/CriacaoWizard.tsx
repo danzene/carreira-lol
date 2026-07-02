@@ -61,7 +61,7 @@ export default function CriacaoWizard() {
           {PASSOS.map((p, i) => (
             <div key={p} className="flex flex-1 flex-col gap-1">
               <div className={`h-1.5 ${i <= passo ? "bg-rosa" : "bg-borda"}`} />
-              <span className={`text-[10px] ${i === passo ? "text-texto" : "text-suave"}`}>
+              <span className={`text-[11px] ${i === passo ? "text-texto" : "text-suave"}`}>
                 {i + 1}. {p}
               </span>
             </div>
@@ -110,7 +110,7 @@ export default function CriacaoWizard() {
                   }`}
                 >
                   <IconeRota rota={r.chave} className="h-6 w-6" />
-                  <span className="text-[10px]">{r.nome}</span>
+                  <span className="text-[11px]">{r.nome}</span>
                 </button>
               ))}
             </div>
@@ -153,7 +153,7 @@ export default function CriacaoWizard() {
             type="button"
             onClick={() => setPasso(passo + 1)}
             disabled={!podeAvancar}
-            className="border-2 border-rosa bg-rosa/10 px-6 py-2 font-pixel text-[10px] text-rosa transition hover:bg-rosa hover:text-fundo disabled:opacity-40"
+            className="border-2 border-rosa bg-rosa/10 px-6 py-2 font-pixel text-[11px] text-rosa transition hover:bg-rosa hover:text-fundo disabled:opacity-40"
           >
             PRÓXIMO
           </button>
@@ -162,7 +162,7 @@ export default function CriacaoWizard() {
             type="button"
             onClick={finalizar}
             disabled={erros.length > 0}
-            className="border-2 border-ciano bg-ciano/10 px-6 py-2 font-pixel text-[10px] text-ciano transition hover:bg-ciano hover:text-fundo disabled:opacity-40"
+            className="border-2 border-ciano bg-ciano/10 px-6 py-2 font-pixel text-[11px] text-ciano transition hover:bg-ciano hover:text-fundo disabled:opacity-40"
           >
             CRIAR
           </button>
@@ -201,7 +201,7 @@ function Alternar({
     >
       <span className="flex flex-col gap-0.5">
         <span className={`text-sm ${ativo ? "text-texto" : "text-suave"}`}>{titulo}</span>
-        <span className="text-[10px] leading-tight text-suave">{desc}</span>
+        <span className="text-[11px] leading-tight text-suave">{desc}</span>
       </span>
       <span className={`h-5 w-9 shrink-0 border-2 ${ativo ? "border-ciano bg-ciano/30" : "border-borda"} relative`}>
         <span className={`absolute top-0.5 h-3 w-3 transition-all ${ativo ? "left-4 bg-ciano" : "left-0.5 bg-suave"}`} />

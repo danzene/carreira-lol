@@ -74,7 +74,7 @@ export default function ResultadoPartida({
 
       {xpEntries.length > 0 && (
         <div className="border-2 border-borda bg-painel p-3">
-          <h3 className="mb-3 font-pixel text-[10px] text-suave">PROGRESSO DOS ATRIBUTOS</h3>
+          <h3 className="mb-3 font-pixel text-[11px] text-suave">PROGRESSO DOS ATRIBUTOS</h3>
           <div className="flex flex-col gap-2.5">
             {xpEntries.map(([k, v]) => (
               <BarraXp key={k} nome={nomeAtr(k)} valor={atributos?.[k] ?? v} ganho={v} />
@@ -96,10 +96,10 @@ function BarraXp({ nome, valor, ganho }: { nome: string; valor: number; ganho: n
   const de = Math.max(0, valor - ganho);
   return (
     <div>
-      <div className="mb-0.5 flex items-baseline justify-between text-[10px]">
+      <div className="mb-0.5 flex items-baseline justify-between text-[11px]">
         <span className="text-suave">{nome}</span>
         <span className="text-texto">
-          {Math.round(valor * 10) / 10} <span className="font-pixel text-[8px] text-emerald-400">+{ganho.toFixed(2)}</span>
+          {Math.round(valor * 10) / 10} <span className="font-pixel text-[10px] text-emerald-400">+{ganho.toFixed(2)}</span>
         </span>
       </div>
       <div className="h-2.5 overflow-hidden border-2 border-borda bg-fundo">
@@ -115,7 +115,7 @@ function BarraXp({ nome, valor, ganho }: { nome: string; valor: number; ganho: n
 function Caixa({ rotulo, children }: { rotulo: string; children: ReactNode }) {
   return (
     <div className="flex flex-col items-center gap-1 border-2 border-borda bg-painel p-3">
-      <span className="font-pixel text-[8px] text-suave">{rotulo}</span>
+      <span className="font-pixel text-[10px] text-suave">{rotulo}</span>
       {children}
     </div>
   );

@@ -40,13 +40,13 @@ export default function PatchPage() {
   const nerfs = alts.filter((a) => a.tipo === "nerf").sort((a, b) => a.delta - b.delta);
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col gap-5 px-4 py-6">
+    <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-5 px-4 py-6">
       <header className="flex items-center justify-between">
         <div>
           <h1 className="font-pixel text-sm text-ciano">PATCH {versaoPatch(patch)}</h1>
-          <p className="mt-1 text-[10px] text-suave">Notas fictícias · a meta muda a cada 2 semanas</p>
+          <p className="mt-1 text-[11px] text-suave">Notas fictícias · a meta muda a cada 2 semanas</p>
         </div>
-        <Link href="/dashboard" className="border-2 border-borda px-3 py-1.5 text-[10px] text-suave transition hover:text-texto">
+        <Link href="/dashboard" className="border-2 border-borda px-3 py-1.5 text-[11px] text-suave transition hover:text-texto">
           Voltar
         </Link>
       </header>
@@ -64,7 +64,7 @@ export default function PatchPage() {
         </div>
       )}
 
-      <p className="text-center text-[10px] text-suave">
+      <p className="text-center text-[11px] text-suave">
         Veja como ficou a{" "}
         <Link href="/campeoes" className="text-ciano hover:underline">
           tier list
@@ -88,7 +88,7 @@ function Secao({
 }) {
   return (
     <div className="border-2 border-borda bg-painel p-4">
-      <h2 className={`mb-3 font-pixel text-[10px] ${cor}`}>{titulo}</h2>
+      <h2 className={`mb-3 font-pixel text-[11px] ${cor}`}>{titulo}</h2>
       <div className="flex flex-col gap-2">
         {alts.map((a) => {
           const cam = campMap[a.championId];
@@ -100,7 +100,7 @@ function Secao({
                 <div className="h-8 w-8 bg-borda" />
               )}
               <span className="flex-1 truncate text-sm text-texto">{cam?.nome ?? a.nome}</span>
-              <span className={`font-pixel text-[10px] ${a.delta > 0 ? "text-ciano" : "text-rosa"}`}>
+              <span className={`font-pixel text-[11px] ${a.delta > 0 ? "text-ciano" : "text-rosa"}`}>
                 {a.delta > 0 ? `+${a.delta}` : a.delta}
               </span>
             </div>

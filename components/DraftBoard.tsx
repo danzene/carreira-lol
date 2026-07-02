@@ -140,13 +140,13 @@ export default function DraftBoard({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between border-2 border-borda bg-painel px-4 py-2">
-        <span className="font-pixel text-[10px] text-suave">
+        <span className="font-pixel text-[11px] text-suave">
           {fim ? "FIM" : passo?.fase === "ban" ? "BANIMENTO" : "ESCOLHA"}
         </span>
-        <span className={`font-pixel text-[10px] ${seuTurno ? "text-ciano" : "text-suave"}`}>
+        <span className={`font-pixel text-[11px] ${seuTurno ? "text-ciano" : "text-suave"}`}>
           {fim ? "DRAFT COMPLETO" : seuTurno ? "SUA VEZ" : passo?.time === "azul" ? "COACH" : "INIMIGO"}
         </span>
-        <span className="font-pixel text-[8px] text-borda">{Math.min(estado.passo + 1, 20)}/20</span>
+        <span className="font-pixel text-[10px] text-borda">{Math.min(estado.passo + 1, 20)}/20</span>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -176,7 +176,7 @@ export default function DraftBoard({
 
       {fim && fc && (
         <div className="border-2 border-rosa bg-painel p-4">
-          <h2 className="mb-3 font-pixel text-[10px] text-suave">FORÇA DE COMP</h2>
+          <h2 className="mb-3 font-pixel text-[11px] text-suave">FORÇA DE COMP</h2>
           <Barra nome="Seu time" valor={fc.azul} cor="from-ciano to-ciano" />
           <Barra nome="Inimigo" valor={fc.vermelho} cor="from-rosa to-rosa" />
           <p className="mt-3 text-center text-xs text-texto">
@@ -187,7 +187,7 @@ export default function DraftBoard({
                 : "Draft equilibrado."}
           </p>
           {seuChamp && (
-            <p className="mt-2 text-center text-[10px] text-suave">
+            <p className="mt-2 text-center text-[11px] text-suave">
               Você joga de <span className="text-texto">{campMap[seuChamp]?.nome ?? seuChamp}</span> · Maestria{" "}
               <span className="text-ciano">{Math.round(maestria[seuChamp] ?? 0)}</span>
               {(maestria[seuChamp] ?? 0) >= 60 ? " 🔥 domínio alto, força extra" : (maestria[seuChamp] ?? 0) === 0 ? " (campeão novo)" : ""}
@@ -196,7 +196,7 @@ export default function DraftBoard({
           <button
             type="button"
             onClick={jogar}
-            className="mt-4 w-full border-2 border-ciano bg-ciano/10 py-3 font-pixel text-[10px] text-ciano transition hover:bg-ciano hover:text-fundo"
+            className="mt-4 w-full border-2 border-ciano bg-ciano/10 py-3 font-pixel text-[11px] text-ciano transition hover:bg-ciano hover:text-fundo"
           >
             ▶ JOGAR PARTIDA
           </button>
@@ -234,16 +234,16 @@ export default function DraftBoard({
                   ) : (
                     <div className="h-10 w-10 bg-borda" />
                   )}
-                  <span className="w-full truncate text-center text-[9px] text-suave">{c.nome}</span>
+                  <span className="w-full truncate text-center text-[10px] text-suave">{c.nome}</span>
                   {conf && (maestria[c.id] ?? 0) > 0 && (
-                    <span className="font-pixel text-[7px] text-ciano">M{Math.round(maestria[c.id])}</span>
+                    <span className="font-pixel text-[9px] text-ciano">M{Math.round(maestria[c.id])}</span>
                   )}
                 </button>
               );
             })}
           </div>
           {seuTurno && (
-            <p className="text-center text-[10px] text-ciano">
+            <p className="text-center text-[11px] text-ciano">
               {passo?.fase === "ban" ? "Escolha um campeão para BANIR" : "Escolha seu campeão (★ = sua pool)"}
             </p>
           )}
@@ -295,7 +295,7 @@ function Coluna({
 }) {
   return (
     <div className={`border-2 bg-painel p-3 ${ativo ? "border-rosa" : "border-borda"}`}>
-      <p className={`mb-2 font-pixel text-[10px] ${cor}`}>{nome}</p>
+      <p className={`mb-2 font-pixel text-[11px] ${cor}`}>{nome}</p>
 
       <div className="mb-3 flex gap-1">
         {Array.from({ length: 5 }).map((_, i) => {
@@ -319,14 +319,14 @@ function Coluna({
               key={role}
               className={`flex items-center gap-2 border-2 border-borda p-1 ${conf ? "bg-ciano/5" : "bg-fundo/40"}`}
             >
-              <span className="w-7 shrink-0 text-center font-pixel text-[7px] text-borda">{ROTULO_ROLE[role]}</span>
+              <span className="w-7 shrink-0 text-center font-pixel text-[9px] text-borda">{ROTULO_ROLE[role]}</span>
               {cam ? (
                 <img src={cam.icone} alt="" width={28} height={28} className="h-7 w-7" />
               ) : (
                 <div className="h-7 w-7 bg-borda/40" />
               )}
-              <span className="truncate text-[10px] text-suave">{cam?.nome ?? ""}</span>
-              {conf && <span className="ml-auto text-[9px] text-ciano">★</span>}
+              <span className="truncate text-[11px] text-suave">{cam?.nome ?? ""}</span>
+              {conf && <span className="ml-auto text-[10px] text-ciano">★</span>}
             </div>
           );
         })}
@@ -338,11 +338,11 @@ function Coluna({
 function Barra({ nome, valor, cor }: { nome: string; valor: number; cor: string }) {
   return (
     <div className="mb-2 flex items-center gap-2">
-      <span className="w-20 shrink-0 text-[11px] text-suave">{nome}</span>
+      <span className="w-20 shrink-0 text-[12px] text-suave">{nome}</span>
       <div className="h-3 flex-1 border-2 border-borda bg-fundo">
         <div className={`h-full bg-gradient-to-r ${cor}`} style={{ width: `${valor}%` }} />
       </div>
-      <span className="w-7 text-right font-pixel text-[9px] text-texto">{valor}</span>
+      <span className="w-7 text-right font-pixel text-[10px] text-texto">{valor}</span>
     </div>
   );
 }

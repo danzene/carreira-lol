@@ -53,7 +53,7 @@ export default function SeletorCampeoes({
           placeholder="Buscar campeão…"
           className="flex-1 border-2 border-borda bg-painel px-3 py-2 text-sm text-texto placeholder:text-suave focus:border-rosa focus:outline-none"
         />
-        <span className="shrink-0 font-pixel text-[10px] text-suave">
+        <span className="shrink-0 font-pixel text-[11px] text-suave">
           {selecionados.length}/{CRIACAO.tamanhoPool}
         </span>
       </div>
@@ -77,7 +77,7 @@ export default function SeletorCampeoes({
                 } ${bloq ? "opacity-30" : ""}`}
               >
                 <img src={c.icone} alt={c.nome} width={48} height={48} loading="lazy" className="h-12 w-12" />
-                <span className="w-full truncate text-center text-[10px] text-suave">{c.nome}</span>
+                <span className="w-full truncate text-center text-[11px] text-suave">{c.nome}</span>
               </button>
             );
           })}

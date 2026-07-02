@@ -10,7 +10,7 @@ export default function ResumoSemanaModal({ resumo, onFechar }: { resumo: Resumo
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-fundo/80 p-4" onClick={onFechar}>
       <div className="w-full max-w-sm border-2 border-ciano bg-painel p-5" onClick={(e) => e.stopPropagation()}>
         <h2 className="font-pixel text-sm text-ciano">{resumo.viradaTemporada ? "NOVA TEMPORADA! 🎉" : "RESUMO DA SEMANA"}</h2>
-        <p className="mt-1 text-[10px] text-suave">
+        <p className="mt-1 text-[11px] text-suave">
           Temporada {resumo.temporada} · Semana {resumo.semana}
         </p>
 
@@ -49,7 +49,7 @@ export default function ResumoSemanaModal({ resumo, onFechar }: { resumo: Resumo
         <button
           type="button"
           onClick={onFechar}
-          className="mt-4 w-full border-2 border-ciano bg-ciano/10 py-2 font-pixel text-[10px] text-ciano transition hover:bg-ciano hover:text-fundo"
+          className="mt-4 w-full border-2 border-ciano bg-ciano/10 py-2 font-pixel text-[11px] text-ciano transition hover:bg-ciano hover:text-fundo"
         >
           CONTINUAR
         </button>

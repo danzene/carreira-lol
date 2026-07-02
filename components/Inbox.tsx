@@ -32,8 +32,8 @@ export default function Inbox({ career }: { career: CareerState }) {
         return (
           <div key={o.timeId} className="border-2 border-borda bg-painel p-4">
             <div className="flex items-center justify-between">
-              <p className="font-pixel text-[10px] text-ciano">{t?.nome ?? o.timeId}</p>
-              <span className="border border-rosa/50 bg-rosa/10 px-2 py-0.5 text-[10px] text-rosa">{o.tier}</span>
+              <p className="font-pixel text-[11px] text-ciano">{t?.nome ?? o.timeId}</p>
+              <span className="border border-rosa/50 bg-rosa/10 px-2 py-0.5 text-[11px] text-rosa">{o.tier}</span>
             </div>
             <p className="mt-2 text-xs text-suave">
               Salário ${o.salarioSemanal}/sem · bônus por vitória ${o.bonusPorVitoria} · {o.duracaoSemanas} semanas
@@ -43,7 +43,7 @@ export default function Inbox({ career }: { career: CareerState }) {
               <button
                 type="button"
                 onClick={() => assinar(o.timeId)}
-                className="border-2 border-ciano bg-ciano/10 px-3 py-1.5 font-pixel text-[10px] text-ciano transition hover:bg-ciano hover:text-fundo"
+                className="border-2 border-ciano bg-ciano/10 px-3 py-1.5 font-pixel text-[11px] text-ciano transition hover:bg-ciano hover:text-fundo"
               >
                 Assinar
               </button>
@@ -51,7 +51,7 @@ export default function Inbox({ career }: { career: CareerState }) {
                 <button
                   type="button"
                   onClick={() => fazContra(o.timeId)}
-                  className="border-2 border-borda px-3 py-1.5 font-pixel text-[10px] text-suave transition hover:text-texto"
+                  className="border-2 border-borda px-3 py-1.5 font-pixel text-[11px] text-suave transition hover:text-texto"
                 >
                   Contrapropor
                 </button>
@@ -59,7 +59,7 @@ export default function Inbox({ career }: { career: CareerState }) {
               <button
                 type="button"
                 onClick={() => recusar(o.timeId)}
-                className="border-2 border-borda px-3 py-1.5 font-pixel text-[10px] text-suave transition hover:text-rosa"
+                className="border-2 border-borda px-3 py-1.5 font-pixel text-[11px] text-suave transition hover:text-rosa"
               >
                 Recusar
               </button>

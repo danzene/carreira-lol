@@ -28,7 +28,7 @@ export default function Loja({ career }: { career: CareerState }) {
         <span className="text-sm text-suave">Caixa</span>
         <span className="font-pixel text-sm text-emerald-400">${career.dinheiro}</span>
       </div>
-      <p className="text-[10px] text-borda">
+      <p className="text-[11px] text-borda">
         Salário: ${ECONOMIA.rendaBaseSemanal}/sem · bônus vitória: ${ECONOMIA.bonusBaseVitoria} · coach:{" "}
         {career.coachAtivo ? "ativo" : "inativo"}
       </p>
@@ -36,7 +36,7 @@ export default function Loja({ career }: { career: CareerState }) {
       {aviso && <p className="border-2 border-rosa/40 bg-rosa/10 p-2 text-sm text-rosa">{aviso}</p>}
       {ok && <p className="border-2 border-ciano/40 bg-ciano/10 p-2 text-sm text-ciano">{ok}</p>}
 
-      <h2 className="mt-2 font-pixel text-[10px] text-suave">INVESTIMENTOS</h2>
+      <h2 className="mt-2 font-pixel text-[11px] text-suave">INVESTIMENTOS</h2>
       <Card icone="🧠" titulo="Sessão mental/nutri" desc={`+${ECONOMIA.sessaoMental.moral} moral, +${ECONOMIA.sessaoMental.energia} energia · $${ECONOMIA.sessaoMental.custo}`}>
         <Botao onClick={() => tenta(sessaoMental, "Cabeça e corpo renovados.")}>Agendar</Botao>
       </Card>
@@ -55,8 +55,8 @@ export default function Loja({ career }: { career: CareerState }) {
         <Botao onClick={() => tenta(bootcamp, "Você voltou da Coreia muito melhor!")}>Ir</Botao>
       </Card>
 
-      <h2 className="mt-2 font-pixel text-[10px] text-suave">EQUIPAMENTOS</h2>
-      <div className="flex items-center gap-3 border-2 border-borda bg-painel p-3 text-[11px] text-suave">
+      <h2 className="mt-2 font-pixel text-[11px] text-suave">EQUIPAMENTOS</h2>
+      <div className="flex items-center gap-3 border-2 border-borda bg-painel p-3 text-[12px] text-suave">
         <span className="text-2xl">🎒</span>
         <span>
           Seu setup agora são <span className="text-ciano">itens com afixos</span> que caem nas partidas — equipe, faça
@@ -74,7 +74,7 @@ function Card({ icone, titulo, desc, children }: { icone: string; titulo: string
         <span className="text-2xl">{icone}</span>
         <div className="min-w-0">
           <p className="text-sm text-texto">{titulo}</p>
-          <p className="text-[11px] text-suave">{desc}</p>
+          <p className="text-[12px] text-suave">{desc}</p>
         </div>
       </div>
       <div className="shrink-0">{children}</div>
@@ -87,7 +87,7 @@ function Botao({ children, onClick }: { children: ReactNode; onClick: () => void
     <button
       type="button"
       onClick={onClick}
-      className="border-2 border-rosa bg-rosa/10 px-4 py-2 font-pixel text-[10px] text-rosa transition hover:bg-rosa hover:text-fundo"
+      className="border-2 border-rosa bg-rosa/10 px-4 py-2 font-pixel text-[11px] text-rosa transition hover:bg-rosa hover:text-fundo"
     >
       {children}
     </button>

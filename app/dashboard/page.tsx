@@ -44,7 +44,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col gap-5 px-4 py-6">
+    <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-5 px-4 py-6">
       <header className="flex items-center justify-between">
         <h1 className="font-pixel text-sm text-ciano">DASHBOARD</h1>
         <button
@@ -53,7 +53,7 @@ export default function DashboardPage() {
             sair();
             router.push("/");
           }}
-          className="border-2 border-borda px-3 py-1.5 text-[10px] text-suave transition hover:text-texto"
+          className="border-2 border-borda px-3 py-1.5 text-[11px] text-suave transition hover:text-texto"
         >
           Trocar carreira
         </button>
@@ -70,7 +70,7 @@ export default function DashboardPage() {
       {career.torneioAtual && (
         <Link
           href="/torneio"
-          className="border-2 border-amber-300 bg-amber-300/10 px-4 py-3 text-center font-pixel text-[10px] text-amber-300 transition hover:bg-amber-300 hover:text-fundo"
+          className="border-2 border-amber-300 bg-amber-300/10 px-4 py-3 text-center font-pixel text-[11px] text-amber-300 transition hover:bg-amber-300 hover:text-fundo"
         >
           🌍 {career.torneioAtual.nome.toUpperCase()} ·{" "}
           {career.torneioAtual.bracket.fase === "ENCERRADA" ? "RESULTADO" : "JOGAR"}
@@ -80,7 +80,7 @@ export default function DashboardPage() {
       {career.eventoAtual && (
         <Link
           href="/draft?evento=1"
-          className="border-2 border-amber-300 bg-amber-300/10 px-4 py-3 text-center font-pixel text-[10px] text-amber-300 transition hover:bg-amber-300 hover:text-fundo"
+          className="border-2 border-amber-300 bg-amber-300/10 px-4 py-3 text-center font-pixel text-[11px] text-amber-300 transition hover:bg-amber-300 hover:text-fundo"
         >
           ⭐ EVENTO: {career.eventoAtual.nome}
         </Link>
@@ -88,25 +88,25 @@ export default function DashboardPage() {
 
       <Link
         href="/patch"
-        className="border-2 border-borda bg-painel px-4 py-3 text-center font-pixel text-[10px] text-ciano transition hover:border-ciano"
+        className="border-2 border-borda bg-painel px-4 py-3 text-center font-pixel text-[11px] text-ciano transition hover:border-ciano"
       >
         🧪 PATCH {versaoPatch(career.patchVigente)} · VER MUDANÇAS
       </Link>
 
       <Link
         href="/gacha"
-        className="border-2 border-rosa bg-rosa/10 px-4 py-3 text-center font-pixel text-[10px] text-rosa transition hover:bg-rosa hover:text-fundo"
+        className="border-2 border-rosa bg-rosa/10 px-4 py-3 text-center font-pixel text-[11px] text-rosa transition hover:bg-rosa hover:text-fundo"
       >
         🎰 CARREIRA BOOSTER · 🪙 {coinpoints}
       </Link>
 
       <Link
         href="/passe"
-        className="relative border-2 border-amber-300 bg-amber-300/10 px-4 py-3 text-center font-pixel text-[10px] text-amber-300 transition hover:bg-amber-300 hover:text-fundo"
+        className="relative border-2 border-amber-300 bg-amber-300/10 px-4 py-3 text-center font-pixel text-[11px] text-amber-300 transition hover:bg-amber-300 hover:text-fundo"
       >
         🎟️ PASSE DE BATALHA{passe ? ` · Nv ${nivelDoPasse(passe.pp)}` : ""}
         {resgataveis > 0 && (
-          <span className="absolute -right-1.5 -top-1.5 grid h-5 min-w-[20px] place-items-center border-2 border-fundo bg-rosa px-1 font-pixel text-[8px] text-fundo">
+          <span className="absolute -right-1.5 -top-1.5 grid h-5 min-w-[20px] place-items-center border-2 border-fundo bg-rosa px-1 font-pixel text-[10px] text-fundo">
             {resgataveis}
           </span>
         )}
@@ -114,7 +114,7 @@ export default function DashboardPage() {
 
       <Link
         href="/online"
-        className="border-2 border-ciano bg-ciano/10 px-4 py-3 text-center font-pixel text-[10px] text-ciano transition hover:bg-ciano hover:text-fundo"
+        className="border-2 border-ciano bg-ciano/10 px-4 py-3 text-center font-pixel text-[11px] text-ciano transition hover:bg-ciano hover:text-fundo"
       >
         ⚔️ ONLINE · DUELO 1v1
       </Link>
@@ -122,13 +122,13 @@ export default function DashboardPage() {
       <div className="grid grid-cols-2 gap-2">
         <Link
           href="/loja"
-          className="border-2 border-borda bg-painel px-2 py-3 text-center font-pixel text-[10px] text-ciano transition hover:border-ciano"
+          className="border-2 border-borda bg-painel px-2 py-3 text-center font-pixel text-[11px] text-ciano transition hover:border-ciano"
         >
           💰 LOJA
         </Link>
         <Link
           href="/propostas"
-          className={`border-2 px-2 py-3 text-center font-pixel text-[10px] transition ${
+          className={`border-2 px-2 py-3 text-center font-pixel text-[11px] transition ${
             career.inbox.length > 0
               ? "border-ciano bg-ciano/10 text-ciano"
               : "border-borda bg-painel text-ciano hover:border-ciano"
@@ -138,30 +138,30 @@ export default function DashboardPage() {
         </Link>
         <Link
           href="/campeoes"
-          className="border-2 border-borda bg-painel px-2 py-3 text-center font-pixel text-[10px] text-ciano transition hover:border-ciano"
+          className="border-2 border-borda bg-painel px-2 py-3 text-center font-pixel text-[11px] text-ciano transition hover:border-ciano"
         >
           📋 TIER
         </Link>
         <Link
           href="/conquistas"
-          className="border-2 border-borda bg-painel px-2 py-3 text-center font-pixel text-[10px] text-ciano transition hover:border-ciano"
+          className="border-2 border-borda bg-painel px-2 py-3 text-center font-pixel text-[11px] text-ciano transition hover:border-ciano"
         >
           🏅 CONQUISTAS
         </Link>
         <Link
           href="/inventario"
-          className="relative border-2 border-borda bg-painel px-2 py-3 text-center font-pixel text-[10px] text-ciano transition hover:border-ciano"
+          className="relative border-2 border-borda bg-painel px-2 py-3 text-center font-pixel text-[11px] text-ciano transition hover:border-ciano"
         >
           🎒 INVENTÁRIO
           {novosItens > 0 && (
-            <span className="absolute -right-1.5 -top-1.5 grid h-5 min-w-[20px] place-items-center border-2 border-fundo bg-rosa px-1 font-pixel text-[8px] text-fundo">
+            <span className="absolute -right-1.5 -top-1.5 grid h-5 min-w-[20px] place-items-center border-2 border-fundo bg-rosa px-1 font-pixel text-[10px] text-fundo">
               {novosItens}
             </span>
           )}
         </Link>
       </div>
 
-      <p className="text-center font-pixel text-[8px] text-borda">CARREIRA LoL · v1.0 🏁</p>
+      <p className="text-center font-pixel text-[10px] text-borda">CARREIRA LoL · v1.0 🏁</p>
       <p className="text-center text-xs">
         <Link href="/" className="text-ciano hover:underline">
           Início
@@ -186,7 +186,7 @@ function LigaBanner({ career }: { career: CareerState }) {
   return (
     <Link
       href="/liga"
-      className={`border-2 px-4 py-3 text-center font-pixel text-[10px] transition ${
+      className={`border-2 px-4 py-3 text-center font-pixel text-[11px] transition ${
         destaque ? "border-rosa bg-rosa/10 text-rosa" : "border-borda bg-painel text-ciano hover:border-ciano"
       }`}
     >

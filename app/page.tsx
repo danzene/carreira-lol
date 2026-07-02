@@ -36,7 +36,7 @@ export default function Home() {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-md flex-col items-center justify-center gap-10 px-5 py-12 text-center">
       <div className="flex flex-col items-center gap-4">
-        <span className="font-pixel text-[10px] tracking-[0.3em] text-ciano">MODO CARREIRA · ESPORTS</span>
+        <span className="font-pixel text-[11px] tracking-[0.3em] text-ciano">MODO CARREIRA · ESPORTS</span>
         <h1
           className="font-pixel text-3xl leading-[1.6] text-rosa sm:text-5xl sm:leading-[1.6]"
           style={{ textShadow: "3px 3px 0 #0b0617, 6px 6px 0 rgba(25,230,224,0.35)" }}
@@ -49,14 +49,14 @@ export default function Home() {
 
       <Link
         href="/criar"
-        className="w-full border-2 border-rosa bg-rosa/10 px-6 py-4 font-pixel text-[10px] text-rosa shadow-[4px_4px_0_#0b0617] transition hover:bg-rosa hover:text-fundo"
+        className="w-full border-2 border-rosa bg-rosa/10 px-6 py-4 font-pixel text-[11px] text-rosa shadow-[4px_4px_0_#0b0617] transition hover:bg-rosa hover:text-fundo"
       >
         ▶ NOVA CARREIRA
       </Link>
 
       {pronto && saves.length > 0 && (
         <section className="w-full">
-          <h2 className="mb-3 text-left font-pixel text-[10px] text-suave">CONTINUAR</h2>
+          <h2 className="mb-3 text-left font-pixel text-[11px] text-suave">CONTINUAR</h2>
           <ul className="flex flex-col gap-2">
             {saves.map((s) => {
               const rota = ROTAS.find((r) => r.chave === s.rota);
@@ -66,7 +66,7 @@ export default function Home() {
                     <span className="text-2xl">{rota?.emoji}</span>
                     <span className="flex flex-col">
                       <span className="text-sm text-texto">{s.nome}</span>
-                      <span className="text-[10px] text-suave">
+                      <span className="text-[11px] text-suave">
                         {rota?.nome} · {s.elo} · Temp. {s.temporada}, Sem. {s.semana}
                       </span>
                     </span>
@@ -88,7 +88,7 @@ export default function Home() {
 
       <div className="flex flex-col items-center gap-2">
         {user && (
-          <p className="text-[10px] text-suave">
+          <p className="text-[11px] text-suave">
             Logado como <span className="text-texto">{user.email}</span> ·{" "}
             <button
               type="button"
@@ -99,7 +99,7 @@ export default function Home() {
             </button>
           </p>
         )}
-        <p className="font-pixel text-[8px] text-borda">FASE 1 · CRIAÇÃO + DASHBOARD</p>
+        <p className="font-pixel text-[10px] text-borda">FASE 1 · CRIAÇÃO + DASHBOARD</p>
       </div>
     </main>
   );

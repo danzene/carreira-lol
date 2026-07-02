@@ -32,11 +32,17 @@ function Missao({ m }: { m: MissaoAtiva }) {
 function CartaRecompensa({ r, passe, onResgatar }: { r: Recompensa; passe: PasseState; onResgatar: () => void }) {
   const resgatada = (r.trilha === "free" ? passe.resgatadasFree : passe.resgatadasPremium).includes(r.nivel);
   const pode = podeResgatar(passe, r);
-  const alcancado = nivelDoPasse(passe.pp) >= r.nivel;
+  const bloqueadoPorPremium = r.trilha === "premium" && !passe.premium;
   return (
     <div
       className={`flex w-24 shrink-0 flex-col items-center gap-1 border-2 p-2 text-center ${
-        resgatada ? "border-borda opacity-60" : pode ? "border-amber-300 bg-amber-300/10" : "border-borda"
+        resgatada
+          ? "border-borda opacity-60"
+          : pode
+            ? "border-amber-300 bg-amber-300/10"
+            : bloqueadoPorPremium
+              ? "border-amber-300/40 bg-amber-300/5"
+              : "border-borda"
       }`}
     >
       <span className="font-pixel text-[8px] text-suave">NÍVEL {r.nivel}</span>
@@ -52,8 +58,10 @@ function CartaRecompensa({ r, passe, onResgatar }: { r: Recompensa; passe: Passe
         >
           RESGATAR
         </button>
+      ) : bloqueadoPorPremium ? (
+        <span className="font-pixel text-[7px] text-amber-300/80">🔒 PREMIUM</span>
       ) : (
-        <span className="font-pixel text-[7px] text-borda">{alcancado ? "—" : "🔒"}</span>
+        <span className="font-pixel text-[7px] text-borda">🔒</span>
       )}
     </div>
   );

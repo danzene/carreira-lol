@@ -17,6 +17,7 @@ import {
 } from "@/engine/draft";
 import { criarRng } from "@/engine/rng";
 import { counterComp, counterLanes, type MatchupRota, type PickRota } from "@/engine/counters";
+import { proibidosProva, type ProvaSemanal } from "@/engine/prova";
 import { buscarCampeoes, type Campeao } from "@/lib/ddragon";
 import type { ChampionDef, Role } from "@/engine/types";
 
@@ -46,6 +47,7 @@ export default function DraftBoard({
   patch = 1,
   proibidos = [],
   modo = "soloq",
+  prova,
   onJogar,
 }: {
   comfort: string[];
@@ -55,6 +57,7 @@ export default function DraftBoard({
   patch?: number;
   proibidos?: string[];
   modo?: ModoDraft; // soloq = picks variados (gente real); competitivo = meta-slave
+  prova?: ProvaSemanal; // Prova Semanal: modificadores filtram o banco (todos os lados)
   onJogar: (info: JogarInfo) => void;
 }) {
   const [campeoes, setCampeoes] = useState<Campeao[]>([]);
@@ -74,9 +77,17 @@ export default function DraftBoard({
   }, []);
 
   const banco = useMemo(() => {
-    const b = aplicarPatch(construirBanco(campeoes), patch);
-    return proibidos.length ? b.filter((c) => !proibidos.includes(c.id)) : b;
-  }, [campeoes, patch, proibidos]);
+    let b = aplicarPatch(construirBanco(campeoes), patch);
+    if (proibidos.length) b = b.filter((c) => !proibidos.includes(c.id));
+    if (prova) {
+      // regras da Prova Semanal valem pro lobby INTEIRO (você e a IA)
+      const pool = Object.entries(maestria).map(([championId, pontos]) => ({ championId, pontos }));
+      const bloqueados = new Set(proibidosProva(prova, pool, b));
+      const filtrado = b.filter((c) => !bloqueados.has(c.id));
+      if (filtrado.length >= 20) b = filtrado; // garante campeões suficientes pro draft
+    }
+    return b;
+  }, [campeoes, patch, proibidos, prova, maestria]);
   const campMap = useMemo(() => {
     const m: Record<string, Campeao> = {};
     for (const c of campeoes) m[c.id] = c;

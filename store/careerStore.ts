@@ -37,6 +37,8 @@ import {
   type PostFeed,
   type TomResposta,
 } from "@/engine/feed";
+import { garantirProva, gerarProvaSemanal, podeJogarProva, registrarPartidaProva, semanaISO } from "@/engine/prova";
+import { useProva } from "./provaStore";
 import { atualizarRecords } from "@/engine/records";
 import { timeDe } from "@/data/times";
 import { gerarEvento, premioEvento } from "@/engine/eventos";
@@ -115,6 +117,8 @@ interface CareerStore {
   limparRecap: () => void;
   responderEntrevista: (tom: TomResposta) => void;
   marcarFeedVisto: () => void;
+  aplicarPartidaProva: (resultado: MatchResult) => void;
+  concederTitulo: (titulo: string) => void;
   iniciarCarreira: (player: Player, opcoes: OpcoesCarreira) => string;
   carregar: (slotId: string) => boolean;
   recarregarAtual: () => boolean;
@@ -180,6 +184,52 @@ export const useCareer = create<CareerStore>((set, get) => ({
     const { career, slotId } = get();
     if (!career || !(career.feedNovos ?? 0)) return;
     const novo = { ...career, feedNovos: 0 };
+    set({ career: novo });
+    if (slotId) salvarSlot(slotId, novo);
+  },
+
+  // Partida da PROVA SEMANAL: lateral — não gasta energia, não mexe em elo/liga.
+  // Na 3ª partida fecha o score, dá recompensa de participação e envia pro leaderboard.
+  aplicarPartidaProva: (resultado) => {
+    const { career: c0, slotId } = get();
+    if (!c0) return;
+    const semana = semanaISO(Date.now());
+    const prova = gerarProvaSemanal(semana);
+    let novo = garantirProva(c0, semana);
+    if (!podeJogarProva(novo, semana)) return;
+    novo = registrarPartidaProva(novo, resultado, prova);
+
+    const provaFinal = novo.prova;
+    if (provaFinal?.finalizada && provaFinal.scoreFinal != null) {
+      // recompensa de participação: item garantido (sorte alta) + título da semana
+      const seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
+      const rng = criarRng(seed);
+      const slot = SLOTS_GEAR[Math.floor(rng() * SLOTS_GEAR.length)].slot;
+      const item = gerarItem(slot, iLvlDe(novo), seed, { sorte: 0.3 });
+      useInventory.getState().adicionarItem(item);
+      useCerimonias.getState().emitir(cerimoniaDeDrop(item));
+      const titulo = `Prova Semanal S${semana % 100}`;
+      if (!(novo.titulos ?? []).includes(titulo)) novo = { ...novo, titulos: [...(novo.titulos ?? []), titulo] };
+      useCerimonias.getState().emitir({
+        tipo: "ACHIEVEMENT_UNLOCKED",
+        id: `prova_${semana}`,
+        nome: `Prova concluída · ${provaFinal.scoreFinal} pts`,
+        emoji: "🏁",
+        desc: "Score enviado pro placar mundial da semana.",
+      });
+      void useProva.getState().enviarScore(prova, provaFinal, { elo: novo.player.rankSoloq.elo, semanaJogo: novo.semanaAtual });
+    }
+
+    set({ career: novo });
+    if (slotId) salvarSlot(slotId, novo);
+  },
+
+  // Concede um título cosmético (idempotente) — usado pelo topo do leaderboard da prova.
+  concederTitulo: (titulo) => {
+    const { career, slotId } = get();
+    if (!career || (career.titulos ?? []).includes(titulo)) return;
+    const novo = { ...career, titulos: [...(career.titulos ?? []), titulo] };
+    useCerimonias.getState().emitir({ tipo: "ACHIEVEMENT_UNLOCKED", id: `titulo_${titulo}`, nome: titulo, emoji: "👑", desc: "Título exclusivo conquistado!" });
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
   },

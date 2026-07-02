@@ -21,6 +21,7 @@ import { usePasse } from "@/store/passeStore";
 import { nivelDoPasse } from "@/engine/passe";
 import { getBadges } from "@/engine/badges";
 import { chaveDia } from "@/engine/diario";
+import { podeJogarProva, semanaISO } from "@/engine/prova";
 import { defUnlock, featureLiberada, type FeatureId } from "@/engine/unlocks";
 
 export default function DashboardPage() {
@@ -123,7 +124,17 @@ export default function DashboardPage() {
       )}
 
       {featureLiberada(career, "online") ? (
-        <CardNav href="/online" icone="⚔️" titulo="ONLINE · DUELO 1v1" sub="enfrente players reais" cor="ciano" />
+        <>
+          <CardNav href="/online" icone="⚔️" titulo="ONLINE · DUELO 1v1" sub="enfrente players reais" cor="ciano" />
+          <CardNav
+            href="/prova"
+            icone="🏁"
+            titulo="PROVA SEMANAL"
+            sub={podeJogarProva(career, semanaISO(Date.now())) ? "regras novas te esperando!" : "concluída · placar mundial"}
+            cor="ambar"
+            ponto={podeJogarProva(career, semanaISO(Date.now()))}
+          />
+        </>
       ) : (
         <Cadeado id="online" />
       )}

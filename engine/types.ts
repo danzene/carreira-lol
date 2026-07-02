@@ -246,6 +246,8 @@ export interface CareerState {
   records?: import("./records").CareerRecords; // Hall da Carreira (marcos permanentes)
   feed?: import("./feed").PostFeed[]; // feed social in-game (últimos ~30 posts)
   feedNovos?: number; // posts não vistos (badge)
+  prova?: import("./prova").EstadoProva; // Prova Semanal em andamento
+  titulos?: string[]; // títulos cosméticos conquistados (prova, temporadas de duelo...)
   entrevistaPendente?: import("./feed").EntrevistaPendente; // entrevista pós-jogo aguardando resposta
   ultimaEntrevistaChave?: number; // temporada*1000+semana da última entrevista (máx. 1/semana)
   statsSemana?: StatsSemana; // stats da semana corrente (recap ao avançar)

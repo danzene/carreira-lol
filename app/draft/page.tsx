@@ -17,6 +17,7 @@ import { efeitoLendas } from "@/engine/gacha";
 import { efeitoItens } from "@/engine/itens";
 import { forcaTimeDe, proximoConfrontoJogador } from "@/engine/liga";
 import { proximoConfrontoTorneio } from "@/engine/internacional";
+import { ajustarCtxProva, defModificador, gerarProvaSemanal, podeJogarProva, semanaISO } from "@/engine/prova";
 import type { AtributoKey, MatchResult } from "@/engine/types";
 import { useCareer } from "@/store/careerStore";
 import { itensEquipadosDe, useInventory } from "@/store/inventoryStore";
@@ -29,12 +30,14 @@ function DraftFlow() {
   const oficial = params.get("oficial") === "1";
   const evento = params.get("evento") === "1";
   const internacional = params.get("internacional") === "1";
+  const ehProva = params.get("prova") === "1";
   const career = useCareer((s) => s.career);
   const recarregarAtual = useCareer((s) => s.recarregarAtual);
   const aplicarPartida = useCareer((s) => s.aplicarPartida);
   const aplicarPartidaOficial = useCareer((s) => s.aplicarPartidaOficial);
   const aplicarPartidaEvento = useCareer((s) => s.aplicarPartidaEvento);
   const aplicarPartidaTorneio = useCareer((s) => s.aplicarPartidaTorneio);
+  const aplicarPartidaProva = useCareer((s) => s.aplicarPartidaProva);
   const invItens = useInventory((s) => s.itens);
   const invEquip = useInventory((s) => s.equipado);
   const ultimoDrop = useInventory((s) => s.ultimoDrop);
@@ -61,6 +64,16 @@ function DraftFlow() {
   const equipadosItens = useMemo(() => itensEquipadosDe(invItens, invEquip), [invItens, invEquip]);
   const efItens = useMemo(() => efeitoItens(equipadosItens), [equipadosItens]);
 
+  // Prova Semanal: mesma prova pra todo mundo (derivada da semana ISO real)
+  const provaAtiva = useMemo(() => (ehProva ? gerarProvaSemanal(semanaISO(Date.now())) : undefined), [ehProva]);
+  const semLendas = !!provaAtiva?.modificadores.includes("sem_lendas");
+  const semItens = !!provaAtiva?.modificadores.includes("sem_itens");
+
+  // prova esgotada/finalizada → volta pra tela da prova
+  useEffect(() => {
+    if (ehProva && career && fase === "draft" && !podeJogarProva(career, semanaISO(Date.now()))) router.replace("/prova");
+  }, [ehProva, career, fase, router]);
+
   // Modo oficial sem partida pendente → volta pra liga.
   useEffect(() => {
     if (oficial && career && fase === "draft" && !proximoConfrontoJogador(career.liga)) {
@@ -86,15 +99,19 @@ function DraftFlow() {
 
   const adversario = adversarioId ? timeDe(adversarioId) : null;
 
-  // bônus de gear: lendas equipadas + itens RPG (os periféricos viraram itens). Comp ajuda no draft.
+  // bônus de gear: lendas equipadas + itens RPG. A Prova pode DESLIGAR cada um (modificador).
   const ef = efeitoLendas(career);
   const bonusAtributos: Partial<Record<AtributoKey, number>> = {};
-  (Object.keys(ef.atributos) as AtributoKey[]).forEach((k) => {
-    bonusAtributos[k] = (bonusAtributos[k] ?? 0) + (ef.atributos[k] ?? 0);
-  });
-  (Object.keys(efItens.atributos) as AtributoKey[]).forEach((k) => {
-    bonusAtributos[k] = (bonusAtributos[k] ?? 0) + (efItens.atributos[k] ?? 0);
-  });
+  if (!semLendas) {
+    (Object.keys(ef.atributos) as AtributoKey[]).forEach((k) => {
+      bonusAtributos[k] = (bonusAtributos[k] ?? 0) + (ef.atributos[k] ?? 0);
+    });
+  }
+  if (!semItens) {
+    (Object.keys(efItens.atributos) as AtributoKey[]).forEach((k) => {
+      bonusAtributos[k] = (bonusAtributos[k] ?? 0) + (efItens.atributos[k] ?? 0);
+    });
+  }
 
   const podeReplay = energiaAgora(career, Date.now()) >= LOOP.custoSoloq;
 
@@ -104,7 +121,8 @@ function DraftFlow() {
     setFase("partida");
   }
   function aoFim(r: MatchResult) {
-    if (internacional) aplicarPartidaTorneio(r);
+    if (ehProva) aplicarPartidaProva(r);
+    else if (internacional) aplicarPartidaTorneio(r);
     else if (evento) aplicarPartidaEvento(r);
     else if (oficial) aplicarPartidaOficial(r);
     else aplicarPartida(r);
@@ -119,13 +137,15 @@ function DraftFlow() {
 
   const titulo =
     fase === "draft"
-      ? internacional
-        ? (career.torneioAtual?.nome ?? "INTERNACIONAL").toUpperCase()
-        : evento
-          ? "PARTIDA-EVENTO"
-          : oficial
-            ? "PARTIDA OFICIAL"
-            : "DRAFT"
+      ? ehProva
+        ? "🏁 PROVA SEMANAL"
+        : internacional
+          ? (career.torneioAtual?.nome ?? "INTERNACIONAL").toUpperCase()
+          : evento
+            ? "PARTIDA-EVENTO"
+            : oficial
+              ? "PARTIDA OFICIAL"
+              : "DRAFT"
       : fase === "partida"
         ? "PARTIDA"
         : "RESULTADO";
@@ -146,12 +166,26 @@ function DraftFlow() {
           </p>
         </div>
         <Link
-          href={oficial ? "/liga" : internacional ? "/torneio" : "/dashboard"}
+          href={ehProva ? "/prova" : oficial ? "/liga" : internacional ? "/torneio" : "/dashboard"}
           className="border-2 border-borda px-3 py-1.5 text-[11px] text-suave transition hover:text-texto"
         >
           Voltar
         </Link>
       </header>
+
+      {provaAtiva && fase === "draft" && (
+        <div className="flex flex-wrap gap-2">
+          {provaAtiva.modificadores.map((m) => {
+            const d = defModificador(m);
+            return (
+              <span key={m} className="border-2 border-amber-300/60 bg-amber-300/10 px-2 py-1 text-[11px] text-amber-300" title={d.desc}>
+                {d.emoji} {d.nome}
+                {m === "so_classe" && provaAtiva.classeDaSemana ? ` (${provaAtiva.classeDaSemana})` : ""}
+              </span>
+            );
+          })}
+        </div>
+      )}
 
       {fase === "draft" && (
         <>
@@ -164,6 +198,7 @@ function DraftFlow() {
             patch={career.patchVigente}
             proibidos={proibidos}
             modo={oficial || internacional ? "competitivo" : "soloq"}
+            prova={provaAtiva}
             onJogar={aoJogar}
           />
         </>
@@ -172,19 +207,22 @@ function DraftFlow() {
       {fase === "partida" && info && (
         <Partida
           player={career.player}
-          ctx={{
-            championId: info.championId,
-            forcaMetaCampeao: info.forcaMetaCampeao,
-            comp: info.comp + ef.bonusComp + efItens.bonusComp,
-            compInimigo: info.compInimigo,
-            bonusAtributos,
-            forcaTimeAliado: (oficial || internacional) && career.contratoAtual ? forcaTimeDe(career.contratoAtual.timeId) : undefined,
-            forcaTimeInimigo: adversarioId ? forcaTimeDe(adversarioId) : undefined,
-            bonusInimigo: mod(career.opcoes).forcaInimigo + (evento && career.eventoAtual ? career.eventoAtual.bonusInimigo : 0),
-            dificuldadeElo: !oficial && !internacional && !evento ? dificuldadeSoloq(career.player.rankSoloq.elo) : 0,
-            counterLane: info.counterLane,
-            counterComp: info.counterComp,
-          }}
+          ctx={(() => {
+            const base = {
+              championId: info.championId,
+              forcaMetaCampeao: info.forcaMetaCampeao,
+              comp: info.comp + (semLendas ? 0 : ef.bonusComp) + (semItens ? 0 : efItens.bonusComp),
+              compInimigo: info.compInimigo,
+              bonusAtributos,
+              forcaTimeAliado: (oficial || internacional) && career.contratoAtual ? forcaTimeDe(career.contratoAtual.timeId) : undefined,
+              forcaTimeInimigo: adversarioId ? forcaTimeDe(adversarioId) : undefined,
+              bonusInimigo: mod(career.opcoes).forcaInimigo + (evento && career.eventoAtual ? career.eventoAtual.bonusInimigo : 0),
+              dificuldadeElo: !oficial && !internacional && !evento && !ehProva ? dificuldadeSoloq(career.player.rankSoloq.elo) : 0,
+              counterLane: info.counterLane,
+              counterComp: info.counterComp,
+            };
+            return provaAtiva ? ajustarCtxProva(base, provaAtiva) : base; // modificadores honrados no engine
+          })()}
           times={{ azul: info.timeAzul, vermelho: info.timeVermelho }}
           onFim={aoFim}
         />
@@ -192,7 +230,23 @@ function DraftFlow() {
 
       {fase === "resultado" && resultado && (
         <div className="flex flex-col gap-4">
-          <ResultadoPartida resultado={resultado} icone={info?.icone} elo={career.player.rankSoloq.elo} atributos={career.player.atributos} />
+          {ehProva ? (
+            // resultado da PROVA: sem LP/CoinPoints (partida lateral) — só o que conta pro score
+            <div className={`border-2 p-5 text-center ${resultado.vitoria ? "border-ciano bg-ciano/10" : "border-rosa bg-rosa/10"}`}>
+              <p className={`font-pixel text-xl ${resultado.vitoria ? "text-ciano" : "text-rosa"}`}>
+                {resultado.vitoria ? "VITÓRIA" : "DERROTA"}
+              </p>
+              <p className="mt-2 text-[12px] text-texto">
+                Nota <span className="font-pixel text-ciano">{resultado.notaPerformance.toFixed(1)}</span> · KDA{" "}
+                <span className="font-pixel">{resultado.kda.k}/{resultado.kda.d}/{resultado.kda.a}</span>
+              </p>
+              <p className="mt-2 font-pixel text-[10px] text-amber-300">
+                🏁 PARTIDA {career.prova?.resultados.length ?? 0}/3 DA PROVA
+              </p>
+            </div>
+          ) : (
+            <ResultadoPartida resultado={resultado} icone={info?.icone} elo={career.player.rankSoloq.elo} atributos={career.player.atributos} />
+          )}
           {ultimoDrop && (
             <div className={`item-card border-2 bg-painel p-3 ${classeBrilho(ultimoDrop.raridade)}`} style={estiloCartaItem(ultimoDrop.raridade)}>
               <p className="mb-2 text-center font-pixel text-[10px]" style={{ color: corRaridade(ultimoDrop.raridade) }}>
@@ -208,7 +262,24 @@ function DraftFlow() {
             </div>
           )}
           <div className="flex justify-center gap-3">
-            {internacional ? (
+            {ehProva ? (
+              (career.prova?.resultados.length ?? 0) < 3 ? (
+                <button
+                  type="button"
+                  onClick={denovo}
+                  className="border-2 border-amber-300 bg-amber-300/10 px-6 py-2 font-pixel text-[11px] text-amber-300 transition hover:bg-amber-300 hover:text-fundo"
+                >
+                  ▶ PRÓXIMA PARTIDA ({(career.prova?.resultados.length ?? 0) + 1}/3)
+                </button>
+              ) : (
+                <Link
+                  href="/prova"
+                  className="border-2 border-amber-300 bg-amber-300/10 px-6 py-2 font-pixel text-[11px] text-amber-300 transition hover:bg-amber-300 hover:text-fundo"
+                >
+                  🏁 VER PLACAR DA PROVA
+                </Link>
+              )
+            ) : internacional ? (
               <Link
                 href="/torneio"
                 className="border-2 border-amber-300 bg-amber-300/10 px-6 py-2 font-pixel text-[11px] text-amber-300 transition hover:bg-amber-300 hover:text-fundo"

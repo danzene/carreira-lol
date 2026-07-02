@@ -133,6 +133,8 @@ export function normalizarCareer(bruto: CareerState): CareerState {
     historicoPartidas: Array.isArray(bruto.historicoPartidas) ? bruto.historicoPartidas : [],
     inbox: Array.isArray(bruto.inbox) ? bruto.inbox : [],
     patchVigente: typeof bruto.patchVigente === "number" ? bruto.patchVigente : 1,
+    feed: Array.isArray(bruto.feed) ? bruto.feed : [],
+    feedNovos: typeof bruto.feedNovos === "number" ? bruto.feedNovos : 0,
     player: {
       nome: p.nome ?? "Jogador",
       nacionalidade: p.nacionalidade ?? "Brasil",

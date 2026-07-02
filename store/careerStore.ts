@@ -29,6 +29,14 @@ import {
   registrarResultadoJogador,
 } from "@/engine/liga";
 import { aplicarBonusRival, ehRival, registrarConfronto, RIVAL } from "@/engine/rivais";
+import {
+  abrirEntrevista,
+  fatosDaSemana,
+  gerarPostsFeed,
+  responderEntrevista as responderEntrevistaEngine,
+  type PostFeed,
+  type TomResposta,
+} from "@/engine/feed";
 import { atualizarRecords } from "@/engine/records";
 import { timeDe } from "@/data/times";
 import { gerarEvento, premioEvento } from "@/engine/eventos";
@@ -91,6 +99,7 @@ export interface RecapSemanal {
   anterior: StatsSemana;
   semana: number;
   temporada: number;
+  posts: PostFeed[]; // 1-2 posts mais relevantes da semana (o mundo reagiu)
 }
 
 interface CareerStore {
@@ -104,6 +113,8 @@ interface CareerStore {
   puxarGratis: () => Promise<ResultadoPuxada[] | null>;
   limparDailyHub: () => void;
   limparRecap: () => void;
+  responderEntrevista: (tom: TomResposta) => void;
+  marcarFeedVisto: () => void;
   iniciarCarreira: (player: Player, opcoes: OpcoesCarreira) => string;
   carregar: (slotId: string) => boolean;
   recarregarAtual: () => boolean;
@@ -153,6 +164,25 @@ export const useCareer = create<CareerStore>((set, get) => ({
 
   limparDailyHub: () => set({ dailyHub: null }),
   limparRecap: () => set({ recapSemanal: null }),
+
+  // Responde a entrevista pendente (a fala vira post no feed; efeitos no engine).
+  responderEntrevista: (tom) => {
+    const { career, slotId } = get();
+    if (!career?.entrevistaPendente) return;
+    const seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
+    const { career: novo } = responderEntrevistaEngine(career, tom, seed);
+    rastrear("entrevista_respondida", { tom, contexto: career.entrevistaPendente.contexto });
+    set({ career: novo });
+    if (slotId) salvarSlot(slotId, novo);
+  },
+
+  marcarFeedVisto: () => {
+    const { career, slotId } = get();
+    if (!career || !(career.feedNovos ?? 0)) return;
+    const novo = { ...career, feedNovos: 0 };
+    set({ career: novo });
+    if (slotId) salvarSlot(slotId, novo);
+  },
 
   // Registra o login do dia (streak com escudo). Abre o Daily Hub se é um dia novo.
   registrarLogin: () => {
@@ -338,12 +368,19 @@ export const useCareer = create<CareerStore>((set, get) => ({
       conquistas: conq.novas.map((c) => c.nome),
     };
 
+    // o mundo REAGE: posts do feed sobre a semana que fechou (determinístico por seed)
+    const posts = gerarPostsFeed(antes, fatosDaSemana(antes), (seed ^ 0xfeed) >>> 0);
+    if (posts.length > 0) {
+      novo = { ...novo, feed: [...posts, ...(novo.feed ?? [])].slice(0, 30), feedNovos: (novo.feedNovos ?? 0) + posts.length };
+    }
+
     // recap "wrapped" da semana que fechou + vira as stats pra próxima
     const recap: RecapSemanal = {
       atual: antes.statsSemana ?? statsVazias(),
       anterior: antes.statsSemanaAnterior ?? statsVazias(),
       semana: antes.semanaAtual,
       temporada: antes.temporada,
+      posts: posts.slice(0, 2),
     };
     novo = fecharSemanaStats(novo);
     const unlocksSemana = cerimoniasDeUnlocks(antes, novo);
@@ -463,7 +500,10 @@ export const useCareer = create<CareerStore>((set, get) => ({
     novo = registrarResultadoJogador(novo, resultado.vitoria, seed);
     // rivalidade: 2 derrotas seguidas viram rival; vencer o rival dá bônus + drop com sorte
     if (adversario) {
-      if (eraRival && resultado.vitoria) novo = aplicarBonusRival(novo);
+      if (eraRival && resultado.vitoria) {
+        novo = aplicarBonusRival(novo);
+        novo = abrirEntrevista(novo, "rival", adversario); // vitória sobre rival = imprensa quer ouvir
+      }
       const rv = registrarConfronto(novo, adversario, resultado.vitoria);
       novo = rv.career;
       const nomeAdv = timeDe(adversario)?.nome ?? adversario;
@@ -529,6 +569,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
     let novo = encerrarTemporadaEngine(career, seed);
     // ir bem no campeonato coloca você nos holofotes: surto de propostas.
     if (colocacao <= 2) novo = adicionarOfertas(novo, gerarOfertas(novo, (seed ^ 0x77) >>> 0));
+    if (colocacao === 1) novo = abrirEntrevista(novo, "campeao_liga"); // campeão fala com a imprensa
     // campeão da liga profissional → vaga no torneio internacional (MSI/Worlds).
     if (eraTier1Campeao && !novo.torneioAtual) {
       const tipo = career.temporada % 2 === 1 ? "MSI" : "WORLDS";
@@ -580,6 +621,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
       titulosInternacionais: titulos,
       torneioAtual: undefined,
     };
+    if (col === 1) novo = abrirEntrevista(novo, "titulo"); // campeão internacional = entrevista
     novo = comConquistas(novo);
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);

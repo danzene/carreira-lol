@@ -28,6 +28,8 @@ describe("normalizarCareer (migração de save)", () => {
     expect(c.historicoPartidas).toEqual([]);
     expect(c.inbox).toEqual([]);
     expect(c.equipamentos).toEqual([]);
+    expect(c.feed).toEqual([]); // campos do feed (Mundo Vivo) com default seguro
+    expect(c.feedNovos).toBe(0);
     expect(c.player.atributos.macro).toBeGreaterThan(0); // atributos completados
     expect(c.player.atributos.mecanica).toBe(60); // sem perder o que existia
     expect(c.player.rankSoloq.elo).toBe("Ferro III");

@@ -5,6 +5,7 @@ import { RARIDADES_ITEM } from "@/data/itens";
 import { tocarSom } from "@/lib/som";
 import type { RecapSemanal as Recap } from "@/store/careerStore";
 import AnimatedNumber from "./juice/AnimatedNumber";
+import PostFeedCard from "./PostFeedCard";
 
 // 📊 Recap "wrapped" da semana: sequência de cards animados ANTES do resumo da semana.
 // Dados vêm do statsSemana acumulado no engine (puro). CONTINUAR avança; nunca trava.
@@ -92,6 +93,19 @@ export default function RecapSemanal({ recap, onFechar }: { recap: Recap; onFech
               </span>
             ))}
           </div>
+        </div>
+      ),
+    });
+  }
+
+  if (recap.posts.length > 0) {
+    cards.push({
+      titulo: "O MUNDO REAGIU",
+      corpo: (
+        <div className="flex w-full flex-col gap-2">
+          {recap.posts.map((p) => (
+            <PostFeedCard key={p.id} post={p} compacto />
+          ))}
         </div>
       ),
     });

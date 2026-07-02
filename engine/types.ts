@@ -244,6 +244,10 @@ export interface CareerState {
   unlocksLegacy?: boolean; // save antigo = features todas destravadas (migração)
   rivais?: Record<string, import("./rivais").RivalState>; // rivalidades por timeId (campeonato)
   records?: import("./records").CareerRecords; // Hall da Carreira (marcos permanentes)
+  feed?: import("./feed").PostFeed[]; // feed social in-game (últimos ~30 posts)
+  feedNovos?: number; // posts não vistos (badge)
+  entrevistaPendente?: import("./feed").EntrevistaPendente; // entrevista pós-jogo aguardando resposta
+  ultimaEntrevistaChave?: number; // temporada*1000+semana da última entrevista (máx. 1/semana)
   statsSemana?: StatsSemana; // stats da semana corrente (recap ao avançar)
   statsSemanaAnterior?: StatsSemana; // pra comparação ↑↓ no recap
 }

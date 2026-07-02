@@ -82,6 +82,6 @@ describe("badges", () => {
 
   it("sem carreira → tudo apagado", () => {
     const b = getBadges(null, null, 0, "2026-07-02");
-    expect(b).toEqual({ booster: false, diaria: false, passe: 0, inventario: 0 });
+    expect(b).toEqual({ booster: false, diaria: false, passe: 0, inventario: 0, feed: 0 });
   });
 });

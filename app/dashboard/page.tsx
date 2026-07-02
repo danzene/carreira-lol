@@ -8,6 +8,7 @@ import PainelSemana from "@/components/PainelSemana";
 import HistoricoPartidas from "@/components/HistoricoPartidas";
 import ResumoSemanaModal from "@/components/ResumoSemanaModal";
 import DailyHub from "@/components/DailyHub";
+import EntrevistaModal from "@/components/EntrevistaModal";
 import RecapSemanal from "@/components/RecapSemanal";
 import { timeDe } from "@/data/times";
 import { proximoConfrontoJogador } from "@/engine/liga";
@@ -161,6 +162,17 @@ export default function DashboardPage() {
           ⚖️ COUNTERS
         </Link>
         <Link
+          href="/feed"
+          className="relative border-2 border-borda bg-painel px-2 py-3 text-center font-pixel text-[11px] text-ciano transition hover:border-ciano"
+        >
+          📱 FEED
+          {badges.feed > 0 && (
+            <span className="absolute -right-1.5 -top-1.5 grid h-5 min-w-[20px] animate-pulse place-items-center border-2 border-fundo bg-rosa px-1 font-pixel text-[10px] text-fundo">
+              {badges.feed}
+            </span>
+          )}
+        </Link>
+        <Link
           href="/hall"
           className="border-2 border-borda bg-painel px-2 py-3 text-center font-pixel text-[11px] text-ciano transition hover:border-ciano"
         >
@@ -197,6 +209,7 @@ export default function DashboardPage() {
         ultimoResumo && <ResumoSemanaModal resumo={ultimoResumo} onFechar={limparResumo} />
       )}
       <DailyHub />
+      <EntrevistaModal />
     </main>
   );
 }

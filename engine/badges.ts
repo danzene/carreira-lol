@@ -11,6 +11,7 @@ export interface Badges {
   diaria: boolean; // recompensa de streak pra coletar
   passe: number; // recompensas do passe liberadas e não resgatadas
   inventario: number; // itens novos não vistos
+  feed: number; // posts do feed não vistos
 }
 
 export function getBadges(career: CareerState | null, passe: PasseState | null, itensNovos: number, hoje: string): Badges {
@@ -22,5 +23,6 @@ export function getBadges(career: CareerState | null, passe: PasseState | null, 
     diaria: !!career && podeColetarDiaria(career, hoje),
     passe: recompensasPasse,
     inventario: Math.max(0, itensNovos),
+    feed: Math.max(0, career?.feedNovos ?? 0),
   };
 }

@@ -14,14 +14,16 @@ export default function AnimatedNumber({
   duracao = DURACOES.numero,
   formato,
   className,
+  deZero = false, // anima de 0 até o valor já na montagem (bom pra deltas tipo +18 LP)
 }: {
   valor: number;
   duracao?: number;
   formato?: (v: number) => string;
   className?: string;
+  deZero?: boolean;
 }) {
-  const [exibido, setExibido] = useState(valor);
-  const anterior = useRef(valor);
+  const [exibido, setExibido] = useState(deZero ? 0 : valor);
+  const anterior = useRef(deZero ? 0 : valor);
   const raf = useRef<number>(0);
 
   useEffect(() => {

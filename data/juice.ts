@@ -52,3 +52,17 @@ export function duracaoAntecipacao(tier: TierJuice): number {
 // Easing padrão das transições CSS (elástico curto pro "pop").
 export const EASING_POP = "cubic-bezier(0.34, 1.56, 0.64, 1)";
 export const EASING_OUT = "cubic-bezier(0.22, 1, 0.36, 1)";
+
+// Cor temática de cada faixa de elo (cerimônia de promoção, badges).
+export function corElo(elo: string): string {
+  if (elo.startsWith("Ferro")) return "#8a8a96";
+  if (elo.startsWith("Bronze")) return "#c9803c";
+  if (elo.startsWith("Prata")) return "#c8d0e0";
+  if (elo.startsWith("Ouro")) return "#ffd34d";
+  if (elo.startsWith("Platina")) return "#3ad6c2";
+  if (elo.startsWith("Esmeralda")) return "#2fd66e";
+  if (elo.startsWith("Diamante")) return "#4db8ff";
+  if (elo.startsWith("Mestre")) return "#9a6bff";
+  if (elo.startsWith("Grão")) return "#ff5a5a";
+  return "#ffe14d"; // Desafiante
+}

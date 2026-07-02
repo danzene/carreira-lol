@@ -1,7 +1,9 @@
 import { create } from "zustand";
 import { ITENS_ECON, SLOTS_GEAR, type Item, type SlotGear } from "@/data/itens";
+import { cerimoniaDeDrop } from "@/engine/cerimonias";
 import { gerarItem, rerollAfixos } from "@/engine/itens";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabaseClient";
+import { useCerimonias } from "./cerimoniaStore";
 import { useProfile } from "./profileStore";
 import { usePasse } from "./passeStore";
 
@@ -116,6 +118,7 @@ export const useInventory = create<InventoryStore>((set, get) => {
       const item = gerarItem(slot, iLvl, seedAgora(), { sorte });
       set({ itens: [...get().itens, item], ultimoDrop: item, novos: get().novos + 1 });
       persistir();
+      useCerimonias.getState().emitir(cerimoniaDeDrop(item));
       return item;
     },
 

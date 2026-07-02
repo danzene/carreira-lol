@@ -8,6 +8,7 @@ import { energiaAgora, proximoUsoEm, usosRestantes } from "@/engine/tempo";
 import type { AtributoKey, CareerState, TraitId } from "@/engine/types";
 import { useCareer } from "@/store/careerStore";
 import AnimacaoAcao, { type TipoAcao } from "./AnimacaoAcao";
+import AnimatedNumber from "./juice/AnimatedNumber";
 
 type Painel = null | "focado" | "especial" | "mental";
 type Anim = { tipo: TipoAcao; titulo: string; legenda: string };
@@ -78,7 +79,9 @@ export default function PainelSemana({ career }: { career: CareerState }) {
       <div className="mb-4">
         <div className="mb-1 flex justify-between text-xs">
           <span className="text-suave">Energia</span>
-          <span className="text-texto">{Math.round(energia)}/100</span>
+          <span className="text-texto">
+            <AnimatedNumber valor={Math.round(energia)} />/100
+          </span>
         </div>
         <div className="h-3 border-2 border-borda bg-fundo">
           <div className="h-full bg-gradient-to-r from-rosa to-ciano transition-all" style={{ width: `${energia}%` }} />
@@ -121,7 +124,9 @@ export default function PainelSemana({ career }: { career: CareerState }) {
                 className="flex flex-col items-center gap-0.5 border-2 border-borda bg-painel p-2 text-center transition hover:border-rosa"
               >
                 <span className="text-xs text-texto">{a.nome}</span>
-                <span className="font-pixel text-[11px] text-ciano">{Math.round(career.player.atributos[a.chave])}</span>
+                <span className="font-pixel text-[11px] text-ciano">
+                  <AnimatedNumber valor={Math.round(career.player.atributos[a.chave])} />
+                </span>
               </button>
             ))}
           </div>

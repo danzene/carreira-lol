@@ -7,6 +7,9 @@ import { melhorRaridade, type Cerimonia } from "@/engine/cerimonias";
 import { alternarMute, somMutado, tocarSom, tocarSomTier, type SomId } from "@/lib/som";
 import { useCerimonias } from "@/store/cerimoniaStore";
 import PixelBurst from "@/components/juice/PixelBurst";
+import CerimoniaDrop from "./CerimoniaDrop";
+import CerimoniaElo from "./CerimoniaElo";
+import CerimoniaPasse from "./CerimoniaPasse";
 
 // 🎭 Apresenta as cerimônias da fila: UMA fullscreen por vez (fases: antecipação →
 // revelação → celebração), toasts em paralelo no canto. Sempre dispensável com 1 clique;
@@ -184,10 +187,20 @@ export default function CeremonyManager() {
   const removerToast = useCerimonias((s) => s.removerToast);
 
   const atual = fila[0];
+  const chave = `${atual?.tipo}-${fila.length}`;
+
+  // cerimônias especializadas (Fase 1); o resto cai no frame genérico
+  let fullscreen: React.ReactNode = null;
+  if (atual?.tipo === "ITEM_DROPPED") fullscreen = <CerimoniaDrop key={chave} item={atual.item} onFechar={dispensar} />;
+  else if (atual?.tipo === "RANK_PROMOTED") fullscreen = <CerimoniaElo key={chave} de={atual.de} para={atual.para} promocao onFechar={dispensar} />;
+  else if (atual?.tipo === "RANK_DEMOTED") fullscreen = <CerimoniaElo key={chave} de={atual.de} para={atual.para} promocao={false} onFechar={dispensar} />;
+  else if (atual?.tipo === "PASS_LEVEL_UP")
+    fullscreen = <CerimoniaPasse key={chave} de={atual.de} para={atual.para} recompensas={atual.recompensas} onFechar={dispensar} />;
+  else if (atual) fullscreen = <CerimoniaFullscreen key={chave} c={atual} onFechar={dispensar} />;
 
   return (
     <>
-      {atual && <CerimoniaFullscreen key={`${atual.tipo}-${fila.length}`} c={atual} onFechar={dispensar} />}
+      {fullscreen}
       {toasts.length > 0 && (
         <div className="pointer-events-none fixed bottom-4 right-4 z-[80] flex flex-col gap-2">
           {toasts.slice(0, 3).map((t, i) => (

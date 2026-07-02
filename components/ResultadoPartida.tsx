@@ -4,6 +4,7 @@ import { type ReactNode, useEffect, useState } from "react";
 import { ATRIBUTOS } from "@/data/config";
 import { GACHA } from "@/data/gacha";
 import type { Attributes, AtributoKey, MatchResult } from "@/engine/types";
+import AnimatedNumber from "./juice/AnimatedNumber";
 
 function corNota(n: number): string {
   if (n >= 8) return "text-ciano";
@@ -60,7 +61,7 @@ export default function ResultadoPartida({
         <Caixa rotulo="LP">
           <span className={`font-pixel text-sm ${lp >= 0 ? "text-ciano" : "text-rosa"}`}>
             {lp >= 0 ? "+" : ""}
-            {lp}
+            <AnimatedNumber valor={lp} deZero />
           </span>
         </Caixa>
         <Caixa rotulo="ELO">

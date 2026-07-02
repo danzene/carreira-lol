@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { PASSE, RECOMPENSAS_FREE, RECOMPENSAS_PREMIUM, type Recompensa } from "@/data/passe";
 import { nivelDoPasse, podeResgatar, ppNoNivel, ppParaProximo, type MissaoAtiva, type PasseState } from "@/engine/passe";
 import { usePasse } from "@/store/passeStore";
+import AnimatedBar from "@/components/juice/AnimatedBar";
 
 const ICONE_REC: Record<Recompensa["tipo"], string> = { coinpoints: "🪙", item: "🎒", ingresso: "🎟️", moldura: "🖼️" };
 
@@ -119,9 +120,7 @@ export default function PassePage() {
             🎟️ {passe.ingressos}
           </span>
         </div>
-        <div className="h-3 overflow-hidden border-2 border-borda bg-fundo">
-          <div className="h-full bg-gradient-to-r from-rosa to-ciano transition-all" style={{ width: `${pctNivel}%` }} />
-        </div>
+        <AnimatedBar pct={pctNivel} alturaClass="h-3" />
         <p className="mt-1 text-right text-[10px] text-suave">{falta > 0 ? `${falta} PP pro próximo nível` : "Nível máximo 👑"}</p>
       </div>
 

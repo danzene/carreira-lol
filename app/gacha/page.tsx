@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import AnimacaoGacha, { type CartaRevelada } from "@/components/AnimacaoGacha";
+import AnimatedNumber from "@/components/juice/AnimatedNumber";
 import {
   GACHA,
   LENDAS,
@@ -36,7 +37,7 @@ export default function GachaPage() {
   const ganharCampeao = useCareer((s) => s.ganharCampeao);
   const equiparLenda = useCareer((s) => s.equiparLenda);
   const perfil = useProfile((s) => s.perfil);
-  const [anim, setAnim] = useState<CartaRevelada[] | null>(null);
+  const [anim, setAnim] = useState<{ cartas: CartaRevelada[]; pity?: { antes: number; depois: number; max: number } } | null>(null);
   const [campeoes, setCampeoes] = useState<Campeao[]>([]);
 
   useEffect(() => {
@@ -102,8 +103,11 @@ export default function GachaPage() {
   }
 
   async function puxar(qtd: number) {
+    const pityAntes = useCareer.getState().career?.pity ?? 0;
     const r = await puxarGacha(qtd);
-    if (r) setAnim(r.map(cartaLenda));
+    if (!r) return;
+    const pityDepois = useCareer.getState().career?.pity ?? 0;
+    setAnim({ cartas: r.map(cartaLenda), pity: { antes: pityAntes, depois: pityDepois, max: GACHA.pity5 } });
   }
 
   async function puxarCampeao() {
@@ -125,16 +129,18 @@ export default function GachaPage() {
     if (!res) return;
     const camp = campMap.get(escolhido.id);
     const rar = raridadeCampeao(escolhido.forcaMetaBase);
-    setAnim([
-      {
-        raridade: rar,
-        cor: infoRaridade(rar).cor,
-        icone: camp?.icone,
-        nome: camp?.nome ?? escolhido.nome,
-        subtitulo: `Maestria ${res.pontos}/100`,
-        badge: res.novo ? "NOVO" : "+MAESTRIA",
-      },
-    ]);
+    setAnim({
+      cartas: [
+        {
+          raridade: rar,
+          cor: infoRaridade(rar).cor,
+          icone: camp?.icone,
+          nome: camp?.nome ?? escolhido.nome,
+          subtitulo: `Maestria ${res.pontos}/100`,
+          badge: res.novo ? "NOVO" : "+MAESTRIA",
+        },
+      ],
+    });
   }
 
   return (
@@ -143,7 +149,7 @@ export default function GachaPage() {
         <div>
           <h1 className="font-pixel text-xs text-ciano">CARREIRA BOOSTER</h1>
           <p className="mt-1 text-[11px] text-suave">
-            🪙 {ps} CoinPoints · pity 5★ {career.pity ?? 0}/{GACHA.pity5}
+            🪙 <AnimatedNumber valor={ps} className="text-texto" /> CoinPoints · pity 5★ {career.pity ?? 0}/{GACHA.pity5}
           </p>
         </div>
         <Link href="/dashboard" className="border-2 border-borda px-3 py-1.5 text-[11px] text-suave transition hover:text-texto">
@@ -310,7 +316,7 @@ export default function GachaPage() {
         )}
       </section>
 
-      {anim && <AnimacaoGacha cartas={anim} onFechar={() => setAnim(null)} />}
+      {anim && <AnimacaoGacha cartas={anim.cartas} pity={anim.pity} onFechar={() => setAnim(null)} />}
     </main>
   );
 }

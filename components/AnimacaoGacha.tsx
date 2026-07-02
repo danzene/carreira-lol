@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { tierDeLenda } from "@/data/juice";
+import { tocarSom, tocarSomTier } from "@/lib/som";
+import AnimatedBar from "@/components/juice/AnimatedBar";
 
 export interface CartaRevelada {
   raridade: number;
@@ -20,6 +23,7 @@ const H = 150;
 const TAU = Math.PI * 2;
 const T_CONV = 0.45;
 const T_PULSE = 0.78;
+const T_QUEBRA = 0.52; // fake-out: momento em que a raridade "quebra" pra real (5★+)
 const T_BURST = 0.78;
 
 interface Part {
@@ -44,13 +48,23 @@ function paletaRaridade(r: number) {
   return { base: "#cfd2e6", sec: "#9a90c0", ter: "#fff7ff", swirl: false, squares: false, stars: false };
 }
 
-export default function AnimacaoGacha({ cartas, onFechar }: { cartas: CartaRevelada[]; onFechar: () => void }) {
+export default function AnimacaoGacha({
+  cartas,
+  onFechar,
+  pity,
+}: {
+  cartas: CartaRevelada[];
+  onFechar: () => void;
+  pity?: { antes: number; depois: number; max: number }; // barra de pity animada pós-reveal
+}) {
   const ref = useRef<HTMLCanvasElement>(null);
   const [revelado, setRevelado] = useState(false);
   const melhorCarta = cartas.reduce((a, b) => (b.raridade > a.raridade ? b : a), cartas[0]);
   const melhor = melhorCarta?.raridade ?? 3;
   const cor = melhorCarta?.cor ?? "#9a90c0";
   const unica = cartas.length === 1;
+  // 10x: revela em ordem de raridade crescente — a melhor carta SEMPRE por último
+  const ordenadas = unica ? cartas : [...cartas].sort((a, b) => a.raridade - b.raridade);
 
   useEffect(() => {
     const canvas = ref.current;
@@ -58,7 +72,11 @@ export default function AnimacaoGacha({ cartas, onFechar }: { cartas: CartaRevel
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.imageSmoothingEnabled = false;
-    const pal = paletaRaridade(melhor);
+    // FAKE-OUT (estilo meteoro dourado): 5★+ começa com cara de comum e "quebra" no meio
+    const fake = melhor >= 5;
+    let pal = paletaRaridade(fake ? 3 : melhor);
+    let quebrou = !fake;
+    let tQuebra = -1;
     const cx = W / 2;
     const cy = H / 2;
     const maxR = 150;
@@ -97,6 +115,19 @@ export default function AnimacaoGacha({ cartas, onFechar }: { cartas: CartaRevel
 
       ctx!.clearRect(0, 0, W, H);
       r(0, 0, W, H, "#0b0617");
+
+      // ===== FAKE-OUT: a animação "quebra" e revela a raridade real =====
+      if (!quebrou && clock >= T_QUEBRA) {
+        quebrou = true;
+        tQuebra = clock;
+        pal = paletaRaridade(melhor);
+        tocarSom("tick");
+      }
+      if (tQuebra >= 0 && clock - tQuebra < 0.22) {
+        ctx!.globalAlpha = Math.max(0, 1 - (clock - tQuebra) / 0.22) * 0.9;
+        r(0, 0, W, H, "#fff7ff");
+        ctx!.globalAlpha = 1;
+      }
 
       // ===== FASE 1 — CONVERGÊNCIA =====
       const convP = Math.min(clock / T_CONV, 1);
@@ -167,6 +198,7 @@ export default function AnimacaoGacha({ cartas, onFechar }: { cartas: CartaRevel
       if (clock >= T_BURST && !estourou) {
         estourou = true;
         setRevelado(true);
+        tocarSomTier(tierDeLenda(melhor));
         const n = melhor >= 6 ? 90 : melhor >= 5 ? 70 : melhor >= 4 ? 50 : 36;
         for (let i = 0; i < n; i++) {
           const a = Math.random() * TAU;
@@ -250,11 +282,13 @@ export default function AnimacaoGacha({ cartas, onFechar }: { cartas: CartaRevel
 
         {revelado && (
           <div className={unica ? "flex justify-center" : "grid grid-cols-3 gap-2 sm:grid-cols-5"}>
-            {cartas.map((c, i) => (
-              <CartaRevel key={i} c={c} delay={i * 0.08} grande={unica} />
+            {ordenadas.map((c, i) => (
+              <CartaRevel key={i} c={c} delay={i * 0.15} grande={unica} tick={!unica} />
             ))}
           </div>
         )}
+
+        {revelado && pity && <BarraPity antes={pity.antes} depois={pity.depois} max={pity.max} />}
 
         <button
           type="button"
@@ -269,8 +303,34 @@ export default function AnimacaoGacha({ cartas, onFechar }: { cartas: CartaRevel
   );
 }
 
-function CartaRevel({ c, delay, grande }: { c: CartaRevelada; delay: number; grande: boolean }) {
+// Barra de pity enchendo animada após a puxada (reset ao tirar 5★ ganha destaque).
+function BarraPity({ antes, depois, max }: { antes: number; depois: number; max: number }) {
+  const [pct, setPct] = useState((antes / max) * 100);
+  const resetou = depois < antes;
+  useEffect(() => {
+    const t = setTimeout(() => setPct((depois / max) * 100), 350);
+    return () => clearTimeout(t);
+  }, [depois, max]);
+  return (
+    <div className="mt-1">
+      <div className="mb-1 flex items-center justify-between text-[10px]">
+        <span className="font-pixel text-suave">PITY 5★</span>
+        <span className={resetou ? "font-pixel text-rosa" : "text-suave"}>
+          {resetou ? "5★! RESETOU ✨" : `${depois}/${max}`}
+        </span>
+      </div>
+      <AnimatedBar pct={pct} alturaClass="h-2" cor="linear-gradient(to right, #9a6bff, #ff2d7e)" />
+    </div>
+  );
+}
+
+function CartaRevel({ c, delay, grande, tick = false }: { c: CartaRevelada; delay: number; grande: boolean; tick?: boolean }) {
   const estilo = { animationDelay: `${delay}s` };
+  useEffect(() => {
+    if (!tick) return;
+    const t = setTimeout(() => tocarSom("tick"), delay * 1000);
+    return () => clearTimeout(t);
+  }, [tick, delay]);
   if (c.cartaImg) {
     return (
       <div className={`carta-entra ${grande ? "w-44 max-w-full" : ""}`} style={estilo}>

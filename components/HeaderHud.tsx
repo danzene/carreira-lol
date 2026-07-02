@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { nivelDoPasse } from "@/engine/passe";
 import { energiaAgora } from "@/engine/tempo";
 import { featureLiberada } from "@/engine/unlocks";
-import { alternarMute, somMutado } from "@/lib/som";
+import { alternarMute, definirVolumeSom, somMutado, tocarSom, volumeSom } from "@/lib/som";
 import { useCareer } from "@/store/careerStore";
 import { usePasse } from "@/store/passeStore";
 import { useProfile } from "@/store/profileStore";
@@ -21,8 +21,11 @@ export default function HeaderHud() {
 
   const [agora, setAgora] = useState(() => Date.now());
   const [mudo, setMudo] = useState(false);
+  const [volume, setVolume] = useState(50);
+  const [painelSom, setPainelSom] = useState(false);
   useEffect(() => {
     setMudo(somMutado());
+    setVolume(Math.round(volumeSom() * 100));
     const id = setInterval(() => setAgora(Date.now()), 5000);
     return () => clearInterval(id);
   }, []);
@@ -50,15 +53,54 @@ export default function HeaderHud() {
             </Link>
           )}
         </div>
-        <button
-          type="button"
-          onClick={() => setMudo(alternarMute())}
-          className="border border-borda px-1.5 py-0.5 text-[11px] text-suave transition hover:text-texto"
-          aria-label="Alternar som"
-          title={mudo ? "Som desligado" : "Som ligado"}
-        >
-          {mudo ? "🔇" : "🔊"}
-        </button>
+        {/* som: clique abre o painel com barra de volume */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setPainelSom((p) => !p)}
+            className="border border-borda px-1.5 py-0.5 text-[11px] text-suave transition hover:text-texto"
+            aria-label="Ajustes de som"
+            title="Som e volume"
+          >
+            {mudo || volume === 0 ? "🔇" : volume < 50 ? "🔉" : "🔊"}
+          </button>
+          {painelSom && (
+            <div className="absolute right-0 top-8 z-50 w-44 border-2 border-borda bg-painel p-3 shadow-lg">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="font-pixel text-[9px] text-suave">VOLUME</span>
+                <span className="font-pixel text-[9px] text-ciano">{mudo ? "MUDO" : `${volume}%`}</span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={volume}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  setVolume(v);
+                  definirVolumeSom(v / 100);
+                }}
+                onMouseUp={() => tocarSom("tick")}
+                onTouchEnd={() => tocarSom("tick")}
+                className="w-full accent-[#19e6e0]"
+                aria-label="Volume dos efeitos"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const m = alternarMute();
+                  setMudo(m);
+                  if (!m) tocarSom("tick");
+                }}
+                className={`mt-2 w-full border-2 py-1 font-pixel text-[9px] transition ${
+                  mudo ? "border-rosa text-rosa hover:bg-rosa hover:text-fundo" : "border-borda text-suave hover:text-texto"
+                }`}
+              >
+                {mudo ? "🔇 ATIVAR SOM" : "🔇 SILENCIAR"}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

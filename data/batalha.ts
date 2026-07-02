@@ -86,7 +86,8 @@ export function pontoNaRota(pontos: P[], prog: number): Ponto {
 // Posição "de casa" do combatente (onde fica na fase de rotas).
 export function posicaoCasa(time: "azul" | "vermelho", rota: Role): Ponto {
   if (rota === "JUNGLE") {
-    return time === "azul" ? { x: 0.37, y: 0.61 } : { x: 0.63, y: 0.39 };
+    // junglers ficam nos acampamentos da própria selva (não em cima da lane)
+    return time === "azul" ? { x: 0.3, y: 0.52 } : { x: 0.7, y: 0.48 };
   }
   const lane = laneDeRota(rota);
   // SUPPORT fica um pouco atrás do ADC na bot.

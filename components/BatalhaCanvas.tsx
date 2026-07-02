@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BATALHA, LANES, type Lane, type Ponto, pontoNaRota, posicaoCasa } from "@/data/batalha";
+import { criarRng } from "@/engine/rng";
 import type { Combatente, RoteiroBatalha } from "@/engine/batalha";
 import type { Role } from "@/engine/types";
 
@@ -14,15 +15,31 @@ const COR = {
   vermelho: "#ff2d7e",
   vermelhoEsc: "#9c1b4e",
   pele: "#e8c39e",
-  rio: "#1d5f7e",
-  lane: "#5c4d2e",
-  grama: "#122c1c",
   ouro: "#ffd34d",
   texto: "#ece8ff",
   suave: "#9a90c0",
   dragao: "#e8762b",
   barao: "#9a6bff",
   branco: "#fff7ff",
+  // cenário (Rift à noite: verdes escuros + água neon, mantendo a identidade)
+  terreno: "#11241a",
+  terreno2: "#152b1f",
+  jungle: "#0a180f",
+  jungle2: "#0d1e13",
+  arvore: "#0f3320",
+  arvoreClara: "#1a4a2f",
+  tronco: "#3d2b1a",
+  lane: "#5c4d2e",
+  laneEsc: "#43351f",
+  laneLinha: "#7a6a45",
+  agua: "#123a52",
+  agua2: "#16465f",
+  aguaClara: "#7fd4ff",
+  baseAzul: "#0d2b31",
+  baseVermelha: "#2b0d1e",
+  pedra: "#3a3050",
+  pedraEsc: "#241c40",
+  critter: "#8a8a5a",
 };
 
 type EquipeCor = { corpo: string; escuro: string };
@@ -91,6 +108,7 @@ interface Estado {
   proxWave: number;
   proxCs: number;
   foco: { ativo: boolean; local: Ponto; ate: number; ids: Set<string> };
+  pit: { dragao: number; barao: number }; // clock em que a criatura RENASCE (0 = viva)
   fim: boolean;
 }
 
@@ -197,6 +215,7 @@ export default function BatalhaCanvas({
       proxWave: 0,
       proxCs: 0,
       foco: { ativo: false, local: { x: 0.5, y: 0.5 }, ate: 0, ids: new Set() },
+      pit: { dragao: 0, barao: 0 },
       fim: false,
     };
 
@@ -258,6 +277,7 @@ export default function BatalhaCanvas({
           break;
         case "objetivo": {
           est.foco = { ativo: true, local, ate: est.clock + 2.6, ids: new Set(vivos().map((c) => c.comb.id)) };
+          if (ev.objetivo) est.pit[ev.objetivo] = est.clock + 40; // criatura some e renasce depois
           const cor = ev.objetivo === "barao" ? COR.barao : COR.dragao;
           flutuante(local, ev.objetivo === "barao" ? "BARÃO" : "DRAGÃO", cor, 8);
           est.efeitos.push({ tipo: "explosao", x: local.x, y: local.y, cor, vida: 1.2, max: 1.2, raio: 0.16 });
@@ -462,89 +482,284 @@ export default function BatalhaCanvas({
       ctx!.fillText(txt, Math.round(x), Math.round(y));
     }
 
-    function desenharMapa() {
-      // gramado base
-      r(0, hud, W, H - hud, COR.fundo);
-      // bases (triângulos de canto)
-      ctx!.fillStyle = "rgba(25,230,224,0.10)";
-      ctx!.beginPath();
-      ctx!.moveTo(...S({ x: 0, y: 0.55 }));
-      ctx!.lineTo(...S({ x: 0.45, y: 1 }));
-      ctx!.lineTo(...S({ x: 0, y: 1 }));
-      ctx!.closePath();
-      ctx!.fill();
-      ctx!.fillStyle = "rgba(255,45,126,0.10)";
-      ctx!.beginPath();
-      ctx!.moveTo(...S({ x: 1, y: 0.45 }));
-      ctx!.lineTo(...S({ x: 0.55, y: 0 }));
-      ctx!.lineTo(...S({ x: 1, y: 0 }));
-      ctx!.closePath();
-      ctx!.fill();
-      // rio (faixa diagonal)
-      const w = 0.1;
-      ctx!.fillStyle = "rgba(29,95,126,0.55)";
-      ctx!.beginPath();
-      ctx!.moveTo(...S({ x: 0, y: 1 - w }));
-      ctx!.lineTo(...S({ x: 1 - w, y: 0 }));
-      ctx!.lineTo(...S({ x: 1, y: w }));
-      ctx!.lineTo(...S({ x: w, y: 1 }));
-      ctx!.closePath();
-      ctx!.fill();
-      // lanes
-      ctx!.strokeStyle = "rgba(92,77,46,0.7)";
-      ctx!.lineWidth = 5;
-      ctx!.lineCap = "round";
-      ctx!.lineJoin = "round";
-      (["top", "mid", "bot"] as Lane[]).forEach((lane) => {
-        ctx!.beginPath();
-        LANES[lane].forEach((p, i) => {
-          const s = S({ x: p[0], y: p[1] });
-          if (i === 0) ctx!.moveTo(...s);
-          else ctx!.lineTo(...s);
+    // ===== CENÁRIO ESTÁTICO — pré-renderizado UMA vez (jungle, rio, lanes, bases) =====
+    // O rio corre na diagonal principal (y = x), separando o lado azul do vermelho e
+    // passando pelos pits do Barão (alto) e Dragão (baixo) — como na Rift de verdade.
+    const cena = document.createElement("canvas");
+    cena.width = W;
+    cena.height = H;
+    {
+      const c2 = cena.getContext("2d")!;
+      c2.imageSmoothingEnabled = false;
+      const rngC = criarRng(0x51f7);
+      const rc = (x: number, y: number, w2: number, h2: number, cor: string) => {
+        c2.fillStyle = cor;
+        c2.fillRect(Math.round(x), Math.round(y), Math.round(w2), Math.round(h2));
+      };
+      const N = (x: number, y: number): [number, number] => [m + x * pfW, hud + m + y * pfH];
+
+      const dSeg = (px: number, py: number, ax: number, ay: number, bx: number, by: number) => {
+        const dx = bx - ax;
+        const dy = by - ay;
+        const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy || 1)));
+        return Math.hypot(px - (ax + dx * t), py - (ay + dy * t));
+      };
+      const dLane = (x: number, y: number) => {
+        let d = 9;
+        (["top", "mid", "bot"] as Lane[]).forEach((lane) => {
+          const pts = LANES[lane];
+          for (let i = 0; i < pts.length - 1; i++) d = Math.min(d, dSeg(x, y, pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1]));
         });
-        ctx!.stroke();
+        return d;
+      };
+      const wRio = (x: number, y: number) => {
+        const s = (x + y) / 2; // posição ao longo da diagonal
+        return 0.04 + Math.sin(s * Math.PI) * 0.02 + Math.sin(s * 21) * 0.007;
+      };
+      const noRio = (x: number, y: number) => {
+        const s = (x + y) / 2;
+        return Math.abs(y - x) / Math.SQRT2 < wRio(x, y) && s > 0.08 && s < 0.92;
+      };
+      const dBaseAzul = (x: number, y: number) => Math.hypot(x - 0.08, y - 0.92);
+      const dBaseVerm = (x: number, y: number) => Math.hypot(x - 0.92, y - 0.08);
+
+      // terreno célula a célula (2px) com dithering — mata fechada longe das rotas
+      const passo = 2;
+      for (let py = 0; py < H; py += passo) {
+        for (let px2 = 0; px2 < W; px2 += passo) {
+          const x = (px2 + 1 - m) / pfW;
+          const y = (py + 1 - hud - m) / pfH;
+          const par = ((px2 + py) / passo) % 4 === 0;
+          let cor: string;
+          if (x < -0.005 || x > 1.005 || y < -0.005 || y > 1.005) {
+            cor = par ? COR.pedraEsc : COR.fundo; // muralha externa
+          } else if (noRio(x, y)) {
+            cor = par ? COR.agua2 : COR.agua;
+          } else if (dBaseAzul(x, y) < 0.14) {
+            cor = COR.baseAzul;
+          } else if (dBaseVerm(x, y) < 0.14) {
+            cor = COR.baseVermelha;
+          } else {
+            const dl = dLane(x, y);
+            if (dl < 0.028) cor = COR.lane;
+            else if (dl < 0.04) cor = COR.laneEsc;
+            else if (dl > 0.085) cor = par ? COR.jungle2 : COR.jungle; // jungle
+            else cor = par ? COR.terreno2 : COR.terreno;
+          }
+          rc(px2, py, passo, passo, cor);
+        }
+      }
+
+      // linha central das lanes (trilha batida)
+      c2.strokeStyle = COR.laneLinha;
+      c2.lineWidth = 1;
+      c2.setLineDash([3, 3]);
+      (["top", "mid", "bot"] as Lane[]).forEach((lane) => {
+        c2.beginPath();
+        LANES[lane].forEach((p, i) => {
+          const s = N(p[0], p[1]);
+          if (i === 0) c2.moveTo(...s);
+          else c2.lineTo(...s);
+        });
+        c2.stroke();
       });
-      // pits
-      const dr = S(BATALHA.dragao);
-      r(dr[0] - 5, dr[1] - 5, 10, 10, "rgba(232,118,43,0.25)");
-      const ba = S(BATALHA.barao);
-      r(ba[0] - 5, ba[1] - 5, 10, 10, "rgba(154,107,255,0.25)");
+      c2.setLineDash([]);
+
+      // margem do rio (espuma clara)
+      for (let i = 0; i < 60; i++) {
+        const s = 0.1 + rngC() * 0.8;
+        const lado = rngC() > 0.5 ? 1 : -1;
+        const off = wRio(s, s) * Math.SQRT2 * lado;
+        const [x, y] = N(s + off * 0.7, s - off * 0.7);
+        rc(x, y, 1, 1, rngC() > 0.6 ? COR.aguaClara : COR.agua2);
+      }
+
+      // árvores e moitas na jungle (rejeição com PRNG seedado)
+      let plantadas = 0;
+      for (let tent = 0; tent < 700 && plantadas < 65; tent++) {
+        const x = rngC();
+        const y = rngC();
+        if (noRio(x, y) || dLane(x, y) < 0.085 || dBaseAzul(x, y) < 0.17 || dBaseVerm(x, y) < 0.17) continue;
+        const [px2, py] = N(x, y);
+        if (rngC() > 0.35) {
+          // pinheiro pixel
+          rc(px2, py + 2, 1, 2, COR.tronco);
+          rc(px2 - 2, py, 5, 2, COR.arvore);
+          rc(px2 - 1, py - 2, 3, 2, COR.arvore);
+          rc(px2, py - 3, 1, 1, COR.arvoreClara);
+        } else {
+          // moita
+          rc(px2 - 2, py, 4, 2, COR.arvore);
+          rc(px2 - 1, py - 1, 2, 1, COR.arvoreClara);
+        }
+        plantadas++;
+      }
+
+      // acampamentos de jungle (clareira + tocas) — espelhados nos dois lados do rio
+      const camps: [number, number][] = [
+        [0.3, 0.52],
+        [0.18, 0.4],
+        [0.48, 0.7],
+        [0.7, 0.48],
+        [0.82, 0.6],
+        [0.52, 0.3],
+      ];
+      for (const [cx, cy] of camps) {
+        const [x, y] = N(cx, cy);
+        c2.fillStyle = "rgba(0,0,0,0.30)";
+        c2.beginPath();
+        c2.ellipse(x, y + 1, 6, 3, 0, 0, Math.PI * 2);
+        c2.fill();
+        rc(x - 4, y - 1, 2, 2, COR.pedra);
+        rc(x + 3, y, 2, 2, COR.pedra);
+      }
+
+      // pits escavados (Barão em cima, Dragão embaixo)
+      for (const [p, cor] of [
+        [BATALHA.barao, COR.barao],
+        [BATALHA.dragao, COR.dragao],
+      ] as [Ponto, string][]) {
+        const [x, y] = N(p.x, p.y);
+        c2.fillStyle = "rgba(0,0,0,0.45)";
+        c2.beginPath();
+        c2.ellipse(x, y, 10, 6, 0, 0, Math.PI * 2);
+        c2.fill();
+        c2.strokeStyle = COR.pedra;
+        c2.lineWidth = 1;
+        c2.beginPath();
+        c2.ellipse(x, y, 10, 6, 0, 0, Math.PI * 2);
+        c2.stroke();
+        rc(x - 9, y - 2, 2, 2, cor); // runa na borda do pit
+        rc(x + 8, y + 1, 2, 2, cor);
+      }
+
+      // fontes das bases (poço com brilho do time)
+      for (const [p, cor] of [
+        [{ x: 0.05, y: 0.95 }, COR.azul],
+        [{ x: 0.95, y: 0.05 }, COR.vermelho],
+      ] as [Ponto, string][]) {
+        const [x, y] = N(p.x, p.y);
+        c2.fillStyle = "rgba(0,0,0,0.4)";
+        c2.beginPath();
+        c2.ellipse(x, y, 6, 3, 0, 0, Math.PI * 2);
+        c2.fill();
+        rc(x - 2, y - 1, 4, 2, cor);
+        rc(x - 1, y - 2, 2, 1, COR.branco);
+      }
+
+      // vinheta (escurece as bordas — foco no centro)
+      const g = c2.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.78);
+      g.addColorStop(0, "rgba(11,6,23,0)");
+      g.addColorStop(1, "rgba(11,6,23,0.5)");
+      c2.fillStyle = g;
+      c2.fillRect(0, 0, W, H);
+    }
+
+    function desenharMapa() {
+      ctx!.drawImage(cena, 0, 0);
+
+      // brilho animado do rio (cintilância determinística pelo relógio)
+      for (let i = 0; i < 12; i++) {
+        const s = 0.12 + i * 0.066;
+        const off = Math.sin(i * 3.7) * 0.018;
+        const a = 0.25 + 0.55 * Math.sin(est.clock * 1.8 + i * 1.9);
+        if (a > 0.45) {
+          const [x, y] = S({ x: s + off, y: s - off });
+          ctx!.globalAlpha = Math.min(0.8, a);
+          r(x, y, i % 3 === 0 ? 2 : 1, 1, COR.aguaClara);
+          ctx!.globalAlpha = 1;
+        }
+      }
+
+      // criaturas dos pits (somem quando o objetivo é tomado; renascem depois)
+      if (est.clock >= est.pit.dragao) desenharDragao();
+      if (est.clock >= est.pit.barao) desenharBarao();
+
       // torres
       for (const t of est.torres) {
         const [x, y] = S(t);
         const cc = corDe(t.time);
         if (t.viva) {
-          r(x - 2, y - 2, 4, 6, cc.escuro);
-          r(x - 2, y - 4, 4, 3, cc.corpo);
-          r(x - 1, y - 5, 2, 1, COR.branco);
+          ctx!.fillStyle = "rgba(0,0,0,0.35)";
+          ctx!.beginPath();
+          ctx!.ellipse(x, y + 2, 4.5, 1.6, 0, 0, Math.PI * 2);
+          ctx!.fill();
+          r(x - 3, y, 6, 2, COR.pedra); // base de pedra
+          r(x - 2, y - 4, 4, 4, cc.escuro); // corpo
+          r(x - 2, y - 4, 1, 4, COR.pedraEsc); // sombra lateral
+          r(x - 1, y - 6, 2, 2, cc.corpo); // cristal
+          if (Math.sin(est.clock * 3 + x * 0.7) > 0.55) r(x - 1, y - 7, 1, 1, COR.branco); // pulso
         } else {
-          r(x - 2, y, 4, 2, "#3a3550");
-          r(x - 1, y - 1, 2, 1, "#2a2540");
+          r(x - 3, y, 6, 2, COR.pedraEsc); // escombros
+          r(x - 2, y - 1, 2, 1, COR.pedra);
+          r(x + 1, y - 2, 1, 2, COR.pedra);
         }
       }
+
       // nexus
       desenharNexus(BATALHA.nexusAzul, "azul", est.nexus.azul);
       desenharNexus(BATALHA.nexusVermelho, "vermelho", est.nexus.vermelho);
     }
 
+    function desenharDragao() {
+      const [x, y0] = S(BATALHA.dragao);
+      const y = y0 + Math.sin(est.clock * 2.2) * 0.8;
+      const asa = Math.sin(est.clock * 6) > 0 ? 1 : 0;
+      r(x - 3, y - 3, 6, 3, COR.dragao); // corpo
+      r(x - 5, y - 2, 2, 1, COR.dragao); // cauda
+      r(x + 3, y - 4, 2, 2, COR.dragao); // cabeça
+      r(x + 4, y - 4, 1, 1, COR.branco); // olho
+      r(x - 2, y - 5 - asa, 3, 2, "#f2a35c"); // asa batendo
+      if (Math.sin(est.clock * 1.4) > 0.75) r(x + 5, y - 3, 1, 1, COR.ouro); // baforada
+    }
+
+    function desenharBarao() {
+      const [x, y0] = S(BATALHA.barao);
+      const y = y0 + Math.sin(est.clock * 1.6) * 0.7;
+      r(x - 5, y - 1, 3, 3, "#6b48b8"); // cauda
+      r(x - 2, y - 3, 3, 4, COR.barao); // meio
+      r(x + 1, y - 5, 3, 5, COR.barao); // torso erguido
+      r(x + 1, y - 7, 1, 2, "#c9adff"); // espinhos
+      r(x + 3, y - 7, 1, 2, "#c9adff");
+      r(x + 2, y - 5, 1, 1, COR.branco); // olho
+    }
+
     function desenharNexus(p: Ponto, time: "azul" | "vermelho", vivo: boolean) {
       const [x, y] = S(p);
       if (!vivo) {
-        r(x - 4, y - 1, 8, 3, "#2a2540");
+        r(x - 4, y - 1, 8, 3, COR.pedraEsc);
+        r(x - 2, y - 2, 2, 1, COR.pedra);
         return;
       }
       const cc = corDe(time);
+      ctx!.fillStyle = "rgba(0,0,0,0.4)";
+      ctx!.beginPath();
+      ctx!.ellipse(x, y + 2, 6, 2, 0, 0, Math.PI * 2);
+      ctx!.fill();
+      r(x - 4, y + 1, 8, 2, COR.pedraEsc); // plataforma
       const pulso = 1 + Math.sin(est.clock * 4) * 0.15;
-      const s = 4 * pulso;
+      const s = 5 * pulso;
       ctx!.fillStyle = cc.escuro;
       ctx!.beginPath();
       ctx!.moveTo(x, y - s);
-      ctx!.lineTo(x + s, y);
-      ctx!.lineTo(x, y + s);
-      ctx!.lineTo(x - s, y);
+      ctx!.lineTo(x + s * 0.7, y);
+      ctx!.lineTo(x, y + s * 0.6);
+      ctx!.lineTo(x - s * 0.7, y);
       ctx!.closePath();
       ctx!.fill();
-      r(x - 1, y - 1, 2, 2, COR.branco);
+      const si = s - 2;
+      ctx!.fillStyle = cc.corpo;
+      ctx!.beginPath();
+      ctx!.moveTo(x, y - si);
+      ctx!.lineTo(x + si * 0.7, y);
+      ctx!.lineTo(x, y + si * 0.6);
+      ctx!.lineTo(x - si * 0.7, y);
+      ctx!.closePath();
+      ctx!.fill();
+      r(x - 1, y - 1, 2, 2, COR.branco); // núcleo
+      // energia orbitando
+      const ang = est.clock * 2 + (time === "azul" ? 0 : Math.PI);
+      r(x + Math.cos(ang) * 7, y + Math.sin(ang) * 3, 1, 1, cc.corpo);
     }
 
     function desenharMinions() {

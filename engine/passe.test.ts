@@ -7,6 +7,7 @@ import {
   gerarSemanais,
   marcarResgatada,
   nivelDoPasse,
+  normalizarPasse,
   podeResgatar,
   ppParaProximo,
   progredirPasse,
@@ -70,6 +71,24 @@ describe("passe de batalha", () => {
     expect(r.diariasEm).toBe(26 * 3600 * 1000);
     expect(r.semanaisEm).toBe(0); // < 7 dias
     expect(renovarMissoes(p, 9, DIA_MS - 1)).toBe(p); // < 24h → nada muda
+  });
+
+  it("estado PARCIAL do servidor não explode (crash de produção)", () => {
+    // jsonb salvo só com {premium:true} — sem arrays nem pp
+    const parcial = { premium: true } as Partial<PasseState>;
+    const p = normalizarPasse(parcial, 1, 1000);
+    expect(p.premium).toBe(true);
+    expect(p.resgatadasFree).toEqual([]);
+    expect(p.resgatadasPremium).toEqual([]);
+    expect(p.diarias.length).toBeGreaterThan(0);
+    expect(p.pp).toBe(0);
+    // podeResgatar defensivo mesmo SEM normalizar
+    const quebrado = { pp: 1000, premium: true } as PasseState;
+    expect(() => podeResgatar(quebrado, recompensaDe(10, "free")!)).not.toThrow();
+    expect(podeResgatar(quebrado, recompensaDe(10, "free")!)).toBe(true);
+    // jsonb vazio {} e null também normalizam
+    expect(normalizarPasse({}, 1, 0).resgatadasFree).toEqual([]);
+    expect(normalizarPasse(null, 1, 0).semanais.length).toBeGreaterThan(0);
   });
 
   it("resgate exige nível e não repete", () => {

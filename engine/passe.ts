@@ -68,6 +68,25 @@ export function criarPasse(seed: number, agora: number, temporadaId = "s1"): Pas
   };
 }
 
+// Normaliza um estado vindo do servidor (jsonb pode estar vazio/parcial/antigo):
+// garante TODOS os campos com defaults sãos — nunca deixa array/número undefined.
+export function normalizarPasse(bruto: Partial<PasseState> | null | undefined, seed: number, agora: number): PasseState {
+  const base = criarPasse(seed, agora, bruto?.temporadaId ?? "s1");
+  if (!bruto) return base;
+  return {
+    temporadaId: bruto.temporadaId ?? base.temporadaId,
+    pp: typeof bruto.pp === "number" ? bruto.pp : 0,
+    premium: bruto.premium === true,
+    resgatadasFree: Array.isArray(bruto.resgatadasFree) ? bruto.resgatadasFree : [],
+    resgatadasPremium: Array.isArray(bruto.resgatadasPremium) ? bruto.resgatadasPremium : [],
+    diarias: Array.isArray(bruto.diarias) && bruto.diarias.length > 0 ? bruto.diarias : base.diarias,
+    diariasEm: typeof bruto.diariasEm === "number" ? bruto.diariasEm : agora,
+    semanais: Array.isArray(bruto.semanais) && bruto.semanais.length > 0 ? bruto.semanais : base.semanais,
+    semanaisEm: typeof bruto.semanaisEm === "number" ? bruto.semanaisEm : agora,
+    ingressos: typeof bruto.ingressos === "number" ? bruto.ingressos : 0,
+  };
+}
+
 // Renova diárias (24h) e semanais (7d) vencidas. Devolve o mesmo passe se nada venceu.
 export function renovarMissoes(passe: PasseState, seed: number, agora: number): PasseState {
   let p = passe;
@@ -101,14 +120,15 @@ export function progredirPasse(passe: PasseState, tipo: TipoMissao, qtd = 1): Pa
 }
 
 export function podeResgatar(passe: PasseState, r: Recompensa): boolean {
-  if (nivelDoPasse(passe.pp) < r.nivel) return false;
+  if (nivelDoPasse(passe.pp ?? 0) < r.nivel) return false;
   if (r.trilha === "premium" && !passe.premium) return false;
-  const ja = r.trilha === "free" ? passe.resgatadasFree : passe.resgatadasPremium;
+  // defensivo: estado vindo do servidor pode estar parcial (jsonb antigo)
+  const ja = (r.trilha === "free" ? passe.resgatadasFree : passe.resgatadasPremium) ?? [];
   return !ja.includes(r.nivel);
 }
 
 export function marcarResgatada(passe: PasseState, r: Recompensa): PasseState {
   return r.trilha === "free"
-    ? { ...passe, resgatadasFree: [...passe.resgatadasFree, r.nivel] }
-    : { ...passe, resgatadasPremium: [...passe.resgatadasPremium, r.nivel] };
+    ? { ...passe, resgatadasFree: [...(passe.resgatadasFree ?? []), r.nivel] }
+    : { ...passe, resgatadasPremium: [...(passe.resgatadasPremium ?? []), r.nivel] };
 }

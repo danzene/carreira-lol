@@ -3,8 +3,8 @@ import { SLOTS_GEAR } from "@/data/itens";
 import type { Recompensa, TipoMissao } from "@/data/passe";
 import { gerarItem } from "@/engine/itens";
 import {
-  criarPasse,
   marcarResgatada,
+  normalizarPasse,
   podeResgatar,
   progredirPasse,
   renovarMissoes,
@@ -70,9 +70,10 @@ export const usePasse = create<PasseStore>((set, get) => {
         }
         const { data } = await sb.from("battle_pass").select("estado").eq("user_id", u.user.id).maybeSingle();
         const agora = Date.now();
-        const salvo = data?.estado as PasseState | undefined;
+        const salvo = data?.estado as Partial<PasseState> | undefined;
         const criou = !salvo || Object.keys(salvo).length === 0;
-        const base = criou ? criarPasse(seedAgora(), agora) : salvo;
+        // normaliza SEMPRE: jsonb do servidor pode estar vazio, parcial ou de versão antiga
+        const base = normalizarPasse(salvo, seedAgora(), agora);
         const passe = renovarMissoes(base, seedAgora(), agora);
         set({ passe, carregando: false });
         if (criou || passe !== base) persistir();

@@ -8,6 +8,6 @@ export const LOJA = {
   cargaCampeonato: { custo: 300 }, // +1 carga de partida de campeonato (respeita o teto)
   escudoStreak: { custo: 400 }, // repõe o escudo semanal do streak (se já consumido)
   preparacao: { custo: 250, comp: 3, counterLane: 1 }, // estudo do adversário: buff da PRÓXIMA partida
-  vodReview: { custo: 280, maestria: 6 }, // +maestria num campeão da pool À ESCOLHA
-  aulaParticular: { custo: 500, xp: 1.5 }, // +atributo à escolha SEM gastar energia
+  vodReview: { custo: 280, maestria: 1 }, // +maestria num campeão da pool À ESCOLHA
+  aulaParticular: { custo: 1000, xp: 1 }, // +atributo à escolha SEM gastar energia
 } as const;

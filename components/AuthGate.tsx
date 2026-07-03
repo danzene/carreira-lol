@@ -5,8 +5,11 @@ import { useAuth } from "@/store/authStore";
 import { useProfile } from "@/store/profileStore";
 import { useInventory } from "@/store/inventoryStore";
 import { usePasse } from "@/store/passeStore";
+import { useLiveOps } from "@/store/liveopsStore";
 import EscolherNick from "./EscolherNick";
 import TelaLogin from "./TelaLogin";
+import TelaBanido from "./TelaBanido";
+import MensagemDoDia from "./MensagemDoDia";
 
 function Centro({ children }: { children: ReactNode }) {
   return <main className="flex min-h-screen items-center justify-center px-6 text-center text-sm text-zinc-500">{children}</main>;
@@ -27,10 +30,16 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   const limparInv = useInventory((s) => s.limpar);
   const carregarPasse = usePasse((s) => s.carregar);
   const limparPasse = usePasse((s) => s.limpar);
+  const carregarLiveOps = useLiveOps((s) => s.carregar);
 
   useEffect(() => {
     init();
   }, [init]);
+
+  // Live-ops (feature flags + mensagem do dia) é público — carrega já no boot.
+  useEffect(() => {
+    void carregarLiveOps();
+  }, [carregarLiveOps]);
 
   useEffect(() => {
     if (user) {
@@ -55,6 +64,12 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   }
   if (!user) return <TelaLogin />;
   if (carregandoPerfil) return <Centro>Carregando…</Centro>;
+  if (perfil?.banned_at) return <TelaBanido />;
   if (!perfil) return <EscolherNick />;
-  return <>{children}</>;
+  return (
+    <>
+      <MensagemDoDia />
+      {children}
+    </>
+  );
 }

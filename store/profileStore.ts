@@ -9,6 +9,7 @@ export interface Perfil {
   nick: string;
   avatar_frame: string | null;
   coinpoints: number;
+  banned_at: string | null;
 }
 
 interface ProfileStore {
@@ -39,7 +40,7 @@ export const useProfile = create<ProfileStore>((set, get) => ({
       }
       const { data } = await sb
         .from("profiles")
-        .select("nick, avatar_frame, coinpoints")
+        .select("nick, avatar_frame, coinpoints, banned_at")
         .eq("id", u.user.id)
         .maybeSingle();
       set({ perfil: (data as Perfil) ?? null, carregando: false });

@@ -20,6 +20,7 @@ const SECOES = [
   { href: "/admin/jogadores", rotulo: "Jogadores", icone: "👤" },
   { href: "/admin/integridade", rotulo: "Integridade", icone: "🛡️" },
   { href: "/admin/liveops", rotulo: "Live-Ops", icone: "🎛️" },
+  { href: "/admin/auditoria", rotulo: "Auditoria", icone: "📜" },
 ];
 
 function BarraPeriodo() {

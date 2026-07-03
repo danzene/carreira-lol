@@ -194,3 +194,13 @@ export function Carregando() {
 export function AvisoDados({ children }: { children: ReactNode }) {
   return <p className="mb-2 rounded border border-amber-700/40 bg-amber-900/20 px-2 py-1 text-[11px] text-amber-300/90">ⓘ {children}</p>;
 }
+
+// Datas: guardadas em UTC no banco; sempre exibidas em America/Sao_Paulo.
+export function fmtDataHora(iso?: string | null): string {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+}
+export function fmtData(iso?: string | null): string {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
+}

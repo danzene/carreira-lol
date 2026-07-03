@@ -30,8 +30,17 @@ import { buscarCampeoes, type Campeao } from "@/lib/ddragon";
 import { chaveDia, puxadaGratisDisponivel } from "@/engine/diario";
 import { useCareer } from "@/store/careerStore";
 import { useProfile } from "@/store/profileStore";
+import FeatureGate from "@/components/FeatureGate";
 
 export default function GachaPage() {
+  return (
+    <FeatureGate flag="gacha" titulo="Gacha em manutenção">
+      <GachaPageConteudo />
+    </FeatureGate>
+  );
+}
+
+function GachaPageConteudo() {
   const router = useRouter();
   const career = useCareer((s) => s.career);
   const recarregar = useCareer((s) => s.recarregarAtual);

@@ -1,6 +1,8 @@
 import { corElo } from "@/data/juice";
 import { criarRng } from "@/engine/rng";
 import { rastrear } from "./telemetria";
+import { useLiveOps } from "@/store/liveopsStore";
+import { featureLigada } from "./liveops";
 
 // 🖼️ Cartão compartilhável: desenha um PNG 1200×630 (link-preview friendly) em canvas
 // offscreen na identidade do jogo — pixel art, moldura do elo, marco em destaque e a
@@ -122,7 +124,9 @@ export async function gerarCartaoPng(d: DadosCartao): Promise<Blob | null> {
 }
 
 // Compartilha: Web Share API com arquivo (mobile) → fallback download + texto no clipboard.
-export async function compartilharCartao(d: DadosCartao, textoPronto: string): Promise<"share" | "download" | null> {
+export async function compartilharCartao(d: DadosCartao, textoPronto: string): Promise<"share" | "download" | "off" | null> {
+  // Kill switch de live-ops (fail-open: só bloqueia com flag explicitamente false).
+  if (!featureLigada(useLiveOps.getState().config, "compartilhamento")) return "off";
   const blob = await gerarCartaoPng(d);
   if (!blob) return null;
   const arquivo = new File([blob], "carreira-lol.png", { type: "image/png" });

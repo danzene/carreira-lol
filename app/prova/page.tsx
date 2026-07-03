@@ -16,6 +16,7 @@ import { compartilharCartao } from "@/lib/cartao";
 import { checarTopoSemana, useProva } from "@/store/provaStore";
 import { useCareer } from "@/store/careerStore";
 import { useProfile } from "@/store/profileStore";
+import FeatureGate from "@/components/FeatureGate";
 
 function fmtCountdown(ms: number): string {
   const h = Math.floor(ms / 3600000);
@@ -26,6 +27,14 @@ function fmtCountdown(ms: number): string {
 }
 
 export default function ProvaPage() {
+  return (
+    <FeatureGate flag="prova_semanal" titulo="Prova semanal em manutenção">
+      <ProvaPageConteudo />
+    </FeatureGate>
+  );
+}
+
+function ProvaPageConteudo() {
   const router = useRouter();
   const career = useCareer((s) => s.career);
   const recarregar = useCareer((s) => s.recarregarAtual);

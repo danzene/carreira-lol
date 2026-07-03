@@ -7,6 +7,7 @@ import { msAteProximaTemporada, temporadaDuelo, tierDuelo } from "@/engine/tempo
 import { useCareer } from "@/store/careerStore";
 import { useProfile } from "@/store/profileStore";
 import { useDuelo, type LadderLinha } from "@/store/dueloStore";
+import FeatureGate from "@/components/FeatureGate";
 
 function LinhaLado({ lado, destaque }: { lado: LadoDuelo; destaque: boolean }) {
   return (
@@ -54,6 +55,14 @@ function ResultadoDuelo({ res, onFechar }: { res: DueloResult; onFechar: () => v
 }
 
 export default function OnlinePage() {
+  return (
+    <FeatureGate flag="duelo_online" titulo="Duelo online em manutenção">
+      <OnlinePageConteudo />
+    </FeatureGate>
+  );
+}
+
+function OnlinePageConteudo() {
   const career = useCareer((s) => s.career);
   const recarregarAtual = useCareer((s) => s.recarregarAtual);
   const nick = useProfile((s) => s.perfil?.nick ?? "—");

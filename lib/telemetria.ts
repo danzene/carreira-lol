@@ -22,7 +22,11 @@ function iniciarLoop(): void {
   if (timer || typeof window === "undefined") return;
   timer = setInterval(() => void flush(), 30_000);
   window.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden") void flush();
+    if (document.visibilityState === "hidden") {
+      // marca fim de sessão best-effort (melhora a precisão da duração de sessão no admin)
+      if (sessaoRegistrada) fila.push({ evento: "sessao_fim", props: {}, client_ts: new Date().toISOString() });
+      void flush();
+    }
   });
 }
 

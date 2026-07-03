@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { DueloResult, LadoDuelo } from "@/engine/duelo";
+import { msAteProximaTemporada, temporadaDuelo, tierDuelo } from "@/engine/temporadaDuelo";
 import { useCareer } from "@/store/careerStore";
 import { useProfile } from "@/store/profileStore";
 import { useDuelo, type LadderLinha } from "@/store/dueloStore";
@@ -58,6 +59,7 @@ export default function OnlinePage() {
   const nick = useProfile((s) => s.perfil?.nick ?? "—");
 
   const meuPoder = useDuelo((s) => s.meuPoder);
+  const meuRating = useDuelo((s) => s.meuRating);
   const ladder = useDuelo((s) => s.ladder);
   const ranking = useDuelo((s) => s.ranking);
   const historico = useDuelo((s) => s.historico);
@@ -82,7 +84,6 @@ export default function OnlinePage() {
     carregar();
   }, [carregar]);
 
-  const minhaLinha = ranking.find((r) => r.nick === nick);
   const semCarreira = !career;
 
   // rival online (derivado do histórico do servidor): saldo de derrotas − vitórias ≥ 2
@@ -113,7 +114,10 @@ export default function OnlinePage() {
       <header className="flex items-center justify-between">
         <div>
           <h1 className="font-pixel text-sm text-ciano">ONLINE · DUELO 1v1</h1>
-          <p className="mt-1 text-[11px] text-suave">Assíncrono e determinístico — enfrente o snapshot de outros players</p>
+          <p className="mt-1 text-[11px] text-suave">
+            <span className="font-pixel text-[10px] text-amber-300">TEMPORADA {temporadaDuelo(Date.now())}</span> · termina em{" "}
+            {Math.ceil(msAteProximaTemporada(Date.now()) / 86400000)}d · tier exclusivo no fim!
+          </p>
         </div>
         <Link href="/dashboard" className="border-2 border-borda px-3 py-1.5 text-[11px] text-suave transition hover:text-texto">
           Voltar
@@ -130,8 +134,8 @@ export default function OnlinePage() {
         </div>
         <div className="text-right">
           <p className="font-pixel text-sm text-rosa">⚔ {meuPoder}</p>
-          <p className="text-[10px] text-suave">
-            poder · {minhaLinha ? `${minhaLinha.vitorias}V / ${minhaLinha.jogos - minhaLinha.vitorias}D` : "0V / 0D"}
+          <p className="text-[10px]" style={{ color: tierDuelo(meuRating).cor }}>
+            {tierDuelo(meuRating).emoji} {tierDuelo(meuRating).nome} · {meuRating}
           </p>
         </div>
       </div>
@@ -221,26 +225,29 @@ export default function OnlinePage() {
         )}
       </section>
 
-      {/* ranking */}
+      {/* ranking da temporada (rating com soft reset a cada virada) */}
       <section className="flex flex-col gap-2">
-        <h2 className="font-pixel text-[11px] text-suave">🏆 RANKING</h2>
+        <h2 className="font-pixel text-[11px] text-suave">🏆 RANKING · TEMPORADA {temporadaDuelo(Date.now())}</h2>
         {ranking.length === 0 ? (
           <p className="text-[11px] text-suave">Ranking vazio — jogue duelos pra aparecer aqui.</p>
         ) : (
-          ranking.slice(0, 10).map((r, i) => (
-            <div
-              key={r.userId}
-              className={`flex items-center justify-between border-2 px-3 py-2 ${r.nick === nick ? "border-ciano bg-ciano/10" : "border-borda bg-painel"}`}
-            >
-              <span className="flex items-center gap-2 text-[11px] text-texto">
-                <span className="font-pixel text-[10px] text-suave">{i + 1}º</span>
-                {r.nick}
-              </span>
-              <span className="text-[10px] text-suave">
-                {r.vitorias}V / {r.jogos - r.vitorias}D · ⚔ {r.poder}
-              </span>
-            </div>
-          ))
+          ranking.slice(0, 10).map((r, i) => {
+            const tier = tierDuelo(r.rating);
+            return (
+              <div
+                key={r.userId}
+                className={`flex items-center justify-between border-2 px-3 py-2 ${r.nick === nick ? "border-ciano bg-ciano/10" : "border-borda bg-painel"}`}
+              >
+                <span className="flex items-center gap-2 text-[11px] text-texto">
+                  <span className="font-pixel text-[10px] text-suave">{i + 1}º</span>
+                  {r.nick}
+                </span>
+                <span className="text-[10px]" style={{ color: tier.cor }}>
+                  {tier.emoji} {tier.nome} · <span className="font-pixel">{r.rating}</span>
+                </span>
+              </div>
+            );
+          })
         )}
       </section>
 

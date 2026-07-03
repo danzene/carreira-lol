@@ -1,8 +1,10 @@
 import { create } from "zustand";
 import { poderDeSnapshot, simularDuelo, snapshotDePlayer, type DueloResult, type PlayerSnapshot } from "@/engine/duelo";
+import { aplicarSoftReset, deltaRating, temporadaDuelo, tituloTemporada, RATING_BASE } from "@/engine/temporadaDuelo";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabaseClient";
 import { rastrear } from "@/lib/telemetria";
 import { useCareer } from "./careerStore";
+import { useCerimonias } from "./cerimoniaStore";
 import { useProfile } from "./profileStore";
 
 // Modo online — Fase B. Duelo 1v1 assíncrono e determinístico.
@@ -20,8 +22,7 @@ export interface RankingLinha {
   userId: string;
   nick: string;
   poder: number;
-  vitorias: number;
-  jogos: number;
+  rating: number; // rating da TEMPORADA (soft reset a cada virada)
 }
 
 export interface DueloRegistro {
@@ -36,6 +37,8 @@ export interface DueloRegistro {
 
 interface DueloStore {
   meuPoder: number;
+  meuRating: number;
+  temporada: number;
   publicado: boolean;
   ladder: LadderLinha[];
   ranking: RankingLinha[];
@@ -75,6 +78,8 @@ function reidratarSnapshot(row: { user_id: string; snapshot: unknown }): PlayerS
 export const useDuelo = create<DueloStore>((set, get) => ({
   meuPoder: 0,
   publicado: false,
+  meuRating: RATING_BASE,
+  temporada: 1,
   ladder: [],
   ranking: [],
   historico: [],
@@ -94,9 +99,8 @@ export const useDuelo = create<DueloStore>((set, get) => ({
       const { data: u } = await sb.auth.getUser();
       const uid = u.user?.id ?? "";
 
-      const [snaps, rank, hist] = await Promise.all([
-        sb.from("duel_snapshots").select("user_id, nick, poder, snapshot").order("poder", { ascending: false }).limit(50),
-        sb.from("ranking_duelos").select("user_id, nick, poder, vitorias, jogos").order("vitorias", { ascending: false }).limit(50),
+      const [snaps, hist] = await Promise.all([
+        sb.from("duel_snapshots").select("user_id, nick, poder, rating, snapshot").order("poder", { ascending: false }).limit(50),
         sb
           .from("duelos")
           .select("id, desafiante, oponente, desafiante_nick, oponente_nick, vencedor, resultado, criado_at")
@@ -109,13 +113,10 @@ export const useDuelo = create<DueloStore>((set, get) => ({
         .filter((r) => r.user_id !== uid)
         .map((r) => ({ userId: r.user_id, nick: r.nick, poder: r.poder, snapshot: reidratarSnapshot(r) }));
 
-      const ranking: RankingLinha[] = (rank.data ?? []).map((r) => ({
-        userId: r.user_id,
-        nick: r.nick,
-        poder: r.poder,
-        vitorias: Number(r.vitorias ?? 0),
-        jogos: Number(r.jogos ?? 0),
-      }));
+      // ranking da TEMPORADA = rating (soft reset a cada virada de 3 semanas)
+      const ranking: RankingLinha[] = (snaps.data ?? [])
+        .map((r) => ({ userId: r.user_id, nick: r.nick, poder: r.poder, rating: (r.rating as number) ?? RATING_BASE }))
+        .sort((a, b) => b.rating - a.rating);
 
       const historico: DueloRegistro[] = (hist.data ?? []).map((r) => ({
         id: r.id,
@@ -140,14 +141,41 @@ export const useDuelo = create<DueloStore>((set, get) => ({
       if (!meu) return;
       const poder = poderDeSnapshot(meu.snapshot);
       const sb = getSupabase();
+
+      // rating existente + SOFT RESET lazy/idempotente na virada de temporada
+      const tempAtual = temporadaDuelo(Date.now());
+      const { data: linha } = await sb
+        .from("duel_snapshots")
+        .select("rating, temporada_rating")
+        .eq("user_id", meu.uid)
+        .maybeSingle();
+      const ratingAntigo = (linha?.rating as number) ?? RATING_BASE;
+      const tempRegistrada = (linha?.temporada_rating as number) ?? tempAtual;
+      const reset = aplicarSoftReset(ratingAntigo, tempAtual, tempRegistrada);
+
+      if (reset.resetou) {
+        // fim de temporada: título exclusivo por tier final + cerimônia (nunca volta)
+        const titulo = tituloTemporada(tempRegistrada, ratingAntigo);
+        useCareer.getState().concederTitulo(titulo);
+        useCerimonias.getState().emitir({
+          tipo: "ACHIEVEMENT_UNLOCKED",
+          id: `temporada_duelo_${tempRegistrada}`,
+          nome: `Fim da Temporada ${tempRegistrada}!`,
+          emoji: "🗓️",
+          desc: `${titulo} · rating ajustado pra nova temporada (${ratingAntigo} → ${reset.rating}).`,
+        });
+      }
+
       await sb.from("duel_snapshots").upsert({
         user_id: meu.uid,
         nick: meu.nick,
         poder,
+        rating: reset.rating,
+        temporada_rating: reset.temporada,
         snapshot: meu.snapshot,
         updated_at: new Date().toISOString(),
       });
-      set({ meuPoder: poder, publicado: true });
+      set({ meuPoder: poder, meuRating: reset.rating, temporada: tempAtual, publicado: true });
     } catch {
       // rede — tenta na próxima
     }
@@ -161,6 +189,7 @@ export const useDuelo = create<DueloStore>((set, get) => ({
       const seed = seedAleatoria();
       const resultado = simularDuelo(meu.snapshot, op.snapshot, seed);
       const sb = getSupabase();
+      const venceu = resultado.vencedorChave === meu.uid;
       await sb.from("duelos").insert({
         desafiante: meu.uid,
         oponente: op.userId,
@@ -169,7 +198,13 @@ export const useDuelo = create<DueloStore>((set, get) => ({
         seed,
         vencedor: resultado.vencedorChave,
         resultado,
+        temporada: temporadaDuelo(Date.now()),
       });
+      // rating da temporada (elo-lite, auto-reportado como o resto do duelo)
+      const meuPoderAtual = get().meuPoder;
+      const novoRating = Math.max(0, get().meuRating + deltaRating(venceu, meuPoderAtual, op.poder));
+      await sb.from("duel_snapshots").update({ rating: novoRating }).eq("user_id", meu.uid);
+      set({ meuRating: novoRating });
       const registro: DueloRegistro = {
         id: `local-${seed}`,
         desafianteNick: meu.nick,

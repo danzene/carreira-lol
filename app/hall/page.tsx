@@ -85,6 +85,20 @@ export default function HallPage() {
         )}
       </section>
 
+      {/* títulos cosméticos (prova semanal, temporadas de duelo) — exclusivos, nunca voltam */}
+      {(career.titulos ?? []).length > 0 && (
+        <section className="flex flex-col gap-2">
+          <h2 className="font-pixel text-[11px] text-suave">TÍTULOS DE ÉPOCA</h2>
+          <div className="flex flex-wrap gap-2">
+            {(career.titulos ?? []).map((t, i) => (
+              <span key={i} className="border-2 border-ciano/60 bg-ciano/10 px-3 py-2 font-pixel text-[10px] text-ciano">
+                👑 {t}
+              </span>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* elos alcançados pela primeira vez */}
       <section className="flex flex-col gap-2">
         <h2 className="font-pixel text-[11px] text-suave">ELOS ALCANÇADOS</h2>

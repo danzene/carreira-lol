@@ -38,6 +38,16 @@ import {
   type TomResposta,
 } from "@/engine/feed";
 import { garantirProva, gerarProvaSemanal, podeJogarProva, registrarPartidaProva, semanaISO } from "@/engine/prova";
+import {
+  aulaParticular as aulaParticularEngine,
+  comprarCargaCampeonato,
+  comprarEnergetico,
+  comprarEscudoStreak,
+  comprarMegaEnergetico,
+  comprarPreparacao,
+  consumirPreparacao,
+  vodReview as vodReviewEngine,
+} from "@/engine/loja";
 import { useProva } from "./provaStore";
 import { atualizarRecords } from "@/engine/records";
 import { timeDe } from "@/data/times";
@@ -119,6 +129,9 @@ interface CareerStore {
   marcarFeedVisto: () => void;
   aplicarPartidaProva: (resultado: MatchResult) => void;
   concederTitulo: (titulo: string) => void;
+  comprarLoja: (item: "energetico" | "megaEnergetico" | "carga" | "escudo" | "preparacao") => boolean;
+  vodReview: (championId: string) => boolean;
+  aulaParticular: (attr: AtributoKey) => boolean;
   iniciarCarreira: (player: Player, opcoes: OpcoesCarreira) => string;
   carregar: (slotId: string) => boolean;
   recarregarAtual: () => boolean;
@@ -197,7 +210,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
     const prova = gerarProvaSemanal(semana);
     let novo = garantirProva(c0, semana);
     if (!podeJogarProva(novo, semana)) return;
-    novo = registrarPartidaProva(novo, resultado, prova);
+    novo = consumirPreparacao(registrarPartidaProva(novo, resultado, prova));
 
     const provaFinal = novo.prova;
     if (provaFinal?.finalizada && provaFinal.scoreFinal != null) {
@@ -222,6 +235,51 @@ export const useCareer = create<CareerStore>((set, get) => ({
 
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
+  },
+
+  // 💰 Compras da loja (consumíveis/preparação). Engine valida tudo; false = não rolou.
+  comprarLoja: (item) => {
+    const { career: c0, slotId } = get();
+    if (!c0) return false;
+    const agora = Date.now();
+    const c = sincronizarEnergia(c0, agora);
+    const novo =
+      item === "energetico"
+        ? comprarEnergetico(c)
+        : item === "megaEnergetico"
+          ? comprarMegaEnergetico(c)
+          : item === "carga"
+            ? comprarCargaCampeonato(c, agora)
+            : item === "escudo"
+              ? comprarEscudoStreak(c, chaveDia(agora))
+              : comprarPreparacao(c);
+    if (!novo) return false;
+    rastrear("loja_compra", { item });
+    set({ career: novo });
+    if (slotId) salvarSlot(slotId, novo);
+    return true;
+  },
+
+  vodReview: (championId) => {
+    const { career, slotId } = get();
+    if (!career) return false;
+    const novo = vodReviewEngine(career, championId);
+    if (!novo) return false;
+    rastrear("loja_compra", { item: "vodReview", championId });
+    set({ career: novo });
+    if (slotId) salvarSlot(slotId, novo);
+    return true;
+  },
+
+  aulaParticular: (attr) => {
+    const { career, slotId } = get();
+    if (!career) return false;
+    const novo = aulaParticularEngine(career, attr);
+    if (!novo) return false;
+    rastrear("loja_compra", { item: "aulaParticular", attr });
+    set({ career: novo });
+    if (slotId) salvarSlot(slotId, novo);
+    return true;
   },
 
   // Concede um título cosmético (idempotente) — usado pelo topo do leaderboard da prova.
@@ -330,6 +388,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
     if ((novo.player.rankSoloq.streak ?? 0) === -3) {
       useCerimonias.getState().emitir({ tipo: "MENSAGEM", texto: "Dia difícil? Um treino leve ou um descanso podem virar o jogo.", emoji: "💜" });
     }
+    novo = consumirPreparacao(novo); // buff da loja vale 1 partida
     rastrear("partida_fim", { modo: "soloq", vitoria: resultado.vitoria, nota: resultado.notaPerformance, elo: novo.player.rankSoloq.elo });
     void useProfile.getState().ajustar(resultado.vitoria ? GACHA.porVitoria : GACHA.porDerrota, "partida");
     if (resultado.vitoria) {
@@ -574,6 +633,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
     if (resultado.vitoria) usePasse.getState().progredir("vencer");
     novo = consumirCarga(novo, agora);
     novo = comConquistas(novo);
+    novo = consumirPreparacao(novo);
     rastrear("partida_fim", { modo: "liga", vitoria: resultado.vitoria, nota: resultado.notaPerformance, elo: novo.player.rankSoloq.elo });
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
@@ -599,6 +659,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
     usePasse.getState().progredir("jogar");
     if (resultado.vitoria) usePasse.getState().progredir("vencer");
     novo = comConquistas(novo);
+    novo = consumirPreparacao(novo);
     rastrear("partida_fim", { modo: "evento", vitoria: resultado.vitoria, nota: resultado.notaPerformance, elo: novo.player.rankSoloq.elo });
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
@@ -653,6 +714,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
     if (resultado.vitoria) usePasse.getState().progredir("vencer");
     novo = consumirCarga(novo, agora);
     novo = comConquistas(novo);
+    novo = consumirPreparacao(novo);
     rastrear("partida_fim", { modo: "torneio", vitoria: resultado.vitoria, nota: resultado.notaPerformance, elo: novo.player.rankSoloq.elo });
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);

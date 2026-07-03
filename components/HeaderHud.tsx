@@ -40,6 +40,9 @@ export default function HeaderHud() {
           <Link href="/gacha" className="flex items-center gap-1 text-[11px] text-rosa" title="CoinPoints">
             🪙 <AnimatedNumber valor={coinpoints} className="font-pixel text-[10px]" />
           </Link>
+          <Link href="/loja" className="flex items-center gap-1 text-[11px] text-emerald-400" title="Dinheiro (loja)">
+            💵 <AnimatedNumber valor={career.dinheiro} className="font-pixel text-[10px]" />
+          </Link>
           <div className="flex items-center gap-1.5" title={`Energia ${energia}/100`}>
             <span className="text-[11px]">⚡</span>
             <div className="h-2 w-14 overflow-hidden border border-borda bg-painel sm:w-20">

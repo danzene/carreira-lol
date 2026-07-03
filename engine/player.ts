@@ -136,6 +136,7 @@ export function normalizarCareer(bruto: CareerState): CareerState {
     feed: Array.isArray(bruto.feed) ? bruto.feed : [],
     feedNovos: typeof bruto.feedNovos === "number" ? bruto.feedNovos : 0,
     titulos: Array.isArray(bruto.titulos) ? bruto.titulos : [],
+    preparacao: bruto.preparacao === true ? true : undefined,
     prova:
       bruto.prova && typeof bruto.prova.semana === "number" && Array.isArray(bruto.prova.resultados) ? bruto.prova : undefined,
     player: {

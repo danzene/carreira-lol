@@ -19,6 +19,7 @@ import { efeitoItens } from "@/engine/itens";
 import { forcaTimeDe, proximoConfrontoJogador } from "@/engine/liga";
 import { proximoConfrontoTorneio } from "@/engine/internacional";
 import { ajustarCtxProva, defModificador, gerarProvaSemanal, podeJogarProva, semanaISO } from "@/engine/prova";
+import { LOJA } from "@/data/loja";
 import type { AtributoKey, MatchResult } from "@/engine/types";
 import { useCareer } from "@/store/careerStore";
 import { useDraftFlow } from "@/store/draftFlowStore";
@@ -199,6 +200,12 @@ function DraftFlow() {
         </Link>
       </header>
 
+      {career.preparacao && fase !== "resultado" && (
+        <div className="flex items-center gap-2 border-2 border-emerald-500/60 bg-emerald-500/10 px-3 py-2 text-[11px] text-emerald-400">
+          📼 <span className="font-pixel text-[10px]">PREPARADO</span> · estudo do adversário ativo: +{LOJA.preparacao.comp} comp, +{LOJA.preparacao.counterLane} na sua lane (vale esta partida)
+        </div>
+      )}
+
       {provaAtiva && fase === "draft" && (
         <div className="flex flex-wrap gap-2">
           {provaAtiva.modificadores.map((m) => {
@@ -236,17 +243,18 @@ function DraftFlow() {
         <Partida
           player={career.player}
           ctx={(() => {
+            const preparado = !!career.preparacao; // "estudo do adversário" comprado na loja
             const base = {
               championId: info.championId,
               forcaMetaCampeao: info.forcaMetaCampeao,
-              comp: info.comp + (semLendas ? 0 : ef.bonusComp) + (semItens ? 0 : efItens.bonusComp),
+              comp: info.comp + (semLendas ? 0 : ef.bonusComp) + (semItens ? 0 : efItens.bonusComp) + (preparado ? LOJA.preparacao.comp : 0),
               compInimigo: info.compInimigo,
               bonusAtributos,
               forcaTimeAliado: (oficial || internacional) && career.contratoAtual ? forcaTimeDe(career.contratoAtual.timeId) : undefined,
               forcaTimeInimigo: adversarioId ? forcaTimeDe(adversarioId) : undefined,
               bonusInimigo: mod(career.opcoes).forcaInimigo + (evento && career.eventoAtual ? career.eventoAtual.bonusInimigo : 0),
               dificuldadeElo: !oficial && !internacional && !evento && !ehProva ? dificuldadeSoloq(career.player.rankSoloq.elo) : 0,
-              counterLane: info.counterLane,
+              counterLane: info.counterLane + (preparado ? LOJA.preparacao.counterLane : 0),
               counterComp: info.counterComp,
             };
             return provaAtiva ? ajustarCtxProva(base, provaAtiva) : base; // modificadores honrados no engine

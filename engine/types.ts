@@ -248,6 +248,7 @@ export interface CareerState {
   feedNovos?: number; // posts não vistos (badge)
   prova?: import("./prova").EstadoProva; // Prova Semanal em andamento
   titulos?: string[]; // títulos cosméticos conquistados (prova, temporadas de duelo...)
+  preparacao?: boolean; // "estudo do adversário" comprado na loja (buff da próxima partida)
   entrevistaPendente?: import("./feed").EntrevistaPendente; // entrevista pós-jogo aguardando resposta
   ultimaEntrevistaChave?: number; // temporada*1000+semana da última entrevista (máx. 1/semana)
   statsSemana?: StatsSemana; // stats da semana corrente (recap ao avançar)

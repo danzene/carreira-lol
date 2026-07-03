@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import DraftBoard, { type JogarInfo } from "@/components/DraftBoard";
+import type { EstadoDraft } from "@/engine/draft";
 import EfeitosLendas from "@/components/EfeitosLendas";
 import ItemVisual, { classeBrilho, corRaridade, estiloCartaItem } from "@/components/ItemVisual";
 import Partida from "@/components/Partida";
@@ -20,9 +21,8 @@ import { proximoConfrontoTorneio } from "@/engine/internacional";
 import { ajustarCtxProva, defModificador, gerarProvaSemanal, podeJogarProva, semanaISO } from "@/engine/prova";
 import type { AtributoKey, MatchResult } from "@/engine/types";
 import { useCareer } from "@/store/careerStore";
+import { useDraftFlow } from "@/store/draftFlowStore";
 import { itensEquipadosDe, useInventory } from "@/store/inventoryStore";
-
-type Fase = "draft" | "partida" | "resultado";
 
 function DraftFlow() {
   const router = useRouter();
@@ -43,9 +43,26 @@ function DraftFlow() {
   const ultimoDrop = useInventory((s) => s.ultimoDrop);
   const limparDrop = useInventory((s) => s.limparDrop);
 
-  const [fase, setFase] = useState<Fase>("draft");
-  const [info, setInfo] = useState<JogarInfo | null>(null);
-  const [resultado, setResultado] = useState<MatchResult | null>(null);
+  // fluxo persiste em store transiente: navegar pra outra tela e voltar NÃO zera o draft/partida
+  const chaveFlow = ehProva ? "prova" : internacional ? "internacional" : evento ? "evento" : oficial ? "oficial" : "soloq";
+  const flowChave = useDraftFlow((s) => s.chave);
+  const fase = useDraftFlow((s) => (s.chave === chaveFlow ? s.fase : "draft"));
+  const info = useDraftFlow((s) => (s.chave === chaveFlow ? s.info : null));
+  const resultado = useDraftFlow((s) => (s.chave === chaveFlow ? s.resultado : null));
+  const seedPartida = useDraftFlow((s) => (s.chave === chaveFlow ? s.seed : null));
+  const draftSalvo = useDraftFlow((s) => (s.chave === chaveFlow ? s.draft : null));
+  const atualizarFlow = useDraftFlow((s) => s.atualizar);
+  const resetarFlow = useDraftFlow((s) => s.resetar);
+
+  // trocou de modo (soloq → oficial etc.) → fluxo antigo não vale mais
+  useEffect(() => {
+    if (flowChave !== chaveFlow) resetarFlow(chaveFlow);
+  }, [flowChave, chaveFlow, resetarFlow]);
+
+  const salvarDraft = useCallback(
+    (e: EstadoDraft) => atualizarFlow({ chave: chaveFlow, draft: e }),
+    [atualizarFlow, chaveFlow],
+  );
 
   useEffect(() => {
     if (!career && !recarregarAtual()) router.replace("/");
@@ -117,22 +134,22 @@ function DraftFlow() {
 
   function aoJogar(i: JogarInfo) {
     limparDrop(); // zera o drop antes da partida (só conta o desta)
-    setInfo(i);
-    setFase("partida");
+    const seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
+    atualizarFlow({ chave: chaveFlow, fase: "partida", info: i, seed, aplicado: false });
   }
   function aoFim(r: MatchResult) {
-    if (ehProva) aplicarPartidaProva(r);
-    else if (internacional) aplicarPartidaTorneio(r);
-    else if (evento) aplicarPartidaEvento(r);
-    else if (oficial) aplicarPartidaOficial(r);
-    else aplicarPartida(r);
-    setResultado(r);
-    setFase("resultado");
+    // partida restaurada (saiu e voltou) NUNCA aplica duas vezes
+    if (!useDraftFlow.getState().aplicado) {
+      if (ehProva) aplicarPartidaProva(r);
+      else if (internacional) aplicarPartidaTorneio(r);
+      else if (evento) aplicarPartidaEvento(r);
+      else if (oficial) aplicarPartidaOficial(r);
+      else aplicarPartida(r);
+    }
+    atualizarFlow({ fase: "resultado", resultado: r, aplicado: true });
   }
   function denovo() {
-    setInfo(null);
-    setResultado(null);
-    setFase("draft");
+    resetarFlow(chaveFlow);
   }
 
   const titulo =
@@ -199,6 +216,8 @@ function DraftFlow() {
             proibidos={proibidos}
             modo={oficial || internacional ? "competitivo" : "soloq"}
             prova={provaAtiva}
+            draftInicial={draftSalvo ?? undefined}
+            onDraft={salvarDraft}
             onJogar={aoJogar}
           />
         </>
@@ -224,6 +243,7 @@ function DraftFlow() {
             return provaAtiva ? ajustarCtxProva(base, provaAtiva) : base; // modificadores honrados no engine
           })()}
           times={{ azul: info.timeAzul, vermelho: info.timeVermelho }}
+          seed={seedPartida ?? undefined}
           onFim={aoFim}
         />
       )}

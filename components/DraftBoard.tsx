@@ -49,6 +49,8 @@ export default function DraftBoard({
   proibidos = [],
   modo = "soloq",
   prova,
+  draftInicial,
+  onDraft,
   onJogar,
 }: {
   comfort: string[];
@@ -59,13 +61,20 @@ export default function DraftBoard({
   proibidos?: string[];
   modo?: ModoDraft; // soloq = picks variados (gente real); competitivo = meta-slave
   prova?: ProvaSemanal; // Prova Semanal: modificadores filtram o banco (todos os lados)
+  draftInicial?: EstadoDraft; // retomar um draft em andamento (voltou pra tela)
+  onDraft?: (e: EstadoDraft) => void; // espelha o progresso pro fluxo persistente
   onJogar: (info: JogarInfo) => void;
 }) {
   const [campeoes, setCampeoes] = useState<Campeao[]>([]);
   const [carregando, setCarregando] = useState(true);
-  const [estado, setEstado] = useState<EstadoDraft>(() => iniciarDraft());
+  const [estado, setEstado] = useState<EstadoDraft>(() => draftInicial ?? iniciarDraft());
   const [busca, setBusca] = useState("");
   const [pendente, setPendente] = useState<string | null>(null); // pick aguardando escolha de ROTA (flex)
+
+  // espelha cada passo do draft pro fluxo persistente (voltar pra tela retoma daqui)
+  useEffect(() => {
+    onDraft?.(estado);
+  }, [estado, onDraft]);
   // RNG seedado por draft (borda) — cada partida tem um "lobby" diferente
   const [rng] = useState(() => criarRng((Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0));
 

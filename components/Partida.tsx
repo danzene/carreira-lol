@@ -11,14 +11,16 @@ export default function Partida({
   player,
   ctx,
   times,
+  seed: seedProp,
   onFim,
 }: {
   player: Player;
   ctx: ContextoPartida;
   times: { azul: LutadorInfo[]; vermelho: LutadorInfo[] };
+  seed?: number; // seed vinda do fluxo (restaurar a tela = MESMA partida, sem re-roll)
   onFim: (r: MatchResult) => void;
 }) {
-  const [seed] = useState(() => (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0);
+  const [seed] = useState(() => seedProp ?? (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0);
   const [resultado] = useState<MatchResult>(() => simularPartida(player, ctx, seed));
   const [pronto, setPronto] = useState(false);
 

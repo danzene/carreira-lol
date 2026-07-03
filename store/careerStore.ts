@@ -350,6 +350,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
     salvarSlot(slotId, career);
     definirSlotAtual(slotId);
     set({ career, slotId });
+    rastrear("carreira_criada", { rota: player.rota });
     return slotId;
   },
 

@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { RARIDADES_ITEM } from "@/data/itens";
+import { compartilharCartao } from "@/lib/cartao";
 import { tocarSom } from "@/lib/som";
-import type { RecapSemanal as Recap } from "@/store/careerStore";
+import { useCareer, type RecapSemanal as Recap } from "@/store/careerStore";
+import { useProfile } from "@/store/profileStore";
 import AnimatedNumber from "./juice/AnimatedNumber";
 import PostFeedCard from "./PostFeedCard";
 
@@ -135,19 +137,44 @@ export default function RecapSemanal({ recap, onFechar }: { recap: Recap; onFech
           ))}
         </div>
 
-        <button
-          type="button"
-          onClick={() => {
-            if (ultimo) onFechar();
-            else {
-              tocarSom("tick");
-              setIdx(idx + 1);
-            }
-          }}
-          className="w-full border-2 border-ciano py-2 font-pixel text-[11px] text-ciano transition hover:bg-ciano hover:text-fundo"
-        >
-          {ultimo ? "CONTINUAR ▸" : "PRÓXIMO ▸"}
-        </button>
+        <div className="flex gap-2">
+          {ultimo && (
+            <button
+              type="button"
+              onClick={() => {
+                const nick = useProfile.getState().perfil?.nick ?? "Jogador";
+                const elo = useCareer.getState().career?.player.rankSoloq.elo ?? "Ferro IV";
+                void compartilharCartao(
+                  {
+                    titulo: "RECAP DA SEMANA",
+                    destaque: `${atual.vitorias}V · ${derrotas}D`,
+                    sub: `PDL ${atual.lpLiquido >= 0 ? "+" : ""}${atual.lpLiquido} · melhor nota ${atual.melhorNota.toFixed(1)}`,
+                    nick,
+                    elo,
+                    emoji: "📊",
+                  },
+                  `Minha semana no Carreira LoL: ${atual.vitorias}V/${derrotas}D! ▶ https://carreira-lol.vercel.app`,
+                );
+              }}
+              className="border-2 border-borda px-3 py-2 font-pixel text-[10px] text-suave transition hover:text-texto"
+            >
+              📤
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              if (ultimo) onFechar();
+              else {
+                tocarSom("tick");
+                setIdx(idx + 1);
+              }
+            }}
+            className="flex-1 border-2 border-ciano py-2 font-pixel text-[11px] text-ciano transition hover:bg-ciano hover:text-fundo"
+          >
+            {ultimo ? "CONTINUAR ▸" : "PRÓXIMO ▸"}
+          </button>
+        </div>
       </div>
     </div>
   );

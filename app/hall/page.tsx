@@ -6,7 +6,9 @@ import { useRouter } from "next/navigation";
 import { CONQUISTAS } from "@/engine/conquistas";
 import { recordsVazios } from "@/engine/records";
 import { corElo } from "@/data/juice";
+import { compartilharCartao } from "@/lib/cartao";
 import { useCareer } from "@/store/careerStore";
+import { useProfile } from "@/store/profileStore";
 
 // 🏛️ Hall da Carreira: mural de troféus pixel com marcos permanentes — recordes
 // pessoais, elos alcançados pela primeira vez, títulos e conquistas.
@@ -77,9 +79,21 @@ export default function HallPage() {
         ) : (
           <div className="flex flex-wrap gap-2">
             {titulos.map((t, i) => (
-              <span key={i} className="border-2 border-amber-300 bg-amber-300/10 px-3 py-2 font-pixel text-[11px] text-amber-300">
-                🏆 {t}
-              </span>
+              <button
+                key={i}
+                type="button"
+                title="Compartilhar este título"
+                onClick={() => {
+                  const nick = useProfile.getState().perfil?.nick ?? career.player.nome;
+                  void compartilharCartao(
+                    { titulo: "CAMPEÃO!", destaque: t, sub: "título internacional conquistado", nick, elo: career.player.rankSoloq.elo, emoji: "🏆" },
+                    `Sou CAMPEÃO do ${t} no Carreira LoL! ▶ https://carreira-lol.vercel.app`,
+                  );
+                }}
+                className="border-2 border-amber-300 bg-amber-300/10 px-3 py-2 font-pixel text-[11px] text-amber-300 transition hover:bg-amber-300 hover:text-fundo"
+              >
+                🏆 {t} 📤
+              </button>
             ))}
           </div>
         )}

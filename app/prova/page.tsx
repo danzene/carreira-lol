@@ -12,8 +12,10 @@ import {
   semanaISO,
 } from "@/engine/prova";
 import { featureLiberada, defUnlock } from "@/engine/unlocks";
+import { compartilharCartao } from "@/lib/cartao";
 import { checarTopoSemana, useProva } from "@/store/provaStore";
 import { useCareer } from "@/store/careerStore";
+import { useProfile } from "@/store/profileStore";
 
 function fmtCountdown(ms: number): string {
   const h = Math.floor(ms / 3600000);
@@ -158,9 +160,31 @@ export default function ProvaPage() {
             ▶ JOGAR PARTIDA {jogadas + 1}/{PROVA.partidas}
           </Link>
         ) : (
-          <p className="mt-3 text-center font-pixel text-[10px] text-emerald-400">
-            ✓ PROVA CONCLUÍDA · recompensa coletada · volta semana que vem!
-          </p>
+          <>
+            <p className="mt-3 text-center font-pixel text-[10px] text-emerald-400">
+              ✓ PROVA CONCLUÍDA · recompensa coletada · volta semana que vem!
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                const nick = useProfile.getState().perfil?.nick ?? "Jogador";
+                void compartilharCartao(
+                  {
+                    titulo: "PROVA SEMANAL",
+                    destaque: `${estado?.scoreFinal ?? 0} pts`,
+                    sub: `semana ${semana % 100}${minhaPosicao ? ` · ${minhaPosicao}º do mundo` : ""}`,
+                    nick,
+                    elo: career.player.rankSoloq.elo,
+                    emoji: "🏁",
+                  },
+                  `Fiz ${estado?.scoreFinal ?? 0} pts na Prova Semanal do Carreira LoL! ▶ https://carreira-lol.vercel.app`,
+                );
+              }}
+              className="mt-2 w-full border-2 border-borda py-2 font-pixel text-[10px] text-suave transition hover:text-texto"
+            >
+              📤 COMPARTILHAR SCORE
+            </button>
+          </>
         )}
         <p className="mt-2 text-center text-[10px] text-suave">
           Partidas da prova são LATERAIS: não gastam energia e não mexem no seu elo.

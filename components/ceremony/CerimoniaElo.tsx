@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { corElo } from "@/data/juice";
 import { criarRng, hashString } from "@/engine/rng";
+import { compartilharCartao } from "@/lib/cartao";
 import { tocarSom } from "@/lib/som";
+import { useProfile } from "@/store/profileStore";
 import PixelBurst from "@/components/juice/PixelBurst";
 
 // 🏆 Cerimônia de elo. PROMOÇÃO: a moldura antiga se despedaça em cacos pixel → o novo
@@ -129,7 +131,22 @@ export default function CerimoniaElo({
             <p className="desliza-cima text-[12px] text-texto">
               {de} → <span style={{ color: cor }}>{para}</span>
             </p>
-            <p className="text-[10px] text-suave/70">clique pra continuar</p>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                const nick = useProfile.getState().perfil?.nick ?? "Jogador";
+                void compartilharCartao(
+                  { titulo: "PROMOÇÃO!", destaque: para, sub: "a escalada continua", nick, elo: para, emoji: "🏆" },
+                  `Subi pra ${para} no Carreira LoL! ▶ https://carreira-lol.vercel.app`,
+                );
+              }}
+              className="border-2 px-4 py-1.5 font-pixel text-[10px] transition hover:brightness-150"
+              style={{ borderColor: cor, color: cor, background: `${cor}14` }}
+            >
+              📤 COMPARTILHAR
+            </button>
+            <p className="text-[10px] text-suave/70">clique fora pra continuar</p>
           </>
         )}
       </div>

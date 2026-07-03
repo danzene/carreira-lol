@@ -47,14 +47,19 @@ export function processarSemanaEconomia(career: CareerState): CareerState {
   return { ...career, dinheiro, coachAtivo, player: { ...career.player, atributos } };
 }
 
+// Sessão mental: com a MORAL BAIXA (<40) fica mais barata E mais eficaz — anti-tilt:
+// quando você mais precisa, a ajuda custa menos e rende mais.
 export function sessaoMental(career: CareerState): CareerState | null {
-  if (career.dinheiro < ECONOMIA.sessaoMental.custo) return null;
+  const abalado = career.player.moral < 40;
+  const custo = abalado ? Math.round(ECONOMIA.sessaoMental.custo / 2) : ECONOMIA.sessaoMental.custo;
+  const ganhoMoral = abalado ? ECONOMIA.sessaoMental.moral + 15 : ECONOMIA.sessaoMental.moral;
+  if (career.dinheiro < custo) return null;
   return {
     ...career,
-    dinheiro: career.dinheiro - ECONOMIA.sessaoMental.custo,
+    dinheiro: career.dinheiro - custo,
     player: {
       ...career.player,
-      moral: clamp(career.player.moral + ECONOMIA.sessaoMental.moral, 0, 100),
+      moral: clamp(career.player.moral + ganhoMoral, 0, 100),
       energia: clamp(career.player.energia + ECONOMIA.sessaoMental.energia, 0, 100),
     },
   };

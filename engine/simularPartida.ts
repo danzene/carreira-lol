@@ -25,6 +25,14 @@ function clamp(v: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, v));
 }
 
+// Pity de DERROTA (anti-tilt, PURO): cada derrota consecutiva dá um empurrão oculto e
+// crescente na próxima partida; zera automaticamente ao vencer (o streak reseta).
+// Invisível na UI — o jogador só sente que "reagiu".
+export function pityDerrota(streak: number | undefined): number {
+  const derrotasSeguidas = Math.max(0, -(streak ?? 0));
+  return Math.min(SIMULACAO.pityDerrotaMax, derrotasSeguidas * SIMULACAO.pityDerrotaPasso);
+}
+
 export function forcaRota(player: Player, bonus: Partial<Attributes> = {}): number {
   let total = 0;
   for (const [chave, peso] of Object.entries(PESOS_ROTA[player.rota])) {
@@ -124,7 +132,8 @@ export function simularPartida(player: Player, ctx: ContextoPartida, seed: numbe
     (forcaFinal - 50) * 0.5 +
     (fTimeAliado - fTimeInimigo) * SIMULACAO.pesoForcaTimeVitoria +
     (ctx.counterComp ?? 0) * SIMULACAO.pesoCounterComp +
-    (maestria(player, ctx.championId) - 40) * SIMULACAO.pesoMaestriaVitoria -
+    (maestria(player, ctx.championId) - 40) * SIMULACAO.pesoMaestriaVitoria +
+    pityDerrota(player.rankSoloq.streak) -
     (ctx.bonusInimigo ?? 0) -
     (ctx.dificuldadeElo ?? 0);
   const vitoria = rng() < 1 / (1 + Math.exp(-SIMULACAO.sensibilidadeVitoria * vantagem));

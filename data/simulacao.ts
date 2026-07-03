@@ -37,6 +37,9 @@ export const SIMULACAO = {
   pesoCounterComp: 1.1, // vantagem de vitória por ponto de counter da comp (soma das rotas)
   pesoCounterLane: 3, // força individual por ponto de matchup da SUA lane (você brilha/sofre)
   pesoMaestriaVitoria: 0.05, // vantagem direta por ponto de maestria acima de 40 (dominar campeão ganha jogo)
+  // ---- anti-tilt: "pity de derrota" OCULTO (compensação de má sorte) ----
+  pityDerrotaPasso: 1.2, // vantagem extra por derrota consecutiva (invisível na UI)
+  pityDerrotaMax: 6, // teto do empurrão (zera ao vencer — o streak reseta)
 } as const;
 
 export const ELO_LADDER = [

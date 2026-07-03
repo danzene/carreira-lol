@@ -326,6 +326,10 @@ export const useCareer = create<CareerStore>((set, get) => ({
     const rec = atualizarRecords(novo, resultado);
     novo = rec.career;
     useCerimonias.getState().emitir(rec.cerimonias);
+    // anti-tilt: 1 mensagem HUMANA por sequência (streak === -3 só acontece 1x)
+    if ((novo.player.rankSoloq.streak ?? 0) === -3) {
+      useCerimonias.getState().emitir({ tipo: "MENSAGEM", texto: "Dia difícil? Um treino leve ou um descanso podem virar o jogo.", emoji: "💜" });
+    }
     rastrear("partida_fim", { modo: "soloq", vitoria: resultado.vitoria, nota: resultado.notaPerformance, elo: novo.player.rankSoloq.elo });
     void useProfile.getState().ajustar(resultado.vitoria ? GACHA.porVitoria : GACHA.porDerrota, "partida");
     if (resultado.vitoria) {

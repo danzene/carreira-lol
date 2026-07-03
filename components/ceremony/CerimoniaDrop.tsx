@@ -4,8 +4,12 @@ import { useEffect, useState } from "react";
 import type { Item } from "@/data/itens";
 import { raridadeItemDef } from "@/data/itens";
 import { duracaoAntecipacao, tierDeItem, TIERS_JUICE } from "@/data/juice";
+import { compartilharCartao } from "@/lib/cartao";
 import { tocarSomTier } from "@/lib/som";
+import { nomeItem } from "@/data/itens";
+import { useCareer } from "@/store/careerStore";
 import { useInventory } from "@/store/inventoryStore";
+import { useProfile } from "@/store/profileStore";
 import ItemVisual from "@/components/ItemVisual";
 import PixelBurst from "@/components/juice/PixelBurst";
 
@@ -78,6 +82,24 @@ export default function CerimoniaDrop({ item, onFechar }: { item: Item; onFechar
             </div>
           )}
         </div>
+
+        {aceso && tier === 5 && (
+          <button
+            type="button"
+            onClick={() => {
+              const nick = useProfile.getState().perfil?.nick ?? "Jogador";
+              const elo = useCareer.getState().career?.player.rankSoloq.elo ?? "Ferro IV";
+              void compartilharCartao(
+                { titulo: "ITEM MÍTICO!", destaque: nomeItem(item), sub: `iLvl ${item.iLvl} · direto pro setup`, nick, elo, emoji: "🎒", cor: info.cor },
+                `Dropei um MÍTICO no Carreira LoL: ${nomeItem(item)}! ▶ https://carreira-lol.vercel.app`,
+              );
+            }}
+            className="desliza-cima w-full border-2 py-1.5 font-pixel text-[9px] transition hover:brightness-150"
+            style={{ borderColor: info.cor, color: info.cor, background: `${info.cor}10` }}
+          >
+            📤 FLEXAR O DROP
+          </button>
+        )}
 
         {aceso && (
           <div className="desliza-cima grid w-full grid-cols-2 gap-2">

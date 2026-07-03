@@ -19,7 +19,8 @@ export type Cerimonia =
   | { tipo: "FEATURE_UNLOCKED"; feature: string; nome: string; desc: string }
   | { tipo: "STREAK_MILESTONE"; dias: number; recompensa: string }
   | { tipo: "RIVAL_DECLARED"; nome: string }
-  | { tipo: "RIVAL_DEFEATED"; nome: string };
+  | { tipo: "RIVAL_DEFEATED"; nome: string }
+  | { tipo: "MENSAGEM"; texto: string; emoji: string }; // toast sutil (ex.: anti-tilt)
 
 export type TipoCerimonia = Cerimonia["tipo"];
 

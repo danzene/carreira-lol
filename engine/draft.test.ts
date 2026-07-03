@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   aplicarEscolha,
+  atribuirRotas,
   draftCompleto,
   escolhaIA,
   forcaComp,
@@ -43,6 +44,26 @@ describe("draft (pick & ban)", () => {
     expect(e.passo).toBe(1);
     expect(e.usados).toContain("Mid1");
     expect(aplicarEscolha(e, "Mid1")).toBe(e); // já usado: não muda
+  });
+
+  it("FLEX PICK: campeão vai pra rota ESCOLHIDA, mesmo fora das rolesValidas (Yasuo ADC)", () => {
+    const defMap = Object.fromEntries(BANCO.map((c) => [c.id, c]));
+    // pula os 6 bans pra chegar no primeiro pick (azul)
+    let e = iniciarDraft();
+    for (let i = 0; i < 6; i++) e = aplicarEscolha(e, escolhaIA(e, BANCO));
+    // "Mid0" só tem MID nas rolesValidas — fixado na ADC pelo flex pick
+    e = aplicarEscolha(e, "Mid0", "ADC");
+    expect(e.rotas.azul.ADC).toBe("Mid0");
+    const rotas = atribuirRotas(e.picks.azul, defMap, e.rotas.azul);
+    expect(rotas.find((r) => r.role === "ADC")?.id).toBe("Mid0");
+    // rota já fixada não é sobrescrita pelo próximo flex
+    let e2 = e;
+    while (passosCoach(0) >= 0 && e2.ordem[e2.passo]?.time !== "azul") e2 = aplicarEscolha(e2, escolhaIA(e2, BANCO));
+    e2 = aplicarEscolha(e2, "Top0", "ADC");
+    expect(e2.rotas.azul.ADC).toBe("Mid0"); // continua o primeiro
+    // sem rota = atribuição automática (comportamento antigo)
+    const auto = atribuirRotas(["Top0", "Jungle0"], defMap);
+    expect(auto.find((r) => r.role === "TOP")?.id).toBe("Top0");
   });
 
   it("a IA escolhe sempre um campeão disponível", () => {

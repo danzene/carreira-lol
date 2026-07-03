@@ -20,6 +20,7 @@ export interface EstadoDraft {
   bans: Record<TimeDraft, string[]>;
   picks: Record<TimeDraft, string[]>;
   usados: string[]; // ids indisponíveis (banidos ou escolhidos)
+  rotas: Record<TimeDraft, Partial<Record<Role, string>>>; // FLEX PICKS: rota escolhida manualmente (Yasuo ADC? pode)
 }
 
 const ROLES: Role[] = ["TOP", "JUNGLE", "MID", "ADC", "SUPPORT"];
@@ -46,6 +47,7 @@ export function iniciarDraft(): EstadoDraft {
     bans: { azul: [], vermelho: [] },
     picks: { azul: [], vermelho: [] },
     usados: [],
+    rotas: { azul: {}, vermelho: {} },
   };
 }
 
@@ -61,14 +63,53 @@ export function disponivel(e: EstadoDraft, championId: string): boolean {
   return !e.usados.includes(championId);
 }
 
-export function aplicarEscolha(e: EstadoDraft, championId: string): EstadoDraft {
+// `rota` (opcional, só em PICK): fixa o campeão naquela rota — flex pick manual.
+// Rota já fixada não é sobrescrita (o pick entra e cai na atribuição automática).
+export function aplicarEscolha(e: EstadoDraft, championId: string, rota?: Role): EstadoDraft {
   const passo = passoAtual(e);
   if (!passo || !disponivel(e, championId)) return e;
   const bans = { azul: [...e.bans.azul], vermelho: [...e.bans.vermelho] };
   const picks = { azul: [...e.picks.azul], vermelho: [...e.picks.vermelho] };
+  const rotasBase = e.rotas ?? { azul: {}, vermelho: {} };
+  const rotas = { azul: { ...rotasBase.azul }, vermelho: { ...rotasBase.vermelho } };
   if (passo.fase === "ban") bans[passo.time].push(championId);
-  else picks[passo.time].push(championId);
-  return { ...e, bans, picks, usados: [...e.usados, championId], passo: e.passo + 1 };
+  else {
+    picks[passo.time].push(championId);
+    if (rota && !rotas[passo.time][rota]) rotas[passo.time][rota] = championId;
+  }
+  return { ...e, bans, picks, rotas, usados: [...e.usados, championId], passo: e.passo + 1 };
+}
+
+// Distribui os picks nas 5 rotas: PRIMEIRO as fixadas manualmente (flex picks),
+// depois guloso pelas rolesValidas, e o que sobrar preenche buraco.
+export function atribuirRotas(
+  ids: string[],
+  defMap: Record<string, ChampionDef>,
+  fixas: Partial<Record<Role, string>> = {},
+): { role: Role; id: string | null }[] {
+  const slot: Record<Role, string | null> = { TOP: null, JUNGLE: null, MID: null, ADC: null, SUPPORT: null };
+  const colocados = new Set<string>();
+  for (const r of ROLES) {
+    const id = fixas[r];
+    if (id && ids.includes(id) && !colocados.has(id)) {
+      slot[r] = id;
+      colocados.add(id);
+    }
+  }
+  const sobra: string[] = [];
+  for (const id of ids) {
+    if (colocados.has(id)) continue;
+    const r = defMap[id]?.rolesValidas.find((x) => slot[x] === null);
+    if (r) {
+      slot[r] = id;
+      colocados.add(id);
+    } else sobra.push(id);
+  }
+  for (const id of sobra) {
+    const r = ROLES.find((x) => slot[x] === null);
+    if (r) slot[r] = id;
+  }
+  return ROLES.map((role) => ({ role, id: slot[role] }));
 }
 
 function lookup(banco: ChampionDef[]): Map<string, ChampionDef> {

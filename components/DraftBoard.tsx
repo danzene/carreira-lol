@@ -5,6 +5,7 @@ import { construirBanco } from "@/engine/champions";
 import { aplicarPatch } from "@/engine/patch";
 import {
   aplicarEscolha,
+  atribuirRotas,
   disponivel,
   draftCompleto,
   escolhaIA,
@@ -64,6 +65,7 @@ export default function DraftBoard({
   const [carregando, setCarregando] = useState(true);
   const [estado, setEstado] = useState<EstadoDraft>(() => iniciarDraft());
   const [busca, setBusca] = useState("");
+  const [pendente, setPendente] = useState<string | null>(null); // pick aguardando escolha de ROTA (flex)
   // RNG seedado por draft (borda) — cada partida tem um "lobby" diferente
   const [rng] = useState(() => criarRng((Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0));
 
@@ -121,15 +123,15 @@ export default function DraftBoard({
   // matchups de counter por rota (só quando o draft fecha)
   const matchups = useMemo<MatchupRota[] | null>(() => {
     if (!fim) return null;
-    const paraPicks = (ids: string[]): PickRota[] =>
-      atribuirRoles(ids, defMap)
+    const paraPicks = (ids: string[], fixas: Partial<Record<Role, string>>): PickRota[] =>
+      atribuirRotas(ids, defMap, fixas)
         .filter((s): s is { role: Role; id: string } => s.id !== null)
         .map((s) => ({ championId: s.id, rota: s.role }));
-    return counterLanes(paraPicks(estado.picks.azul), paraPicks(estado.picks.vermelho), banco);
+    return counterLanes(paraPicks(estado.picks.azul, estado.rotas.azul), paraPicks(estado.picks.vermelho, estado.rotas.vermelho), banco);
   }, [fim, estado, defMap, banco]);
   const seuChamp = useMemo(() => {
     if (!fim) return null;
-    const r = atribuirRoles(estado.picks.azul, defMap).find((s) => s.role === rota)?.id;
+    const r = atribuirRotas(estado.picks.azul, defMap, estado.rotas.azul).find((s) => s.role === rota)?.id;
     return r ?? estado.picks.azul[0] ?? null;
   }, [fim, estado, defMap, rota]);
 
@@ -143,13 +145,21 @@ export default function DraftBoard({
 
   function escolher(id: string) {
     if (!seuTurno || !disponivel(estado, id)) return;
-    setEstado((e) => aplicarEscolha(e, id));
+    // PICK seu: pergunta a ROTA (flex pick — Yasuo ADC? pode). Ban aplica direto.
+    if (passo?.fase === "pick") setPendente(id);
+    else setEstado((e) => aplicarEscolha(e, id));
+  }
+
+  function confirmarPick(rotaEscolhida?: Role) {
+    if (!pendente) return;
+    setEstado((e) => aplicarEscolha(e, pendente, rotaEscolhida));
+    setPendente(null);
   }
 
   function jogar() {
     if (!fc) return;
-    const rolesAzul = atribuirRoles(estado.picks.azul, defMap);
-    const rolesVerm = atribuirRoles(estado.picks.vermelho, defMap);
+    const rolesAzul = atribuirRotas(estado.picks.azul, defMap, estado.rotas.azul);
+    const rolesVerm = atribuirRotas(estado.picks.vermelho, defMap, estado.rotas.vermelho);
     const lanes = matchups ?? [];
     const minhaLane = lanes.find((l) => l.rota === rota)?.delta ?? 0;
     const lut = (role: Role, id: string | null): LutadorInfo => ({
@@ -196,6 +206,7 @@ export default function DraftBoard({
           comfort={comfort}
           ativo={!fim && passo?.time === "azul"}
           fase={passo?.fase}
+          fixas={estado.rotas.azul}
         />
         <Coluna
           nome="INIMIGO"
@@ -322,28 +333,72 @@ export default function DraftBoard({
           )}
         </div>
       )}
+
+      {/* FLEX PICK: escolher a rota do campeão (Yasuo ADC? pode!) */}
+      {pendente && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 px-4" onClick={() => setPendente(null)}>
+          <div className="w-full max-w-xs border-2 border-ciano bg-fundo p-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-center gap-2">
+              {campMap[pendente] && <img src={campMap[pendente].icone} alt="" className="h-10 w-10 border-2 border-ciano" />}
+              <div>
+                <p className="font-pixel text-[11px] text-texto">{campMap[pendente]?.nome ?? pendente}</p>
+                <p className="text-[10px] text-suave">Vai jogar em qual rota?</p>
+              </div>
+            </div>
+
+            <div className="mt-3 flex flex-col gap-1.5">
+              {TODAS_ROTAS.map((r) => {
+                const ocupadaPor = estado.rotas.azul[r];
+                const natural = defMap[pendente]?.rolesValidas.includes(r);
+                const sua = r === rota;
+                return (
+                  <button
+                    key={r}
+                    type="button"
+                    disabled={!!ocupadaPor}
+                    onClick={() => confirmarPick(r)}
+                    className={`flex items-center justify-between border-2 px-3 py-2 text-left transition disabled:opacity-40 ${
+                      sua ? "border-ciano bg-ciano/10 hover:bg-ciano/20" : "border-borda bg-painel hover:border-suave"
+                    }`}
+                  >
+                    <span className="font-pixel text-[10px] text-texto">
+                      {ROTULO_ROLE[r]}
+                      {sua && <span className="ml-2 text-ciano">★ VOCÊ JOGA</span>}
+                    </span>
+                    <span className="text-[10px] text-suave">
+                      {ocupadaPor ? `ocupada (${campMap[ocupadaPor]?.nome ?? ocupadaPor})` : natural ? "rota natural" : "fora de rota 😈"}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => confirmarPick(undefined)}
+                className="border-2 border-borda py-2 font-pixel text-[9px] text-suave transition hover:text-texto"
+                title="Deixa o coach decidir a melhor rota"
+              >
+                🤖 AUTO
+              </button>
+              <button
+                type="button"
+                onClick={() => setPendente(null)}
+                className="border-2 border-borda py-2 font-pixel text-[9px] text-suave transition hover:text-rosa"
+              >
+                CANCELAR
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 const ROTULO_ROLE: Record<Role, string> = { TOP: "TOP", JUNGLE: "JG", MID: "MID", ADC: "ADC", SUPPORT: "SUP" };
-
-// Distribui os picks nas 5 rotas (Top→Sup), por gulosidade nas rolesValidas.
-function atribuirRoles(ids: string[], defMap: Record<string, ChampionDef>): { role: Role; id: string | null }[] {
-  const ordem: Role[] = ["TOP", "JUNGLE", "MID", "ADC", "SUPPORT"];
-  const slot: Record<Role, string | null> = { TOP: null, JUNGLE: null, MID: null, ADC: null, SUPPORT: null };
-  const sobra: string[] = [];
-  for (const id of ids) {
-    const r = defMap[id]?.rolesValidas.find((x) => slot[x] === null);
-    if (r) slot[r] = id;
-    else sobra.push(id);
-  }
-  for (const id of sobra) {
-    const r = ordem.find((x) => slot[x] === null);
-    if (r) slot[r] = id;
-  }
-  return ordem.map((role) => ({ role, id: slot[role] }));
-}
+const TODAS_ROTAS: Role[] = ["TOP", "JUNGLE", "MID", "ADC", "SUPPORT"];
 
 function Coluna({
   nome,
@@ -355,6 +410,7 @@ function Coluna({
   comfort,
   ativo,
   fase,
+  fixas = {},
 }: {
   nome: string;
   cor: string;
@@ -365,6 +421,7 @@ function Coluna({
   comfort: string[];
   ativo: boolean;
   fase?: "ban" | "pick";
+  fixas?: Partial<Record<Role, string>>;
 }) {
   return (
     <div className={`border-2 bg-painel p-3 ${ativo ? "border-rosa" : "border-borda"}`}>
@@ -384,7 +441,7 @@ function Coluna({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        {atribuirRoles(picks, defMap).map(({ role, id }) => {
+        {atribuirRotas(picks, defMap, fixas).map(({ role, id }) => {
           const cam = id ? campMap[id] : undefined;
           const conf = id ? comfort.includes(id) : false;
           return (

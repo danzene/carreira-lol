@@ -59,6 +59,15 @@ function DraftFlow() {
     if (flowChave !== chaveFlow) resetarFlow(chaveFlow);
   }, [flowChave, chaveFlow, resetarFlow]);
 
+  // pós-jogo JÁ APLICADO não sobrevive a voltar pra tela: quem reabre o draft quer
+  // jogar a PRÓXIMA partida, não rever as estatísticas da anterior (bug da liga).
+  // Só o que está EM ANDAMENTO (draft/batalha) é retomado.
+  useEffect(() => {
+    const s = useDraftFlow.getState();
+    if (s.chave === chaveFlow && s.fase === "resultado" && s.aplicado) resetarFlow(chaveFlow);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const salvarDraft = useCallback(
     (e: EstadoDraft) => atualizarFlow({ chave: chaveFlow, draft: e }),
     [atualizarFlow, chaveFlow],

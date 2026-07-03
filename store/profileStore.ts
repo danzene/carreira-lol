@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabaseClient";
+import { rastrear } from "@/lib/telemetria";
 
 // Perfil de conta (modo online — Fase A): nick + moldura + saldo de CoinPoints (POR CONTA).
 // O saldo é a fonte da verdade no servidor; aqui guardamos um espelho pra UI.
@@ -77,6 +78,8 @@ export const useProfile = create<ProfileStore>((set, get) => ({
       if (error) return false;
       const novo = data as number;
       set((s) => (s.perfil ? { perfil: { ...s.perfil, coinpoints: novo } } : {}));
+      // telemetria de ECONOMIA: fonte (delta>0) vs sink (delta<0) por motivo. Best-effort.
+      rastrear("coinpoints", { delta, motivo: motivo ?? "?", saldo: novo });
       return true;
     } catch {
       return false;

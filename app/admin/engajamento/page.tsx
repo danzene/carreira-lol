@@ -1,5 +1,97 @@
-import EmBreve from "@/components/admin/EmBreve";
+"use client";
 
-export default function Page() {
-  return <EmBreve secao="Engajamento" />;
+import { useAdmin } from "@/components/admin/PeriodoContext";
+import { AvisoDados, BarChart, Carregando, KpiCard, Painel, Secao, Vazio } from "@/components/admin/ui";
+
+type KV = { k: string; v: number };
+interface Eng {
+  skip_por_tipo: { tipo: string; vista: number; pulada: number; taxa: number }[];
+  partidas_por_modo: KV[];
+  cartoes_por_tipo: KV[];
+  duelos: number;
+  provas: number;
+  passe_niveis: KV[];
+}
+
+const NOME_CERIMONIA: Record<string, string> = {
+  drop: "Drop de item",
+  gacha: "Puxada gacha",
+  passe: "Recompensa de passe",
+  nivel: "Subir de nível",
+  vitoria: "Vitória",
+  conquista: "Conquista",
+};
+
+function corTaxa(taxa: number): string {
+  if (taxa >= 80) return "text-rose-400";
+  if (taxa >= 50) return "text-amber-400";
+  return "text-zinc-300";
+}
+
+export default function AdminEngajamento() {
+  const { dados, carregando, erro } = useAdmin<Eng>("engajamento");
+  if (carregando) return <Carregando />;
+  if (erro || !dados) return <Vazio msg={erro ? `Erro: ${erro}` : "Sem dados."} />;
+
+  return (
+    <div>
+      <h1 className="mb-4 text-lg font-bold text-zinc-100">Engajamento</h1>
+
+      <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <KpiCard rotulo="Duelos" valor={dados.duelos} />
+        <KpiCard rotulo="Provas" valor={dados.provas} />
+        <KpiCard rotulo="Cartões" valor={dados.cartoes_por_tipo.reduce((s, c) => s + Number(c.v), 0)} />
+        <KpiCard rotulo="Partidas" valor={dados.partidas_por_modo.reduce((s, p) => s + Number(p.v), 0)} />
+      </div>
+
+      <Secao titulo="Taxa de skip por tipo de cerimônia" sub="Skip alto = a cerimônia atrapalha mais do que recompensa. Base: cerimonia_vista / cerimonia_pulada.">
+        <AvisoDados>O evento <code>cerimonia_vista</code> é novo — a taxa só é confiável para o período depois que ele passou a ser emitido.</AvisoDados>
+        {dados.skip_por_tipo.length === 0 ? (
+          <Vazio msg="Nenhuma cerimônia registrada no período." />
+        ) : (
+          <div className="overflow-x-auto rounded border border-zinc-800">
+            <table className="w-full text-xs">
+              <thead className="bg-zinc-900 text-zinc-400">
+                <tr>
+                  <th className="px-3 py-2 text-left">Tipo</th>
+                  <th className="px-3 py-2 text-right">Vistas</th>
+                  <th className="px-3 py-2 text-right">Puladas</th>
+                  <th className="px-3 py-2 text-right">Taxa de skip</th>
+                </tr>
+              </thead>
+              <tbody>
+                {dados.skip_por_tipo.map((s) => (
+                  <tr key={s.tipo} className="border-t border-zinc-800">
+                    <td className="px-3 py-1.5 text-zinc-300">{NOME_CERIMONIA[s.tipo] ?? s.tipo}</td>
+                    <td className="px-3 py-1.5 text-right tabular-nums text-zinc-400">{Number(s.vista).toLocaleString("pt-BR")}</td>
+                    <td className="px-3 py-1.5 text-right tabular-nums text-zinc-400">{Number(s.pulada).toLocaleString("pt-BR")}</td>
+                    <td className={`px-3 py-1.5 text-right font-semibold tabular-nums ${corTaxa(Number(s.taxa))}`}>{Number(s.taxa)}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Secao>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Secao titulo="Partidas por modo">
+          <Painel>
+            <BarChart dados={dados.partidas_por_modo.map((p) => ({ x: p.k, y: Number(p.v), cor: "#38bdf8" }))} altura={170} />
+          </Painel>
+        </Secao>
+        <Secao titulo="Cartões compartilhados por tipo" sub="Uso da feature de compartilhamento.">
+          <Painel>
+            <BarChart dados={dados.cartoes_por_tipo.map((c) => ({ x: c.k, y: Number(c.v), cor: "#34d399" }))} altura={170} />
+          </Painel>
+        </Secao>
+      </div>
+
+      <Secao titulo="Distribuição de nível do passe" sub="Onde os jogadores estão no passe (nível 60 = completo).">
+        <Painel>
+          <BarChart dados={dados.passe_niveis.map((n) => ({ x: n.k, y: Number(n.v), cor: "#a78bfa" }))} altura={180} />
+        </Painel>
+      </Secao>
+    </div>
+  );
 }

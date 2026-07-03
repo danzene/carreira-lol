@@ -91,6 +91,7 @@ function CerimoniaFullscreen({ c, onFechar }: { c: Cerimonia; onFechar: () => vo
 
   useEffect(() => {
     setFase("antecipacao");
+    rastrear("cerimonia_vista", { tipo: c.tipo }); // denominador do skip-rate (juice cansando?)
     const t1 = setTimeout(() => {
       setFase("revelacao");
       if (ap.somTier) tocarSomTier(ap.somTier);

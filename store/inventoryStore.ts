@@ -136,6 +136,7 @@ export const useInventory = create<InventoryStore>((set, get) => {
       const novo = rerollAfixos(item, seedAgora());
       set({ itens: get().itens.map((i) => (i.id === id ? novo : i)) });
       persistir();
+      rastrear("item_reroll", { raridade: item.raridade });
       return true;
     },
 
@@ -149,6 +150,7 @@ export const useInventory = create<InventoryStore>((set, get) => {
       set({ itens: itens.filter((i) => i.id !== id), equipado: eq });
       void useProfile.getState().ajustar(ITENS_ECON.coinsDesmonte, "desmonte-item");
       persistir();
+      rastrear("item_desmonte", { raridade: item.raridade });
     },
 
     limparDrop: () => set({ ultimoDrop: null }),

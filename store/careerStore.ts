@@ -339,7 +339,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
     usePasse.getState().progredir("booster");
-    rastrear("gacha_puxada", { qtd: 1, melhor: Math.max(...r.resultados.map((x) => x.raridade)), pity: novo.pity ?? 0, gratis: true });
+    rastrear("gacha_puxada", { qtd: 1, melhor: Math.max(...r.resultados.map((x) => x.raridade)), raridades: r.resultados.map((x) => x.raridade), pity: novo.pity ?? 0, gratis: true });
     return r.resultados;
   },
 
@@ -547,7 +547,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
     usePasse.getState().progredir("booster");
-    rastrear("gacha_puxada", { qtd, melhor: Math.max(...r.resultados.map((x) => x.raridade)), pity: novo.pity ?? 0, gratis: false });
+    rastrear("gacha_puxada", { qtd, melhor: Math.max(...r.resultados.map((x) => x.raridade)), raridades: r.resultados.map((x) => x.raridade), pity: novo.pity ?? 0, gratis: false });
     return r.resultados;
   },
 

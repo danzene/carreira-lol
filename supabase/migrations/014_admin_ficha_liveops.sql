@@ -149,10 +149,22 @@ revoke execute on function public.admin_prova_outliers(integer) from public;
 create or replace function public.admin_duelo_suspeitos()
 returns table (user_id uuid, nick text, jogos bigint, vitorias bigint, taxa numeric)
 language sql stable security definer set search_path = public as $$
-  select user_id, nick, jogos, vitorias,
-         case when jogos > 0 then round((vitorias::numeric / jogos), 3) else 0 end taxa
-  from public.ranking_duelos
-  where jogos >= 10 and vitorias::numeric / nullif(jogos, 0) >= 0.9
+  -- Fonte da verdade = tabela `duelos` (a view ranking_duelos foi removida na 008).
+  -- Cada duelo vira 2 linhas (uma por participante) com a flag de vitória.
+  with participacoes as (
+    select desafiante as uid, (vencedor = desafiante) as venceu from public.duelos
+    union all
+    select oponente as uid, (vencedor = oponente) as venceu from public.duelos
+  ),
+  agg as (
+    select uid, count(*) as jogos, count(*) filter (where venceu) as vitorias
+    from participacoes group by uid
+  )
+  select a.uid as user_id, p.nick, a.jogos, a.vitorias,
+         round((a.vitorias::numeric / a.jogos), 3) as taxa
+  from agg a
+  left join public.profiles p on p.id = a.uid
+  where a.jogos >= 10 and a.vitorias::numeric / a.jogos >= 0.9
   order by taxa desc, jogos desc;
 $$;
 revoke execute on function public.admin_duelo_suspeitos() from public;

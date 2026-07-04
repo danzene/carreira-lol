@@ -5,6 +5,28 @@ import { BarChart, Carregando, FunnelChart, LineChart, Painel, Secao, Vazio } fr
 
 type Etapa = { etapa: string; ordem: number; usuarios: number };
 type KV = { k: string; v: number };
+
+// Rótulos bonitos (com acento) ficam AQUI, no cliente — o SQL só devolve a chave
+// sem acento, então nada quebra por encoding no caminho até o banco.
+const ROTULO_ETAPA: Record<string, string> = {
+  cadastro: "Cadastro",
+  criou: "Criou jogador",
+  partida1: "1ª partida",
+  vitoria1: "1ª vitória",
+  drop1: "1º drop de item",
+  gacha1: "1ª puxada de gacha",
+  d1: "Voltou no D1",
+  sem2: "Semana 2",
+  booster: "Destravou Booster",
+  itens: "Destravou Itens",
+  passe: "Destravou Passe",
+  passe10: "Passe nível 10",
+  passe60: "Passe completo (60)",
+  online: "Destravou Online",
+  duelo1: "1º duelo online",
+  prova1: "1ª Prova Semanal",
+};
+const rotuloEtapa = (chave: string) => ROTULO_ETAPA[chave] ?? chave;
 interface Funis {
   onboarding: Etapa[];
   progressao: Etapa[];
@@ -24,13 +46,13 @@ export default function AdminFunis() {
       <div className="grid gap-4 lg:grid-cols-2">
         <Secao titulo="Onboarding" sub="Cadastro → primeiros passos → voltou no D1.">
           <Painel>
-            <FunnelChart etapas={dados.onboarding.map((e) => ({ rotulo: e.etapa, valor: Number(e.usuarios) }))} />
+            <FunnelChart etapas={dados.onboarding.map((e) => ({ rotulo: rotuloEtapa(e.etapa), valor: Number(e.usuarios) }))} />
           </Painel>
         </Secao>
 
         <Secao titulo="Progressão longa" sub="Quantos concluem o passe (60) e chegam ao 1º duelo.">
           <Painel>
-            <FunnelChart etapas={dados.progressao.map((e) => ({ rotulo: e.etapa, valor: Number(e.usuarios) }))} />
+            <FunnelChart etapas={dados.progressao.map((e) => ({ rotulo: rotuloEtapa(e.etapa), valor: Number(e.usuarios) }))} />
           </Painel>
         </Secao>
       </div>

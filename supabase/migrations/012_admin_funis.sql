@@ -21,14 +21,16 @@ language sql stable security definer set search_path = public as $$
       where exists (select 1 from public.telemetria_eventos e where e.user_id=p.user_id and e.evento='sessao_inicio' and e.created_at::date=p.d0+1)
     ) x
   )
+  -- `etapa` é uma CHAVE sem acento (o rótulo bonito vive no cliente, evitando
+  -- corrupção de encoding no caminho SQL->banco).
   select * from (values
-    ('Cadastro', 0, (select count(*)::bigint from public.profiles)),
-    ('Criou jogador', 1, (select criou from u)),
-    ('1ª partida', 2, (select partida from u)),
-    ('1ª vitória', 3, (select vitoria from u)),
-    ('1º drop de item', 4, (select dropi from u)),
-    ('1ª puxada de gacha', 5, (select gacha from u)),
-    ('Voltou no D1', 6, (select n from d1))
+    ('cadastro', 0, (select count(*)::bigint from public.profiles)),
+    ('criou', 1, (select criou from u)),
+    ('partida1', 2, (select partida from u)),
+    ('vitoria1', 3, (select vitoria from u)),
+    ('drop1', 4, (select dropi from u)),
+    ('gacha1', 5, (select gacha from u)),
+    ('d1', 6, (select n from d1))
   ) t(etapa, ordem, usuarios) order by ordem;
 $$;
 revoke execute on function public.admin_funil_onboarding() from public;
@@ -51,17 +53,18 @@ language sql stable security definer set search_path = public as $$
       count(distinct case when evento='prova_fim' then user_id end) as prova
     from public.telemetria_eventos
   )
+  -- `etapa` = chave sem acento; rótulo bonito no cliente.
   select * from (values
-    ('Criou jogador', 0, (select criou from u)),
-    ('Semana 2', 1, (select sem2 from u)),
-    ('Destravou Booster', 2, coalesce((select n from feat where f='booster'),0)),
-    ('Destravou Itens', 3, coalesce((select n from feat where f='itens'),0)),
-    ('Destravou Passe', 4, coalesce((select n from feat where f='passe'),0)),
-    ('Passe nível 10', 5, (select p10 from u)),
-    ('Passe COMPLETO (60)', 6, (select p60 from u)),
-    ('Destravou Online', 7, coalesce((select n from feat where f='online'),0)),
-    ('1º duelo online', 8, (select duelo from u)),
-    ('1ª Prova Semanal', 9, (select prova from u))
+    ('criou', 0, (select criou from u)),
+    ('sem2', 1, (select sem2 from u)),
+    ('booster', 2, coalesce((select n from feat where f='booster'),0)),
+    ('itens', 3, coalesce((select n from feat where f='itens'),0)),
+    ('passe', 4, coalesce((select n from feat where f='passe'),0)),
+    ('passe10', 5, (select p10 from u)),
+    ('passe60', 6, (select p60 from u)),
+    ('online', 7, coalesce((select n from feat where f='online'),0)),
+    ('duelo1', 8, (select duelo from u)),
+    ('prova1', 9, (select prova from u))
   ) t(etapa, ordem, usuarios) order by ordem;
 $$;
 revoke execute on function public.admin_funil_progressao() from public;

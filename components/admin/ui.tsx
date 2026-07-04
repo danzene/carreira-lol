@@ -53,7 +53,12 @@ export function LineChart({ dados, altura = 160, cor = "#38bdf8" }: { dados: { x
       </text>
       <polyline points={pontos} fill="none" stroke={cor} strokeWidth="2" />
       {dados.map((d, i) => (
-        <circle key={i} cx={px(i)} cy={py(d.y)} r="2" fill={cor} />
+        <g key={i} className="cursor-default">
+          <title>{`${d.x}: ${d.y.toLocaleString("pt-BR")}`}</title>
+          <circle cx={px(i)} cy={py(d.y)} r="2.5" fill={cor} />
+          {/* alvo de hover maior e invisível pra facilitar mirar o ponto */}
+          <circle cx={px(i)} cy={py(d.y)} r="12" fill="transparent" />
+        </g>
       ))}
       {dados.map((d, i) => (i % passo === 0 ? <text key={`l${i}`} x={px(i)} y={H - pad + 12} fill="#71717a" fontSize="9" textAnchor="middle">{d.x}</text> : null))}
     </svg>
@@ -76,7 +81,10 @@ export function BarChart({ dados, altura = 180 }: { dados: { x: string; y: numbe
         const x = pad + i * (bw + gap);
         const h = (d.y / max) * (H - pad * 2);
         return (
-          <g key={i}>
+          <g key={i} className="cursor-default">
+            <title>{`${d.x}: ${d.y.toLocaleString("pt-BR")}`}</title>
+            {/* faixa transparente = área de hover cheia (mesmo em barra baixa) */}
+            <rect x={x} y={pad} width={bw} height={H - pad * 2} fill="transparent" />
             <rect x={x} y={H - pad - h} width={bw} height={h} fill={d.cor ?? "#38bdf8"} rx="1" />
             <text x={x + bw / 2} y={H - pad - h - 3} fill="#a1a1aa" fontSize="9" textAnchor="middle">{d.y}</text>
             <text x={x + bw / 2} y={H - pad + 12} fill="#71717a" fontSize="9" textAnchor="middle">{d.x}</text>

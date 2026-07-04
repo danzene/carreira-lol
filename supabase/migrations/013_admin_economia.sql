@@ -77,9 +77,9 @@ returns jsonb language sql stable security definer set search_path = public as $
       from (select coalesce(vs.tipo, pl.tipo) tipo, coalesce(vs.n,0) v, coalesce(pl.n,0) p
             from (select props->>'tipo' tipo, count(*) n from ev where evento='cerimonia_vista' group by 1) vs
             full join (select props->>'tipo' tipo, count(*) n from ev where evento='cerimonia_pulada' group by 1) pl using (tipo)) z), '[]'::jsonb),
-    'partidas_por_modo', coalesce((select jsonb_agg(jsonb_build_object('k', coalesce(props->>'modo','?'), 'v', c) order by c desc)
+    'partidas_por_modo', coalesce((select jsonb_agg(jsonb_build_object('k', coalesce(modo,'?'), 'v', c) order by c desc)
       from (select props->>'modo' modo, count(*) c from ev where evento='partida_fim' group by 1) z), '[]'::jsonb),
-    'cartoes_por_tipo', coalesce((select jsonb_agg(jsonb_build_object('k', coalesce(props->>'tipo','?'), 'v', c) order by c desc)
+    'cartoes_por_tipo', coalesce((select jsonb_agg(jsonb_build_object('k', coalesce(tipo,'?'), 'v', c) order by c desc)
       from (select props->>'tipo' tipo, count(*) c from ev where evento='cartao_compartilhado' group by 1) z), '[]'::jsonb),
     'duelos', (select count(*) from ev where evento='duelo_fim'),
     'provas', (select count(*) from ev where evento='prova_fim'),

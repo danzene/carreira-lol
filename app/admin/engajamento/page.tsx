@@ -13,14 +13,31 @@ interface Eng {
   passe_niveis: KV[];
 }
 
+// Tipos de cerimônia (do EventBus do jogo) → nome legível em PT.
 const NOME_CERIMONIA: Record<string, string> = {
-  drop: "Drop de item",
-  gacha: "Puxada gacha",
-  passe: "Recompensa de passe",
-  nivel: "Subir de nível",
-  vitoria: "Vitória",
-  conquista: "Conquista",
+  RANK_PROMOTED: "Promoção de elo",
+  RANK_DEMOTED: "Queda de elo",
+  PASS_LEVEL_UP: "Nível do passe",
+  ACHIEVEMENT_UNLOCKED: "Conquista",
+  FEATURE_UNLOCKED: "Novo recurso",
+  STREAK_MILESTONE: "Marco de streak",
+  ITEM_DROPPED: "Drop de item",
+  GACHA_PULLED: "Puxada de gacha",
+  MISSION_COMPLETED: "Missão concluída",
+  RIVAL_DECLARED: "Rivalidade declarada",
+  RIVAL_DEFEATED: "Rival superado",
+  MENSAGEM: "Mensagem",
 };
+
+// Fallback: "ALGO_ASSIM" → "Algo assim" (pra tipos novos que ainda não mapeamos).
+function humanizar(chave: string): string {
+  const s = chave.replace(/_/g, " ").toLowerCase();
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+const nomeCerimonia = (t: string) => NOME_CERIMONIA[t] ?? humanizar(t);
+
+const NOME_MODO: Record<string, string> = { soloq: "SoloQ", liga: "Liga", evento: "Evento", torneio: "Torneio" };
+const nomeModo = (m: string) => NOME_MODO[m] ?? humanizar(m);
 
 function corTaxa(taxa: number): string {
   if (taxa >= 80) return "text-rose-400";
@@ -62,7 +79,7 @@ export default function AdminEngajamento() {
               <tbody>
                 {dados.skip_por_tipo.map((s) => (
                   <tr key={s.tipo} className="border-t border-zinc-800">
-                    <td className="px-3 py-1.5 text-zinc-300">{NOME_CERIMONIA[s.tipo] ?? s.tipo}</td>
+                    <td className="px-3 py-1.5 text-zinc-300">{nomeCerimonia(s.tipo)}</td>
                     <td className="px-3 py-1.5 text-right tabular-nums text-zinc-400">{Number(s.vista).toLocaleString("pt-BR")}</td>
                     <td className="px-3 py-1.5 text-right tabular-nums text-zinc-400">{Number(s.pulada).toLocaleString("pt-BR")}</td>
                     <td className={`px-3 py-1.5 text-right font-semibold tabular-nums ${corTaxa(Number(s.taxa))}`}>{Number(s.taxa)}%</td>
@@ -77,7 +94,7 @@ export default function AdminEngajamento() {
       <div className="grid gap-4 lg:grid-cols-2">
         <Secao titulo="Partidas por modo">
           <Painel>
-            <BarChart dados={dados.partidas_por_modo.map((p) => ({ x: p.k, y: Number(p.v), cor: "#38bdf8" }))} altura={170} />
+            <BarChart dados={dados.partidas_por_modo.map((p) => ({ x: nomeModo(p.k), y: Number(p.v), cor: "#38bdf8" }))} altura={170} />
           </Painel>
         </Secao>
         <Secao titulo="Cartões compartilhados por tipo" sub="Uso da feature de compartilhamento.">

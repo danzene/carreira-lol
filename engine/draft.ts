@@ -222,15 +222,10 @@ export function forcaComp(e: EstadoDraft, banco: ChampionDef[]): Record<TimeDraf
   return { azul: forca(a, v), vermelho: forca(v, a) };
 }
 
-// Quantos dos SEUS picks o coach assume (cai com a reputação).
-export function passosCoach(reputacao: number): number {
-  return reputacao < 20 ? 2 : reputacao < 50 ? 1 : 0;
-}
-
-// No passo atual, é VOCÊ que escolhe (vs coach/inimigo)?
-export function vocePica(e: EstadoDraft, reputacao: number): boolean {
+// No passo atual, é VOCÊ que escolhe? AUTONOMIA TOTAL: todos os SEUS bans e picks
+// são seus, do começo ao fim (o coach não assume mais nenhum). O inimigo
+// (vermelho) segue jogado pela IA.
+export function vocePica(e: EstadoDraft): boolean {
   const passo = passoAtual(e);
-  if (!passo || passo.time !== "azul") return false;
-  if (passo.fase === "ban") return true; // bans são seus
-  return e.picks.azul.length < 5 - passosCoach(reputacao);
+  return !!passo && passo.time === "azul";
 }

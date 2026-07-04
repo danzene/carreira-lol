@@ -7,7 +7,6 @@ import {
   forcaComp,
   iniciarDraft,
   ordemDraft,
-  passosCoach,
   vocePica,
 } from "./draft";
 import { criarRng } from "./rng";
@@ -58,7 +57,7 @@ describe("draft (pick & ban)", () => {
     expect(rotas.find((r) => r.role === "ADC")?.id).toBe("Mid0");
     // rota já fixada não é sobrescrita pelo próximo flex
     let e2 = e;
-    while (passosCoach(0) >= 0 && e2.ordem[e2.passo]?.time !== "azul") e2 = aplicarEscolha(e2, escolhaIA(e2, BANCO));
+    while (e2.ordem[e2.passo]?.time !== "azul") e2 = aplicarEscolha(e2, escolhaIA(e2, BANCO));
     e2 = aplicarEscolha(e2, "Top0", "ADC");
     expect(e2.rotas.azul.ADC).toBe("Mid0"); // continua o primeiro
     // sem rota = atribuição automática (comportamento antigo)
@@ -104,11 +103,14 @@ describe("draft (pick & ban)", () => {
     expect(fc.azul).toBeLessThanOrEqual(100);
   });
 
-  it("voz no draft: reputação baixa deixa o coach assumir picks", () => {
-    expect(passosCoach(5)).toBe(2);
-    expect(passosCoach(60)).toBe(0);
-    const e = iniciarDraft();
+  it("autonomia total: TODO passo do azul é seu (bans e picks); vermelho é da IA", () => {
     // primeiro passo é ban do azul → é seu
-    expect(vocePica(e, 5)).toBe(true);
+    expect(vocePica(iniciarDraft())).toBe(true);
+    // percorre o draft inteiro: você decide em cada passo do azul, nunca no vermelho
+    let e = iniciarDraft();
+    while (!draftCompleto(e)) {
+      expect(vocePica(e)).toBe(e.ordem[e.passo]?.time === "azul");
+      e = aplicarEscolha(e, escolhaIA(e, BANCO));
+    }
   });
 });

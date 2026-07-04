@@ -226,7 +226,6 @@ function DraftFlow() {
           <DraftBoard
             comfort={career.player.pool.map((p) => p.championId)}
             maestria={Object.fromEntries(career.player.pool.map((p) => [p.championId, p.pontos]))}
-            reputacao={career.player.reputacao}
             rota={career.player.rota}
             patch={career.patchVigente}
             proibidos={proibidos}

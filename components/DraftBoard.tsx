@@ -43,7 +43,6 @@ export interface JogarInfo {
 export default function DraftBoard({
   comfort,
   maestria = {},
-  reputacao,
   rota,
   patch = 1,
   proibidos = [],
@@ -55,7 +54,6 @@ export default function DraftBoard({
 }: {
   comfort: string[];
   maestria?: Record<string, number>;
-  reputacao: number;
   rota: Role;
   patch?: number;
   proibidos?: string[];
@@ -112,7 +110,7 @@ export default function DraftBoard({
 
   const passo = passoAtual(estado);
   const fim = draftCompleto(estado);
-  const seuTurno = passo?.time === "azul" && vocePica(estado, reputacao);
+  const seuTurno = vocePica(estado); // todos os seus turnos (bans + picks) são seus
 
   // auto-avanço (inimigo ou coach)
   useEffect(() => {
@@ -199,7 +197,7 @@ export default function DraftBoard({
           {fim ? "FIM" : passo?.fase === "ban" ? "BANIMENTO" : "ESCOLHA"}
         </span>
         <span className={`font-pixel text-[11px] ${seuTurno ? "text-ciano" : "text-suave"}`}>
-          {fim ? "DRAFT COMPLETO" : seuTurno ? "SUA VEZ" : passo?.time === "azul" ? "COACH" : "INIMIGO"}
+          {fim ? "DRAFT COMPLETO" : seuTurno ? "SUA VEZ" : "INIMIGO"}
         </span>
         <span className="font-pixel text-[10px] text-borda">{Math.min(estado.passo + 1, 20)}/20</span>
       </div>

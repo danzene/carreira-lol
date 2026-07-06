@@ -100,6 +100,26 @@ export default function RecapSemanal({ recap, onFechar }: { recap: Recap; onFech
     });
   }
 
+  if (recap.grind && recap.grind.partidas > 0) {
+    cards.push({
+      titulo: "GRIND DE NORMAIS",
+      corpo: (
+        <div className="flex flex-col items-center gap-2">
+          <p className="font-pixel text-4xl text-texto">🛋️ {recap.grind.partidas}</p>
+          <p className="text-[12px] text-suave">normais enquanto o jogo ficou aberto</p>
+          <p className="text-[13px] text-texto">
+            <span className="text-emerald-400">{recap.grind.vitorias}V</span> ·{" "}
+            <span className="text-rosa">{recap.grind.partidas - recap.grind.vitorias}D</span> ·{" "}
+            <span className="text-emerald-300">+${recap.grind.dinheiro}</span>
+          </p>
+          <p className="text-[10px] text-suave">
+            +{recap.grind.maestria.toFixed(1)} de maestria{recap.grind.drops > 0 ? ` · ${recap.grind.drops} drop(s)` : ""} — isso somou.
+          </p>
+        </div>
+      ),
+    });
+  }
+
   if (recap.posts.length > 0) {
     cards.push({
       titulo: "O MUNDO REAGIU",

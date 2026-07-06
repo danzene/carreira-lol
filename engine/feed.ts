@@ -61,6 +61,10 @@ export interface FatosSemana {
   perdeuPraRival: boolean;
   campeaoLiga: boolean; // fechou a liga em 1º nesta semana
   tituloInternacional?: string;
+  // Grind de Normais (semana): alimenta NO MÁXIMO 1 post de grind por semana
+  grindStreakV: number; // maior sequência de vitórias em normais na semana
+  grindStreakD: number; // maior sequência de derrotas
+  grindDrops: number; // drops no grind na semana
 }
 
 export function fatosDaSemana(c: CareerState): FatosSemana {
@@ -88,6 +92,9 @@ export function fatosDaSemana(c: CareerState): FatosSemana {
     perdeuPraRival: !!rivalId, // rival ATIVO = perdeu 2+ seguidas pra ele (definição do sistema)
     campeaoLiga: c.liga?.fase === "ENCERRADA" && c.liga.campeao === "VOCE",
     tituloInternacional: undefined, // setado pelo chamador quando o título sai na semana
+    grindStreakV: c.grind?.semana.maiorStreakV ?? 0,
+    grindStreakD: c.grind?.semana.maiorStreakD ?? 0,
+    grindDrops: c.grind?.semana.drops ?? 0,
   };
 }
 
@@ -171,6 +178,30 @@ const TEMPLATES: Record<string, Tpl[]> = {
       "{nome} fechou a semana com {vitorias} vitórias. Sem brilho excessivo, mas o trabalho aparece.",
     ] },
   ],
+  grind_maratona: [
+    { arquetipo: "torcedor", peso: 70, textos: [
+      "O {nome} NÃO SAI DA FILA!!! {grindStreak} normais seguidas ganhas, o cara respira jogo!!! 🔥",
+      "olha o grind do {nome}: {grindStreak} vitórias seguidas nas normais. É DISSO que os pros são feitos!!!",
+    ] },
+    { arquetipo: "meme", peso: 40, textos: [
+      "{nome} ganhou {grindStreak} normais seguidas. a cadeira já criou o formato dele 🐸🪑",
+    ] },
+  ],
+  grind_bagre: [
+    { arquetipo: "hater", peso: 60, textos: [
+      "{grindStreak} derrotas seguidas em NORMAL, {nome}? em normal?? 😏 até o bot da fila tá com pena.",
+      "dizem que normal não vale nada. o {nome} levou {grindStreak} L seguidas e concordou na hora 😏",
+    ] },
+    { arquetipo: "meme", peso: 40, textos: [
+      "{nome} perdendo normal em sequência é o meu espírito animal 🐸",
+    ] },
+  ],
+  grind_farm: [
+    { arquetipo: "meme", peso: 55, textos: [
+      "{nome} tá farmando até dormindo: dropou item na fila de normal 🐸💤🎒",
+      "o setup do {nome} se monta sozinho — mais um item saído do grind de normais 📦",
+    ] },
+  ],
 };
 
 function preencher(tpl: string, f: FatosSemana): string {
@@ -184,6 +215,7 @@ function preencher(tpl: string, f: FatosSemana): string {
     .replace(/\{lp\}/g, `${f.lpLiquido >= 0 ? "+" : ""}${f.lpLiquido}`)
     .replace(/\{campeao\}/g, f.campeaoProblema?.championId ?? "?")
     .replace(/\{derrotasChamp\}/g, String(f.campeaoProblema?.derrotas ?? 0))
+    .replace(/\{grindStreak\}/g, String(Math.max(f.grindStreakV, f.grindStreakD)))
     .replace(/\{kda\}/g, f.melhorKda ? `${f.melhorKda.k}/${f.melhorKda.d}/${f.melhorKda.a}` : "?");
 }
 
@@ -198,6 +230,10 @@ function gatilhosAtivos(f: FatosSemana): { gatilho: string; relevancia: number }
   if (f.campeaoProblema) out.push({ gatilho: "campeao_problema", relevancia: 50 });
   if (f.perdeuPraRival && f.rivalId) out.push({ gatilho: "rival_provoca", relevancia: 65 });
   if (f.dropMitico) out.push({ gatilho: "drop_mitico", relevancia: 45 });
+  // grind: relevância BAIXA e NO MÁXIMO 1 gatilho (o grind não pode dominar o feed)
+  if (f.grindStreakV >= 5) out.push({ gatilho: "grind_maratona", relevancia: 40 });
+  else if (f.grindStreakD >= 5) out.push({ gatilho: "grind_bagre", relevancia: 35 });
+  else if (f.grindDrops > 0) out.push({ gatilho: "grind_farm", relevancia: 28 });
   if (f.partidas >= 4 && out.length === 0) out.push({ gatilho: "semana_solida", relevancia: 25 });
   return out.sort((a, b) => b.relevancia - a.relevancia);
 }

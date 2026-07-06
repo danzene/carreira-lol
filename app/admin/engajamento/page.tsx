@@ -1,7 +1,7 @@
 "use client";
 
 import { useAdmin } from "@/components/admin/PeriodoContext";
-import { AvisoDados, BarChart, Carregando, KpiCard, Painel, Secao, Vazio } from "@/components/admin/ui";
+import { AvisoDados, BarChart, Carregando, KpiCard, LineChart, Painel, Secao, Vazio } from "@/components/admin/ui";
 
 type KV = { k: string; v: number };
 interface Eng {
@@ -11,6 +11,12 @@ interface Eng {
   duelos: number;
   provas: number;
   passe_niveis: KV[];
+  grind: {
+    adocao: { dia: string; ativos: number; grinders: number }[];
+    pct_geral: number;
+    horas_hist: KV[];
+    teto_dias: number;
+  } | null;
 }
 
 // Tipos de cerimônia (do EventBus do jogo) → nome legível em PT.
@@ -108,6 +114,33 @@ export default function AdminEngajamento() {
         <Painel>
           <BarChart dados={dados.passe_niveis.map((n) => ({ x: n.k, y: Number(n.v), cor: "#a78bfa" }))} altura={180} />
         </Painel>
+      </Secao>
+
+      <Secao
+        titulo="Endgame — Grind de Normais"
+        sub="Adoção da camada idle: % dos ativos do dia que usaram o grind e quanto do teto (3h) cada usuário-dia consumiu. É o que diz se a feature reteve ou virou ruído."
+      >
+        {!dados.grind ? (
+          <Vazio msg="Sem dados do grind (rode a migration 016 e aguarde eventos grind_*)." />
+        ) : (
+          <>
+            <div className="mb-3 grid grid-cols-2 gap-2">
+              <KpiCard rotulo="% ativos que usaram o grind" valor={Number(dados.grind.pct_geral)} formato={(n) => `${n}%`} />
+              <KpiCard rotulo="Dias-usuário no teto (3h)" valor={Number(dados.grind.teto_dias)} />
+            </div>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <Painel>
+                <p className="mb-1 text-[11px] text-zinc-400">Ativos (azul) vs usaram grind (verde), por dia</p>
+                <LineChart dados={dados.grind.adocao.map((a) => ({ x: a.dia.slice(5), y: Number(a.ativos) }))} cor="#38bdf8" altura={120} />
+                <LineChart dados={dados.grind.adocao.map((a) => ({ x: a.dia.slice(5), y: Number(a.grinders) }))} cor="#34d399" altura={100} />
+              </Painel>
+              <Painel>
+                <p className="mb-1 text-[11px] text-zinc-400">Horas de grind por usuário-dia (até o teto)</p>
+                <BarChart dados={dados.grind.horas_hist.map((h) => ({ x: h.k, y: Number(h.v), cor: "#f59e0b" }))} altura={170} />
+              </Painel>
+            </div>
+          </>
+        )}
       </Secao>
     </div>
   );

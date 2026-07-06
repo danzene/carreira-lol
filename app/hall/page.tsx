@@ -67,6 +67,12 @@ export default function HallPage() {
             valor={rec.melhorKda ? `${rec.melhorKda.k}/${rec.melhorKda.d}/${rec.melhorKda.a}` : "—"}
           />
         </div>
+        {career.grind && career.grind.totalPartidas > 0 && (
+          <div className="grid grid-cols-2 gap-2">
+            <Placa emoji="🛋️" rotulo="normais jogadas (grind)" valor={`${career.grind.totalPartidas}`} />
+            <Placa emoji="📈" rotulo="maior sequência em normais" valor={`${career.grind.maiorStreakV}`} />
+          </div>
+        )}
       </section>
 
       {/* títulos internacionais */}

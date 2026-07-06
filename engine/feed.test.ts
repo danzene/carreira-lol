@@ -80,6 +80,27 @@ describe("feed vivo", () => {
       expect(p.likes).toBeGreaterThan(0);
     }
   });
+
+  it("grind: no MÁXIMO 1 post por semana e nunca domina o feed", () => {
+    const grind = {
+      ligado: true, dia: "2026-07-03", seedDia: 1, segundosHoje: 0, partidasAplicadas: 0,
+      streakDia: 0, totalPartidas: 30, maiorStreakV: 6,
+      semana: { partidas: 18, vitorias: 12, dinheiro: 40, maestria: 9, maiorStreakV: 6, maiorStreakD: 5, drops: 2 },
+    };
+    // semana cheia + grind com streak V, streak D e drop: só UM gatilho de grind entra
+    const c = { ...semanaCheia(), grind };
+    const posts = gerarPostsFeed(c, fatosDaSemana(c), 5);
+    const deGrind = posts.filter((p) => p.gatilho.startsWith("grind_"));
+    expect(deGrind.length).toBeLessThanOrEqual(1);
+    // com notícia de verdade na semana, o grind nunca é o post mais relevante
+    if (posts.length > 0) expect(posts[0].gatilho.startsWith("grind_")).toBe(false);
+    // semana morta + só grind: o post de grind aparece (maratona vence bagre/farm)
+    const soGrind = { ...carreira(), grind };
+    const postsSo = gerarPostsFeed(soGrind, fatosDaSemana(soGrind), 5);
+    expect(postsSo.some((p) => p.gatilho === "grind_maratona")).toBe(true);
+    expect(postsSo.filter((p) => p.gatilho.startsWith("grind_")).length).toBe(1);
+    for (const p of postsSo) expect(p.texto).not.toMatch(/\{[a-zA-Z]+\}/); // {grindStreak} preenchido
+  });
 });
 
 describe("entrevista pós-jogo", () => {

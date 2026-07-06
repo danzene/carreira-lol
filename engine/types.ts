@@ -119,6 +119,7 @@ export interface MatchResult {
 export interface OpcoesCarreira {
   esconderAtributos: boolean; // modo imersão: esconde os números dos atributos
   fearless: boolean; // não dá pra repetir campeões jogados recentemente
+  ocultarGrind?: boolean; // esconde o widget do grind (se ligado, continua acumulando)
 }
 
 // ----- Partidas-evento (Fase 11 p2) -----

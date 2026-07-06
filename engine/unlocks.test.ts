@@ -28,10 +28,11 @@ describe("unlock progressivo", () => {
     expect(featureLiberada(c, "online")).toBe(false);
   });
 
-  it("semana 2 libera stream/mental/loja; semana 3 libera o passe", () => {
+  it("semana 2 libera stream/mental/loja/grind; semana 3 libera o passe", () => {
     const c = { ...carreira(), unlocksLegacy: false, semanaAtual: 2 };
     expect(featureLiberada(c, "stream")).toBe(true);
     expect(featureLiberada(c, "loja")).toBe(true);
+    expect(featureLiberada(c, "grind")).toBe(true);
     expect(featureLiberada(c, "passe")).toBe(false);
     expect(featureLiberada({ ...c, semanaAtual: 3 }, "passe")).toBe(true);
   });
@@ -63,7 +64,7 @@ describe("unlock progressivo", () => {
     const antes = { ...carreira(), unlocksLegacy: false };
     const depois = { ...antes, semanaAtual: 2 };
     const evs = cerimoniasDeUnlocks(antes, depois);
-    expect(evs.map((e) => e.tipo === "FEATURE_UNLOCKED" && e.feature)).toEqual(["stream", "mental", "loja"]);
+    expect(evs.map((e) => e.tipo === "FEATURE_UNLOCKED" && e.feature)).toEqual(["stream", "mental", "loja", "grind"]);
     expect(cerimoniasDeUnlocks(antes, { ...depois, unlocksLegacy: true })).toHaveLength(0);
     expect(cerimoniasDeUnlocks(depois, depois)).toHaveLength(0);
   });

@@ -3,6 +3,7 @@ import { Press_Start_2P } from "next/font/google";
 import "./globals.css";
 import AuthGate from "@/components/AuthGate";
 import CeremonyManager from "@/components/ceremony/CeremonyManager";
+import GrindWidget from "@/components/GrindWidget";
 import HeaderHud from "@/components/HeaderHud";
 import Guardiao from "@/components/Guardiao";
 import TelemetriaTela from "@/components/TelemetriaTela";
@@ -28,6 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <AuthGate>
             <HeaderHud />
             {children}
+            <GrindWidget />
           </AuthGate>
           <CeremonyManager />
           <TelemetriaTela />

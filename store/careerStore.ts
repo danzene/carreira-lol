@@ -71,7 +71,18 @@ import {
   type EventoLogin,
 } from "@/engine/diario";
 import { acumularDrop, acumularPartida, fecharSemanaStats, statsVazias } from "@/engine/statsSemana";
-import { cerimoniasDeUnlocks, migrarUnlocks } from "@/engine/unlocks";
+import {
+  acumularSegundosGrind,
+  aplicarGrind,
+  estadoGrindInicial,
+  fecharSemanaGrind,
+  gerarItemGrind,
+  resolverGrind,
+  tetoAtingido,
+  type ResultadoGrind,
+} from "@/engine/grind";
+import { GRIND } from "@/data/grind";
+import { cerimoniasDeUnlocks, featureLiberada, migrarUnlocks } from "@/engine/unlocks";
 import { gerarItem } from "@/engine/itens";
 import { SLOTS_GEAR } from "@/data/itens";
 import { criarRng } from "@/engine/rng";
@@ -112,6 +123,7 @@ export interface RecapSemanal {
   semana: number;
   temporada: number;
   posts: PostFeed[]; // 1-2 posts mais relevantes da semana (o mundo reagiu)
+  grind?: import("@/engine/grind").GrindSemana; // totais do Grind de Normais na semana
 }
 
 interface CareerStore {
@@ -120,6 +132,9 @@ interface CareerStore {
   ultimoResumo: ResumoSemana | null;
   dailyHub: { streak: number; evento: EventoLogin } | null;
   recapSemanal: RecapSemanal | null;
+  grindResultado: ResultadoGrind | null; // transiente: lote do dia resolvido (widget lê daqui)
+  tickGrind: (deltaSegundos: number) => void;
+  alternarGrind: () => void;
   registrarLogin: () => void;
   coletarDiaria: () => boolean;
   puxarGratis: () => Promise<ResultadoPuxada[] | null>;
@@ -165,6 +180,9 @@ function iLvlDe(c: CareerState): number {
   return Math.max(10, Math.min(60, Math.round((c.player.rankSoloq.mmr - 800) / 50) + 10));
 }
 
+// Últimos segundos de grind já persistidos (throttle da gravação do heartbeat).
+let segGravado = 0;
+
 // Aplica conquistas e emite as cerimônias das novas (borda store→apresentação).
 function comConquistas(c: CareerState): CareerState {
   const { career, novas } = verificarConquistas(c);
@@ -178,9 +196,76 @@ export const useCareer = create<CareerStore>((set, get) => ({
   ultimoResumo: null,
   dailyHub: null,
   recapSemanal: null,
+  grindResultado: null,
 
   limparDailyHub: () => set({ dailyHub: null }),
   limparRecap: () => set({ recapSemanal: null }),
+
+  // 🛋️ Heartbeat do Grind de Normais. Chamado pelo widget a cada tick com os SEGUNDOS
+  // DE ABA VISÍVEL decorridos (nunca relógio — Regra 5). delta=0 só re-resolve/aplica
+  // pendências (usado no mount e ao voltar de outra aba). Engine decide tudo em lote.
+  tickGrind: (deltaSegundos) => {
+    const { career: c0, slotId } = get();
+    if (!c0 || !GRIND.habilitado || !featureLiberada(c0, "grind")) return;
+    const hoje = chaveDia(Date.now());
+    // seed nasce na BORDA (só usada se o dia virou / primeiro uso)
+    const seedNova = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
+    const gAntes = c0.grind ?? estadoGrindInicial(hoje, seedNova);
+
+    if (!gAntes.ligado) {
+      // pausado: não acumula; só garante o estado inicializado no save (1ª vez)
+      if (!c0.grind) {
+        const novo = { ...c0, grind: gAntes };
+        set({ career: novo });
+        if (slotId) salvarSlot(slotId, novo);
+      }
+      return;
+    }
+
+    const g = acumularSegundosGrind(gAntes, deltaSegundos, hoje, seedNova);
+    let novo: CareerState = { ...c0, grind: g };
+    const resultado = resolverGrind(novo.player, g.segundosHoje, g.seedDia);
+    const ap = aplicarGrind(novo, resultado);
+    novo = ap.career;
+
+    // drops → inventário DIRETO (sem cerimônia fullscreen: grind é ambiente, não evento)
+    for (const p of ap.novas) {
+      if (p.drop) useInventory.getState().adicionarItem(gerarItemGrind(p.drop, iLvlDe(novo)));
+      rastrear("grind_partida", { vitoria: p.vitoria, campeao: p.championId, idx: p.idx });
+    }
+
+    // teto do dia: telemetria + marca o aviso (badge) uma vez por dia
+    if (novo.grind && tetoAtingido(novo.grind) && novo.grind.tetoAvisadoEm !== hoje) {
+      novo = { ...novo, grind: { ...novo.grind, tetoAvisadoEm: hoje } };
+      rastrear("grind_teto_atingido", { partidas: resultado.completas.length });
+    }
+
+    set({ career: novo, grindResultado: resultado });
+
+    // persistência com parcimônia: gravar a cada tick spamaria o cloud sync (debounce de
+    // 1.5s). Grava quando algo MATERIAL muda; segundos puros vão em lotes de ≥60s
+    // (perda máxima ao fechar a aba: <60s de grind — aceitável e documentado).
+    const material =
+      ap.novas.length > 0 || gAntes.dia !== g.dia || !c0.grind || novo.grind?.tetoAvisadoEm !== gAntes.tetoAvisadoEm;
+    if (material) segGravado = novo.grind?.segundosHoje ?? 0;
+    const lote = (novo.grind?.segundosHoje ?? 0) - segGravado >= 60;
+    if (lote) segGravado = novo.grind?.segundosHoje ?? 0;
+    if ((material || lote) && slotId) salvarSlot(slotId, novo);
+  },
+
+  // Liga/pausa o grind (toggle do widget). Inicializa o estado na primeira vez.
+  alternarGrind: () => {
+    const { career: c0, slotId } = get();
+    if (!c0) return;
+    const hoje = chaveDia(Date.now());
+    const seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
+    const g = c0.grind ?? estadoGrindInicial(hoje, seed);
+    const novoG = { ...g, ligado: !g.ligado };
+    rastrear(novoG.ligado ? "grind_ligado" : "grind_pausado", { dia: hoje });
+    const novo = { ...c0, grind: novoG };
+    set({ career: novo });
+    if (slotId) salvarSlot(slotId, novo);
+  },
 
   // Responde a entrevista pendente (a fala vira post no feed; efeitos no engine).
   responderEntrevista: (tom) => {
@@ -495,8 +580,9 @@ export const useCareer = create<CareerStore>((set, get) => ({
       semana: antes.semanaAtual,
       temporada: antes.temporada,
       posts: posts.slice(0, 2),
+      grind: antes.grind && antes.grind.semana.partidas > 0 ? antes.grind.semana : undefined,
     };
-    novo = fecharSemanaStats(novo);
+    novo = fecharSemanaGrind(fecharSemanaStats(novo));
     const unlocksSemana = cerimoniasDeUnlocks(antes, novo);
     useCerimonias.getState().emitir(unlocksSemana);
     for (const u of unlocksSemana) if (u.tipo === "FEATURE_UNLOCKED") rastrear("feature_desbloqueada", { feature: u.feature });

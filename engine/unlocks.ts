@@ -6,7 +6,7 @@ import type { Cerimonia } from "./cerimonias";
 // saves antigos ganham `unlocksLegacy` na migração e têm tudo aberto desde o início.
 // O gate mora aqui — a UI só lê (banner com cadeado + condição).
 
-export type FeatureId = "stream" | "mental" | "loja" | "booster" | "itens" | "passe" | "online";
+export type FeatureId = "stream" | "mental" | "loja" | "booster" | "itens" | "passe" | "online" | "grind";
 
 export interface DefUnlock {
   id: FeatureId;
@@ -22,6 +22,13 @@ export const UNLOCKS: DefUnlock[] = [
   { id: "stream", nome: "Streaming", desc: "Faça lives pra ganhar $ e reputação.", condicao: "Destrava na semana 2 (ou 10 partidas)", liberado: semana2 },
   { id: "mental", nome: "Foco Mental", desc: "Ganhe traços novos de personalidade.", condicao: "Destrava na semana 2 (ou 10 partidas)", liberado: semana2 },
   { id: "loja", nome: "Loja", desc: "Invista em coach, bootcamp e sessões.", condicao: "Destrava na semana 2 (ou 10 partidas)", liberado: semana2 },
+  {
+    id: "grind",
+    nome: "Grind de Normais",
+    desc: "Seu jogador entra na fila sozinho enquanto o jogo está aberto — rende até 3h por dia.",
+    condicao: "Destrava na semana 2 (ou 10 partidas)",
+    liberado: semana2,
+  },
   {
     id: "booster",
     nome: "Carreira Booster",

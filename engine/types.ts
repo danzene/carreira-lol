@@ -212,6 +212,8 @@ export interface StatsSemana {
   dropsPorRaridade: Record<number, number>;
 }
 
+// (o total semanal do Grind de Normais vive em career.grind.semana — engine/grind)
+
 export interface CareerState {
   player: Player;
   dinheiro: number;
@@ -253,4 +255,5 @@ export interface CareerState {
   ultimaEntrevistaChave?: number; // temporada*1000+semana da última entrevista (máx. 1/semana)
   statsSemana?: StatsSemana; // stats da semana corrente (recap ao avançar)
   statsSemanaAnterior?: StatsSemana; // pra comparação ↑↓ no recap
+  grind?: import("./grind").EstadoGrind; // Grind de Normais (camada idle; ausente em saves antigos)
 }

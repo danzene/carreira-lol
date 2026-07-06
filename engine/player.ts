@@ -1,5 +1,6 @@
 import { CRIACAO, INICIO } from "@/data/config";
 import { OPCOES_PADRAO } from "@/data/opcoes";
+import { normalizarGrind } from "./grind";
 import type { Attributes, CareerState, ChampionMastery, OpcoesCarreira, Player, Role, TraitId } from "./types";
 
 // Criação de jogador (lógica PURA). Recebe dados → devolve estado.
@@ -139,6 +140,7 @@ export function normalizarCareer(bruto: CareerState): CareerState {
     preparacao: bruto.preparacao === true ? true : undefined,
     prova:
       bruto.prova && typeof bruto.prova.semana === "number" && Array.isArray(bruto.prova.resultados) ? bruto.prova : undefined,
+    grind: normalizarGrind(bruto.grind), // idle: shape inválido/ausente → undefined (seguro)
     player: {
       nome: p.nome ?? "Jogador",
       nacionalidade: p.nacionalidade ?? "Brasil",

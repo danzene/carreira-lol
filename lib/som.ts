@@ -168,13 +168,14 @@ const PARTITURAS: Record<SomId, N[]> = {
   ],
 };
 
-// Toca um som (não-op no servidor, mutado ou sem Web Audio).
-export function tocarSom(id: SomId): void {
+// Toca um som (não-op no servidor, mutado ou sem Web Audio). `fator` escala o volume
+// além do global (ex.: sons de ambiente do diorama tocam mais baixo) — mute manda em tudo.
+export function tocarSom(id: SomId, fator = 1): void {
   const c = lerConfig();
-  if (c.mute || c.volume <= 0) return;
+  if (c.mute || c.volume <= 0 || fator <= 0) return;
   const ac = contexto();
   if (!ac) return;
-  for (const n of PARTITURAS[id]) nota(ac, n.f, n.t, n.d, n.o ?? "square", (n.v ?? 0.5) * c.volume);
+  for (const n of PARTITURAS[id]) nota(ac, n.f, n.t, n.d, n.o ?? "square", (n.v ?? 0.5) * c.volume * Math.min(1, fator));
 }
 
 // Som do tier de raridade (1..5).

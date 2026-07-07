@@ -20,6 +20,11 @@ import type { RaridadeItem } from "./itens";
 export const GRIND = {
   // 🔌 kill switch global: false desliga o widget/heartbeat em 1 deploy, sem quebrar saves.
   habilitado: true,
+  // 🎬 kill switch VISUAL do diorama (separado): false volta o widget-pílula simples
+  // sem desligar o grind — rollback de apresentação em 1 deploy.
+  dioramaHabilitado: true,
+  volumeDiorama: 0.45, // sons do diorama tocam nesta fração do volume global
+  autoSilencioSeg: 240, // sem interação por 4min ⇒ só drop/fim de partida tocam
 
   // ⏱️ tempo (SEGUNDOS DE ABA VISÍVEL — nunca relógio do cliente; ver Regra 5)
   tetoSegundosDia: 3 * 3600, // rende no máx. 3h de ganho por dia real

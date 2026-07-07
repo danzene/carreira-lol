@@ -120,6 +120,8 @@ export interface OpcoesCarreira {
   esconderAtributos: boolean; // modo imersão: esconde os números dos atributos
   fearless: boolean; // não dá pra repetir campeões jogados recentemente
   ocultarGrind?: boolean; // esconde o widget do grind (se ligado, continua acumulando)
+  grindPilula?: boolean; // prefere o widget-pílula discreto ao diorama animado
+  reduzirAnimacoes?: boolean; // modo economia: 12fps e sem partículas no diorama
 }
 
 // ----- Partidas-evento (Fase 11 p2) -----

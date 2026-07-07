@@ -27,6 +27,11 @@ const PREVIEW = "assets/sprites-preview.html";
 
 // ---- calibração (documentada no CHANGELOG-sprites) ----
 const TOLERANCIA_SAT = 26; // max(R,G,B)−min(R,G,B) ≤ isto = cinza de fundo (ajuste se sobrar franja)
+// O personagem TAMBÉM tem cinzas (casaco escuro, armadura) — o que separa é a LUZ:
+// o fundo é cinza médio-claro (~#888 com degradê), os escuros do personagem são quase
+// pretos. Fundo = neutro E claro. Ilhas de fundo escuras que sobrarem nos cantos caem
+// no filtro de componentes soltos.
+const LUMI_MIN_FUNDO = 60; // max(R,G,B) ≥ isto pra contar como fundo
 const ALPHA_BORDA = 140; // alpha da fronteira do recorte (suaviza serrilhado sobre fundo escuro)
 const LARGURA_ATLAS = 1024; // largura máxima do atlas (shelf packing)
 const PAD = 2; // respiro entre frames no atlas
@@ -69,7 +74,8 @@ function removerFundo(data, w, h) {
     const r = data[i * 4];
     const g = data[i * 4 + 1];
     const b = data[i * 4 + 2];
-    return Math.max(r, g, b) - Math.min(r, g, b) <= TOLERANCIA_SAT;
+    const max = Math.max(r, g, b);
+    return max - Math.min(r, g, b) <= TOLERANCIA_SAT && max >= LUMI_MIN_FUNDO;
   };
   const empurrar = (i) => {
     if (!fundo[i] && ehFundo(i)) {
@@ -113,6 +119,112 @@ function removerFundo(data, w, h) {
       if (borda) data[i * 4 + 3] = Math.min(data[i * 4 + 3], ALPHA_BORDA);
     }
   }
+}
+
+// ---- 2a. corte da TARJA de legenda na base (antes do flood-fill) ----
+// A arte IA traz uma faixa preta com o nome do arquivo colada na base; em poses
+// baixas (derrota) ela FUNDE com o personagem e o filtro de componentes não pega.
+// Perfil inconfundível: linhas contíguas a partir da base com ≥50% de pixels quase
+// pretos na LARGURA TODA (o corpo nunca ocupa 50% da largura em linha escura).
+function removerTarjaBase(data, w, h) {
+  // linha de tarja: escura de BORDA A BORDA (x≈0 até x≈w) e majoritariamente preta —
+  // um corpo deitado nunca cruza a largura inteira encostando nas duas bordas.
+  const ehLinhaTarja = (y) => {
+    let escuros = 0;
+    let primeiro = -1;
+    let ultimo = -1;
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      if (data[i + 3] > 10 && Math.max(data[i], data[i + 1], data[i + 2]) < 60) {
+        escuros++;
+        if (primeiro < 0) primeiro = x;
+        ultimo = x;
+      }
+    }
+    return escuros / w >= 0.6 && primeiro <= 2 && ultimo >= w - 3;
+  };
+  // procura a PRIMEIRA linha de tarja no quarto de baixo (a tarja pode estar
+  // levemente afastada da borda); exige ≥3 linhas seguidas pra não confundir
+  let inicio = -1;
+  for (let y = Math.floor(h * 0.75); y < h - 2; y++) {
+    if (ehLinhaTarja(y) && ehLinhaTarja(y + 1) && ehLinhaTarja(y + 2)) {
+      inicio = y;
+      break;
+    }
+  }
+  if (inicio < 0) return 0;
+  const de = Math.max(0, inicio - 2); // buffer pro serrilhado
+  for (let y = de; y < h; y++) for (let x = 0; x < w; x++) data[(y * w + x) * 4 + 3] = 0;
+  return h - de;
+}
+
+// ---- 2b. descarte de componentes soltos (selos/etiquetas da arte IA) ----
+// A arte bruta traz um selo rosa numerado no canto e uma tarja de legenda — o selo é
+// SATURADO (o flood-fill não remove). Solução: componentes conexos do que sobrou;
+// mantém o MAIOR (o personagem) + componentes encostados no bbox dele (margem 2px —
+// efeitos de golpe destacados sobrevivem); o resto (selos de canto, sobras) some.
+function manterComponentePrincipal(data, w, h) {
+  const comp = new Int32Array(w * h).fill(-1);
+  const componentes = [];
+  const fila = new Int32Array(w * h);
+  for (let start = 0; start < w * h; start++) {
+    if (comp[start] !== -1 || data[start * 4 + 3] <= 10) continue;
+    const id = componentes.length;
+    let n = 0;
+    let x0 = w;
+    let y0 = h;
+    let x1 = -1;
+    let y1 = -1;
+    let ini = 0;
+    let fim = 0;
+    fila[fim++] = start;
+    comp[start] = id;
+    while (ini < fim) {
+      const i = fila[ini++];
+      n++;
+      const x = i % w;
+      const y = (i / w) | 0;
+      if (x < x0) x0 = x;
+      if (x > x1) x1 = x;
+      if (y < y0) y0 = y;
+      if (y > y1) y1 = y;
+      const tenta = (v) => {
+        if (comp[v] === -1 && data[v * 4 + 3] > 10) {
+          comp[v] = id;
+          fila[fim++] = v;
+        }
+      };
+      if (x > 0) tenta(i - 1);
+      if (x < w - 1) tenta(i + 1);
+      if (y > 0) tenta(i - w);
+      if (y < h - 1) tenta(i + w);
+    }
+    componentes.push({ n, x0, y0, x1, y1 });
+  }
+  if (componentes.length <= 1) return 0;
+  let principal = 0;
+  for (let i = 1; i < componentes.length; i++) if (componentes[i].n > componentes[principal].n) principal = i;
+  const P = componentes[principal];
+  const M = 2;
+  // perfis dos contaminantes da arte IA (sempre descartados, mesmo encostados):
+  // SELO numerado = componente pequeno inteiro num canto SUPERIOR da imagem;
+  // TARJA de legenda = faixa larga e baixa colada na base da imagem.
+  const ehSelo = (cp) =>
+    cp.n < w * h * 0.08 && cp.y1 <= h * 0.3 && (cp.x1 <= w * 0.32 || cp.x0 >= w * 0.68);
+  const ehTarja = (cp) => cp.y0 >= h * 0.8 && cp.x1 - cp.x0 >= w * 0.5 && cp.y1 - cp.y0 <= h * 0.2;
+  const manter = componentes.map((cp, i) => {
+    if (i === principal) return true; // o personagem nunca é descartado
+    if (ehSelo(cp) || ehTarja(cp)) return false;
+    return cp.x1 >= P.x0 - M && cp.x0 <= P.x1 + M && cp.y1 >= P.y0 - M && cp.y0 <= P.y1 + M;
+  });
+  let removidos = 0;
+  for (let i = 0; i < w * h; i++) {
+    if (comp[i] >= 0 && !manter[comp[i]]) {
+      data[i * 4 + 3] = 0;
+      removidos++;
+    }
+  }
+  return removidos;
 }
 
 // ---- 3. trim pro bbox do conteúdo ----
@@ -179,7 +291,11 @@ async function main() {
     for (const arq of arquivos) {
       const nome = nomeFrame(arq);
       const { data, info } = await sharp(join(dir, arq)).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+      const tarja = removerTarjaBase(data, info.width, info.height);
+      if (tarja > 0) log(`${nome}: tarja de legenda cortada (${tarja} linhas na base)`);
       removerFundo(data, info.width, info.height);
+      const soltos = manterComponentePrincipal(data, info.width, info.height);
+      if (soltos > 0) log(`${nome}: ${soltos}px de componentes soltos descartados (selo/etiqueta)`);
       const bb = bbox(data, info.width, info.height);
       if (!bb) {
         log(`AVISO: ${nome} ficou vazio após o recorte — tolerância alta demais? Pulando.`);

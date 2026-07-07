@@ -39,12 +39,23 @@ foi removida por inteiro.*
 - **Lib: sharp** (e não node-canvas): binários pré-compilados no Windows (zero
   toolchain), acesso raw RGBA rápido e `kernel: nearest` no resize — essencial pro
   pixel art não virar mingau.
-- **Tolerância do flood-fill**: `TOLERANCIA_SAT = 26` (pixel de fundo =
-  `max(R,G,B) − min(R,G,B) ≤ 26`, BFS a partir de TODAS as bordas; personagem
-  colorido bloqueia a propagação). Validado com 22 sprites sintéticos imitando os
-  brutos (degradê radial ~#888→preto + corpo colorido + acento neon + **buraco
-  cinza interno**): fundo 100% removido, buraco interno **preservado** (teste de
-  pixel no atlas). Se sobrar franja na arte real: subir pra ~30-34.
+- **Tolerância do flood-fill (calibração FINAL com a arte real)**: `TOLERANCIA_SAT
+  = 26` **+ `LUMI_MIN_FUNDO = 60`** — só saturação não bastou: o casaco do herói e
+  a armadura do minion são cinzas dessaturados e o flood-fill comeu o corpo inteiro
+  na 1ª passada. O que separa fundo de personagem nesta arte é a LUZ: fundo = neutro
+  **e** claro (`max ≥ 60`); os escuros do personagem (quase pretos) bloqueiam a
+  propagação. Ilhas de fundo escuras que sobram nos cantos caem no filtro de
+  componentes.
+- **Contaminantes da arte IA (resolvidos por perfil determinístico)**: cada frame
+  bruto trazia um **selo rosa numerado** no canto superior e uma **tarja preta de
+  legenda** na base. Selo = componente pequeno inteiro num canto superior →
+  descartado; tarja = linhas escuras de **borda a borda** (x≈0 até x≈w, ≥60%
+  pretas, ≥3 seguidas) no quarto inferior → cortada ANTES do flood-fill (em poses
+  baixas ela fundia com o personagem). Um corpo deitado nunca cruza a largura
+  inteira — o discriminador é seguro.
+- Validação em duas rodadas: 22 sintéticos (fundo/degradê/buraco interno/idempotência)
+  e depois os 22 PNGs reais com inspeção visual do atlas a cada iteração (3 iterações
+  até o atlas 100% limpo).
 - **Suavização de borda**: alpha 140 na fronteira do recorte (8-conexo).
 - **Baseline**: default = fundo do bbox (pés no chão). `BASELINE_OVERRIDES` no
   script pra poses caídas (fração da altura) — **nenhum override foi necessário nos

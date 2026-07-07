@@ -1,0 +1,352 @@
+{
+ "v": 1,
+ "gerado": "npm run sprites:build",
+ "1x": {
+  "w": 557,
+  "h": 43,
+  "frames": {
+   "heroi_atk_1": {
+    "x": 109,
+    "y": 2,
+    "w": 24,
+    "h": 30,
+    "anchorX": 12,
+    "baselineY": 30
+   },
+   "heroi_atk_2": {
+    "x": 282,
+    "y": 2,
+    "w": 33,
+    "h": 25,
+    "anchorX": 17,
+    "baselineY": 25
+   },
+   "heroi_atk_3": {
+    "x": 166,
+    "y": 2,
+    "w": 31,
+    "h": 29,
+    "anchorX": 16,
+    "baselineY": 29
+   },
+   "heroi_derrota_1": {
+    "x": 317,
+    "y": 2,
+    "w": 26,
+    "h": 25,
+    "anchorX": 13,
+    "baselineY": 25
+   },
+   "heroi_derrota_2": {
+    "x": 370,
+    "y": 2,
+    "w": 34,
+    "h": 24,
+    "anchorX": 17,
+    "baselineY": 24
+   },
+   "heroi_hit_1": {
+    "x": 135,
+    "y": 2,
+    "w": 29,
+    "h": 30,
+    "anchorX": 15,
+    "baselineY": 30
+   },
+   "heroi_idle_1": {
+    "x": 26,
+    "y": 2,
+    "w": 17,
+    "h": 34,
+    "anchorX": 9,
+    "baselineY": 34
+   },
+   "heroi_idle_2": {
+    "x": 45,
+    "y": 2,
+    "w": 17,
+    "h": 34,
+    "anchorX": 9,
+    "baselineY": 34
+   },
+   "heroi_run_1": {
+    "x": 199,
+    "y": 2,
+    "w": 28,
+    "h": 28,
+    "anchorX": 14,
+    "baselineY": 28
+   },
+   "heroi_run_2": {
+    "x": 260,
+    "y": 2,
+    "w": 20,
+    "h": 27,
+    "anchorX": 10,
+    "baselineY": 27
+   },
+   "heroi_run_3": {
+    "x": 229,
+    "y": 2,
+    "w": 29,
+    "h": 28,
+    "anchorX": 15,
+    "baselineY": 28
+   },
+   "heroi_run_4": {
+    "x": 345,
+    "y": 2,
+    "w": 23,
+    "h": 25,
+    "anchorX": 12,
+    "baselineY": 25
+   },
+   "heroi_vitoria_1": {
+    "x": 2,
+    "y": 2,
+    "w": 22,
+    "h": 39,
+    "anchorX": 11,
+    "baselineY": 39
+   },
+   "heroi_vitoria_2": {
+    "x": 64,
+    "y": 2,
+    "w": 18,
+    "h": 33,
+    "anchorX": 9,
+    "baselineY": 33
+   },
+   "heroi_vitoria_3": {
+    "x": 84,
+    "y": 2,
+    "w": 23,
+    "h": 32,
+    "anchorX": 12,
+    "baselineY": 32
+   },
+   "minion_azul_atk_1": {
+    "x": 406,
+    "y": 2,
+    "w": 20,
+    "h": 21,
+    "anchorX": 10,
+    "baselineY": 21
+   },
+   "minion_azul_atk_2": {
+    "x": 428,
+    "y": 2,
+    "w": 31,
+    "h": 21,
+    "anchorX": 16,
+    "baselineY": 21
+   },
+   "minion_azul_hit": {
+    "x": 532,
+    "y": 2,
+    "w": 21,
+    "h": 19,
+    "anchorX": 11,
+    "baselineY": 19
+   },
+   "minion_azul_walking_1": {
+    "x": 461,
+    "y": 2,
+    "w": 20,
+    "h": 21,
+    "anchorX": 10,
+    "baselineY": 21
+   },
+   "minion_azul_walking_2": {
+    "x": 483,
+    "y": 2,
+    "w": 26,
+    "h": 21,
+    "anchorX": 13,
+    "baselineY": 21
+   },
+   "minion_azul_walking_3": {
+    "x": 511,
+    "y": 2,
+    "w": 19,
+    "h": 21,
+    "anchorX": 10,
+    "baselineY": 21
+   }
+  }
+ },
+ "2x": {
+  "w": 1114,
+  "h": 86,
+  "frames": {
+   "heroi_atk_1": {
+    "x": 217,
+    "y": 4,
+    "w": 48,
+    "h": 60,
+    "anchorX": 24,
+    "baselineY": 60
+   },
+   "heroi_atk_2": {
+    "x": 669,
+    "y": 4,
+    "w": 66,
+    "h": 49,
+    "anchorX": 33,
+    "baselineY": 49
+   },
+   "heroi_atk_3": {
+    "x": 332,
+    "y": 4,
+    "w": 62,
+    "h": 58,
+    "anchorX": 31,
+    "baselineY": 58
+   },
+   "heroi_derrota_1": {
+    "x": 563,
+    "y": 4,
+    "w": 52,
+    "h": 50,
+    "anchorX": 26,
+    "baselineY": 50
+   },
+   "heroi_derrota_2": {
+    "x": 739,
+    "y": 4,
+    "w": 67,
+    "h": 48,
+    "anchorX": 34,
+    "baselineY": 48
+   },
+   "heroi_hit_1": {
+    "x": 269,
+    "y": 4,
+    "w": 59,
+    "h": 59,
+    "anchorX": 30,
+    "baselineY": 59
+   },
+   "heroi_idle_1": {
+    "x": 52,
+    "y": 4,
+    "w": 34,
+    "h": 68,
+    "anchorX": 17,
+    "baselineY": 68
+   },
+   "heroi_idle_2": {
+    "x": 90,
+    "y": 4,
+    "w": 34,
+    "h": 68,
+    "anchorX": 17,
+    "baselineY": 68
+   },
+   "heroi_run_1": {
+    "x": 460,
+    "y": 4,
+    "w": 56,
+    "h": 55,
+    "anchorX": 28,
+    "baselineY": 55
+   },
+   "heroi_run_2": {
+    "x": 520,
+    "y": 4,
+    "w": 39,
+    "h": 53,
+    "anchorX": 20,
+    "baselineY": 53
+   },
+   "heroi_run_3": {
+    "x": 398,
+    "y": 4,
+    "w": 58,
+    "h": 56,
+    "anchorX": 29,
+    "baselineY": 56
+   },
+   "heroi_run_4": {
+    "x": 619,
+    "y": 4,
+    "w": 46,
+    "h": 50,
+    "anchorX": 23,
+    "baselineY": 50
+   },
+   "heroi_vitoria_1": {
+    "x": 4,
+    "y": 4,
+    "w": 44,
+    "h": 78,
+    "anchorX": 22,
+    "baselineY": 78
+   },
+   "heroi_vitoria_2": {
+    "x": 128,
+    "y": 4,
+    "w": 35,
+    "h": 65,
+    "anchorX": 18,
+    "baselineY": 65
+   },
+   "heroi_vitoria_3": {
+    "x": 167,
+    "y": 4,
+    "w": 46,
+    "h": 64,
+    "anchorX": 23,
+    "baselineY": 64
+   },
+   "minion_azul_atk_1": {
+    "x": 810,
+    "y": 4,
+    "w": 41,
+    "h": 42,
+    "anchorX": 21,
+    "baselineY": 42
+   },
+   "minion_azul_atk_2": {
+    "x": 855,
+    "y": 4,
+    "w": 62,
+    "h": 42,
+    "anchorX": 31,
+    "baselineY": 42
+   },
+   "minion_azul_hit": {
+    "x": 1063,
+    "y": 4,
+    "w": 43,
+    "h": 38,
+    "anchorX": 22,
+    "baselineY": 38
+   },
+   "minion_azul_walking_1": {
+    "x": 921,
+    "y": 4,
+    "w": 40,
+    "h": 42,
+    "anchorX": 20,
+    "baselineY": 42
+   },
+   "minion_azul_walking_2": {
+    "x": 965,
+    "y": 4,
+    "w": 52,
+    "h": 42,
+    "anchorX": 26,
+    "baselineY": 42
+   },
+   "minion_azul_walking_3": {
+    "x": 1021,
+    "y": 4,
+    "w": 38,
+    "h": 42,
+    "anchorX": 19,
+    "baselineY": 42
+   }
+  }
+ }
+}

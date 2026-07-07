@@ -1,0 +1,23 @@
+<!doctype html><meta charset="utf-8"><title>sprites-preview</title>
+<body style="background:#0b0617;color:#ece8ff;font-family:monospace;padding:20px">
+<h3>Diorama · preview do atlas (@2x)</h3><p>Fundo escuro do jogo — confira franja, escala e baseline.</p>
+<div id="grid" style="display:flex;flex-wrap:wrap;gap:24px"></div>
+<script>
+const ANIM = {"heroi_idle":["heroi_idle_1","heroi_idle_2"],"heroi_run":["heroi_run_1","heroi_run_2","heroi_run_3","heroi_run_4"],"heroi_atk":["heroi_atk_1","heroi_atk_2","heroi_atk_3"],"heroi_hit":["heroi_hit_1"],"heroi_derrota":["heroi_derrota_1","heroi_derrota_2"],"heroi_vitoria":["heroi_vitoria_1","heroi_vitoria_2","heroi_vitoria_3"],"minion_walk":["minion_azul_walking_1","minion_azul_walking_2","minion_azul_walking_3"],"minion_atk":["minion_azul_atk_1","minion_azul_atk_2"],"minion_morte":["minion_azul_hit"]};
+fetch("../public/sprites/diorama.json").then(r=>r.json()).then(meta=>{
+  const img = new Image(); img.src = "../public/sprites/diorama@2x.png";
+  img.onload = () => { for (const [nome, frames] of Object.entries(ANIM)) {
+    const fs = frames.map(f=>meta["2x"].frames[f]).filter(Boolean);
+    if (!fs.length) continue;
+    const w = Math.max(...fs.map(f=>f.w)), h = Math.max(...fs.map(f=>f.h));
+    const cv = document.createElement("canvas"); cv.width=w; cv.height=h;
+    cv.style.cssText = "image-rendering:pixelated;border:1px solid #2a2150;background:#15102a";
+    const cx = cv.getContext("2d"); cx.imageSmoothingEnabled = false;
+    const rot = document.createElement("div");
+    rot.textContent = nome + " ("+fs.length+"f)"; rot.style.cssText="font-size:11px;color:#9a90c0;margin-top:4px";
+    const cel = document.createElement("div"); cel.append(cv, rot); document.getElementById("grid").append(cel);
+    let i = 0; setInterval(()=>{ const f = fs[i++ % fs.length]; cx.clearRect(0,0,w,h);
+      cx.drawImage(img, f.x, f.y, f.w, f.h, Math.round((w-f.w)/2), h-f.h, f.w, f.h); }, 180);
+  }};
+});
+</script>

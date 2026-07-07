@@ -80,6 +80,7 @@ export interface CenaDiorama {
   desenhar(): void;
   definirPartida(idx: number, boss: boolean): void;
   tocarDesfecho(p: PartidaGrind): void;
+  definirCtx(novo: CanvasRenderingContext2D): void; // troca o alvo de render (PiP)
   definirModo(m: ModoCena): void;
   definirRetrato(img: HTMLImageElement | null): void;
   definirReduzido(r: boolean): void;
@@ -496,7 +497,9 @@ export function criarCena(
   }
 
   // ---- desenho ----
-  const c = ctx;
+  // Alvo de render TROCÁVEL (PiP): a cena desenha no ctx que receber — nunca se move
+  // um <canvas> entre documentos (isso quebra/trava); cria-se um novo lá e troca aqui.
+  let c = ctx;
 
   function drawTile(img: HTMLCanvasElement, fator: number): void {
     const off = Math.floor(scroll * fator) % CENA_W;
@@ -739,6 +742,10 @@ export function criarCena(
     desenhar,
     definirPartida,
     tocarDesfecho,
+    definirCtx: (novo) => {
+      c = novo;
+      c.imageSmoothingEnabled = false;
+    },
     definirModo: (m) => {
       modo = m;
       if (m !== "normal") limparCampo();

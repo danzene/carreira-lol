@@ -191,7 +191,8 @@ export default function DioramaGrind({
     idxDesfechado.current = r0?.completas.length ?? 0;
 
     // loop: cada frame agenda o PRÓXIMO na janela dona do canvas (principal ou PiP).
-    // Guardamos a janela usada pra cancelar no lugar certo — um loop, um dono.
+    // TEMPO: usamos SEMPRE o performance.now() da janela PRINCIPAL (closure) — o
+    // timestamp do rAF muda de ÉPOCA entre janelas e envenenaria o dt na troca.
     let raf = 0;
     let rafWin: Window = window;
     let rodando = false;
@@ -200,7 +201,7 @@ export default function DioramaGrind({
     let acumulado = 0;
     const passo = 1 / (reduzido ? FPS_ECONOMIA : fpsAlvo);
 
-    const frame = (now: number) => {
+    const frame = () => {
       if (!vivo || !rodando) return;
       rafWin = janelaPip() ?? window;
       try {
@@ -209,9 +210,10 @@ export default function DioramaGrind({
         rafWin = window; // janela PiP morreu no meio: volta pro principal
         raf = window.requestAnimationFrame(frame);
       }
-      const dt = Math.min(0.1, (now - ultimo) / 1000);
+      const now = performance.now(); // época única (janela principal), sempre
+      const dt = Math.max(0, Math.min(0.1, (now - ultimo) / 1000));
       ultimo = now;
-      acumulado += dt;
+      acumulado = Math.max(0, acumulado + dt);
       if (acumulado < passo) return;
       const passoReal = Math.min(0.2, acumulado);
       acumulado = 0;
@@ -223,6 +225,7 @@ export default function DioramaGrind({
       if (rodando) return; // nunca dois loops
       rodando = true;
       ultimo = performance.now();
+      acumulado = 0;
       rafWin = janelaPip() ?? window;
       raf = rafWin.requestAnimationFrame(frame);
     };
@@ -235,11 +238,23 @@ export default function DioramaGrind({
       }
       raf = 0;
     };
-    iniciarLoopRef.current = iniciar;
+    // REINICIAR de verdade (parar → iniciar): obrigatório ao abrir/fechar a PiP —
+    // o rAF pendente pode estar agendado numa janela que acabou de morrer (o
+    // callback nunca dispararia e o loop morreria "travado").
+    iniciarLoopRef.current = () => {
+      parar();
+      iniciar();
+    };
 
     const aoVisibilidade = () => {
-      if (grindVisivel()) iniciar();
-      else parar();
+      // reinício forçado ao ficar visível: se o rAF pendente morreu junto com uma
+      // janela PiP fechada, parar()+iniciar() ressuscita o loop na janela certa
+      if (grindVisivel()) {
+        parar();
+        iniciar();
+      } else {
+        parar();
+      }
     };
     document.addEventListener("visibilitychange", aoVisibilidade);
     aoVisibilidade();

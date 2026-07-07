@@ -192,10 +192,18 @@ export function criarCena(
     campeaoInimigo = null;
   }
 
+  let cenarioAnterior: CamadasCenario | null = null;
+  let crossfade = 0; // >0: transição suave entre cenários (easing, nada de corte seco)
+
   // ---- API ----
   function definirPartida(idx: number, boss: boolean): void {
+    const antes = corpo?.cenario;
     corpo = coreografarCorpo(opts.seedDia, idx, opts.elo, boss);
     rngCena = criarRng(seedCoreografia(opts.seedDia, idx) ^ 0xce7a);
+    if (antes !== undefined && antes !== corpo.cenario) {
+      cenarioAnterior = cenarios;
+      crossfade = 0.8;
+    }
     cenarios = prerenderCenario(corpo.cenario, CENA_W, CENA_H);
     clock = 0;
     idxWave = 0;
@@ -381,6 +389,10 @@ export function criarCena(
       dt = dt0 * 0.2;
     }
     shake = Math.max(0, shake - dt0 * 14);
+    if (crossfade > 0) {
+      crossfade -= dt0;
+      if (crossfade <= 0) cenarioAnterior = null;
+    }
     jogadorFrameT += dt;
     ataqueT = Math.max(0, ataqueT - dt0);
     jogadorSquash += (0 - jogadorSquash) * Math.min(1, dt0 * 10);
@@ -622,7 +634,7 @@ export function criarCena(
       const t = 1.4 - dropGlow;
       const y = CHAO_Y - 40 + t * 26;
       const x = PX + 44;
-      c.globalAlpha = 0.35 + 0.3 * Math.sin(t * 12);
+      c.globalAlpha = 0.35 + 0.25 * Math.sin(t * 6); // pulso calmo (brilho excessivo irrita no aquário)
       c.fillStyle = CORD.suave;
       c.fillRect(x - 5, y - 5, 12, 12); // glow
       c.globalAlpha = 1;
@@ -657,6 +669,17 @@ export function criarCena(
     drawTile(cenarios.fundo, 0.25);
     drawTile(cenarios.meio, 0.55);
     drawTile(cenarios.chao, 1);
+
+    // crossfade entre cenários (ease-out — a transição some suave, sem corte seco)
+    if (crossfade > 0 && cenarioAnterior) {
+      const a = crossfade / 0.8;
+      c.globalAlpha = a * a;
+      c.drawImage(cenarioAnterior.ceu, 0, 0);
+      drawTile(cenarioAnterior.fundo, 0.25);
+      drawTile(cenarioAnterior.meio, 0.55);
+      drawTile(cenarioAnterior.chao, 1);
+      c.globalAlpha = 1;
+    }
 
     // brilho da água (variante rio) — barato, 4 pixels senoidais
     if (corpo?.cenario === 2 && !reduzido) {

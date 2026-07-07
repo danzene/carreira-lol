@@ -16,6 +16,16 @@ interface Eng {
     pct_geral: number;
     horas_hist: KV[];
     teto_dias: number;
+    diorama?: {
+      usuarios_grind: number;
+      ocultaram: number;
+      pilula: number;
+      pip_usuarios: number;
+      pip_aberturas: number;
+      pip_seg_medio: number;
+      expandiram: number;
+      reduzidos: number;
+    };
   } | null;
 }
 
@@ -139,6 +149,19 @@ export default function AdminEngajamento() {
                 <BarChart dados={dados.grind.horas_hist.map((h) => ({ x: h.k, y: Number(h.v), cor: "#f59e0b" }))} altura={170} />
               </Painel>
             </div>
+            {dados.grind.diorama && (
+              <div className="mt-3">
+                <p className="mb-2 text-[11px] text-zinc-400">
+                  Diorama (vitrine): quem rejeitou a cena (ocultou/pílula) é o sinal mais importante; PiP é o abraço máximo.
+                </p>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <KpiCard rotulo="Ocultaram o diorama" valor={Number(dados.grind.diorama.ocultaram)} />
+                  <KpiCard rotulo="Preferiram pílula" valor={Number(dados.grind.diorama.pilula)} />
+                  <KpiCard rotulo="Usaram PiP" valor={Number(dados.grind.diorama.pip_usuarios)} />
+                  <KpiCard rotulo="PiP: média por sessão" valor={Number(dados.grind.diorama.pip_seg_medio)} formato={(n) => `${Math.round(n / 60)}min`} />
+                </div>
+              </div>
+            )}
           </>
         )}
       </Secao>

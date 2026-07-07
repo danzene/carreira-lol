@@ -9,6 +9,7 @@ import { rastrear } from "@/lib/telemetria";
 import { useCareer } from "@/store/careerStore";
 import DioramaGrind from "./grind/DioramaGrind";
 import { grindVisivel } from "./grind/pip";
+import { modoVisualGrind } from "./grind/visual";
 
 // 🛋️ Coordenador do Grind de Normais: heartbeat de segundos VISÍVEIS (aba visível OU
 // janela PiP aberta — guard único, sem dupla contagem), resumo de retorno, título e
@@ -33,7 +34,7 @@ export default function GrindWidget() {
 
   const ativo = !!career && grindDisponivel(career);
   const oculto = career?.opcoes?.ocultarGrind === true;
-  const usaPilula = career?.opcoes?.grindPilula === true || !GRIND.dioramaHabilitado || minimizado;
+  const usaPilula = modoVisualGrind(career?.opcoes, minimizado) === "pilula";
   const ligado = career?.grind?.ligado ?? true;
 
   // ---- heartbeat: 1 intervalo; conta com aba visível OU PiP aberta ----

@@ -57,6 +57,8 @@ export default function DioramaGrind({
   // refs vivos pro loop (sem recriar a cena a cada render)
   const vivoRef = useRef({ resultado, placar, dinheiroHoje, segundos: g?.segundosHoje ?? 0 });
   vivoRef.current = { resultado, placar, dinheiroHoje, segundos: g?.segundosHoje ?? 0 };
+  const volumeDioramaRef = useRef<number>(GRIND.volumeDiorama);
+  volumeDioramaRef.current = career?.opcoes?.volumeDiorama ?? GRIND.volumeDiorama;
 
   // modo economia: preferências do sistema/config
   const reduzido = useMemo(() => {
@@ -132,16 +134,21 @@ export default function DioramaGrind({
     if (!ctx) return;
     ctx.imageSmoothingEnabled = false;
 
-    const somDiorama = (id: Parameters<typeof tocarSom>[0], importante = false) => {
-      const quieto = performance.now() - ultimaInteracao.current > GRIND.autoSilencioSeg * 1000;
+    // cooldown por som: kills/moedas em rajada não viram metralhadora de bipes
+    const ultimoSom: Record<string, number> = {};
+    const somDiorama = (id: Parameters<typeof tocarSom>[0], importante = false, cooldownMs = 350) => {
+      const agora = performance.now();
+      if (agora - (ultimoSom[id] ?? 0) < cooldownMs) return;
+      const quieto = agora - ultimaInteracao.current > GRIND.autoSilencioSeg * 1000;
       if (quieto && !importante) return;
-      tocarSom(id, GRIND.volumeDiorama);
+      ultimoSom[id] = agora;
+      tocarSom(id, volumeDioramaRef.current);
     };
 
     const aoEvento = (ev: EventoCena) => {
-      if (ev === "kill") somDiorama("tick");
+      if (ev === "kill") somDiorama("tick", false, 600);
       else if (ev === "killGrande") somDiorama("moeda");
-      else if (ev === "moeda") somDiorama("tick");
+      else if (ev === "moeda") somDiorama("tick", false, 900); // 1 bipe por leva de moedas
       else if (ev === "drop") somDiorama("tier2", true);
       else if (ev === "vitoria") somDiorama("missao", true);
       else if (ev === "penta") somDiorama("conquista", true);
@@ -301,10 +308,12 @@ export default function DioramaGrind({
       marcarPip(win);
       setPip(true);
       rastrear("diorama_pip_aberto", {});
+      const abertaEm = performance.now(); // duração da PiP (amostrada no fechamento)
       win.addEventListener("pagehide", () => {
         origemRef.current?.append(wrap);
         marcarPip(null);
         setPip(false);
+        rastrear("diorama_pip_fechado", { segundos: Math.round((performance.now() - abertaEm) / 1000) });
       });
     } catch {
       // usuário negou/erro — segue na página

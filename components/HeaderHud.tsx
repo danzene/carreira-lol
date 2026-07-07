@@ -17,6 +17,7 @@ import AnimatedNumber from "./juice/AnimatedNumber";
 export default function HeaderHud() {
   const career = useCareer((s) => s.career);
   const alternarOcultarGrind = useCareer((s) => s.alternarOcultarGrind);
+  const definirOpcaoGrind = useCareer((s) => s.definirOpcaoGrind);
   const coinpoints = useProfile((s) => s.perfil?.coinpoints ?? 0);
   const passe = usePasse((s) => s.passe);
 
@@ -103,14 +104,44 @@ export default function HeaderHud() {
                 {mudo ? "🔇 ATIVAR SOM" : "🔇 SILENCIAR"}
               </button>
               {featureLiberada(career, "grind") && (
-                <button
-                  type="button"
-                  onClick={alternarOcultarGrind}
-                  title="Esconde/mostra o widget do grind (se ligado, ele continua acumulando)"
-                  className="mt-2 w-full border-2 border-borda py-1 font-pixel text-[9px] text-suave transition hover:text-texto"
-                >
-                  {career.opcoes?.ocultarGrind ? "🛋️ MOSTRAR GRIND" : "🛋️ OCULTAR GRIND"}
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={alternarOcultarGrind}
+                    title="Esconde/mostra o widget do grind (se ligado, ele continua acumulando)"
+                    className="mt-2 w-full border-2 border-borda py-1 font-pixel text-[9px] text-suave transition hover:text-texto"
+                  >
+                    {career.opcoes?.ocultarGrind ? "🛋️ MOSTRAR GRIND" : "🛋️ OCULTAR GRIND"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => definirOpcaoGrind({ grindPilula: !career.opcoes?.grindPilula })}
+                    title="Alterna entre a cena animada (diorama) e a pílula discreta"
+                    className="mt-1.5 w-full border-2 border-borda py-1 font-pixel text-[9px] text-suave transition hover:text-texto"
+                  >
+                    {career.opcoes?.grindPilula ? "🎬 USAR DIORAMA" : "▪ USAR PÍLULA"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => definirOpcaoGrind({ reduzirAnimacoes: !career.opcoes?.reduzirAnimacoes })}
+                    title="Modo economia: 12fps e sem partículas no diorama"
+                    className={`mt-1.5 w-full border-2 py-1 font-pixel text-[9px] transition ${career.opcoes?.reduzirAnimacoes ? "border-emerald-400 text-emerald-400" : "border-borda text-suave hover:text-texto"}`}
+                  >
+                    🍃 REDUZIR ANIMAÇÕES {career.opcoes?.reduzirAnimacoes ? "ON" : "OFF"}
+                  </button>
+                  <div className="mt-1.5 flex items-center gap-1.5" title="Volume dos sons do diorama (fração do volume global)">
+                    <span className="font-pixel text-[8px] text-suave">🎬🔉</span>
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={Math.round((career.opcoes?.volumeDiorama ?? 0.45) * 100)}
+                      onChange={(e) => definirOpcaoGrind({ volumeDiorama: Number(e.target.value) / 100 })}
+                      className="w-full accent-[#19e6e0]"
+                      aria-label="Volume do diorama"
+                    />
+                  </div>
+                </>
               )}
             </div>
           )}

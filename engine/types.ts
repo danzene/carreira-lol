@@ -122,6 +122,7 @@ export interface OpcoesCarreira {
   ocultarGrind?: boolean; // esconde o widget do grind (se ligado, continua acumulando)
   grindPilula?: boolean; // prefere o widget-pílula discreto ao diorama animado
   reduzirAnimacoes?: boolean; // modo economia: 12fps e sem partículas no diorama
+  volumeDiorama?: number; // 0..1 — fração do volume global pros sons do diorama
 }
 
 // ----- Partidas-evento (Fase 11 p2) -----

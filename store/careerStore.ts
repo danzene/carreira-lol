@@ -138,6 +138,7 @@ interface CareerStore {
   tickGrind: (deltaSegundos: number) => void;
   alternarGrind: () => void;
   alternarOcultarGrind: () => void;
+  definirOpcaoGrind: (patch: Partial<Pick<OpcoesCarreira, "grindPilula" | "reduzirAnimacoes" | "volumeDiorama">>) => void;
   registrarLogin: () => void;
   coletarDiaria: () => boolean;
   puxarGratis: () => Promise<ResultadoPuxada[] | null>;
@@ -262,12 +263,21 @@ export const useCareer = create<CareerStore>((set, get) => ({
   alternarOcultarGrind: () => {
     const { career, slotId } = get();
     if (!career) return;
-    const opcoes = {
-      esconderAtributos: false,
-      fearless: false,
-      ...career.opcoes,
-      ocultarGrind: !career.opcoes?.ocultarGrind,
-    };
+    const ocultar = !career.opcoes?.ocultarGrind;
+    if (ocultar) rastrear("diorama_ocultado", {}); // o sinal de rejeição mais importante
+    const opcoes = { esconderAtributos: false, fearless: false, ...career.opcoes, ocultarGrind: ocultar };
+    const novo = { ...career, opcoes };
+    set({ career: novo });
+    if (slotId) salvarSlot(slotId, novo);
+  },
+
+  // Preferências de apresentação do diorama (persistidas no save).
+  definirOpcaoGrind: (patch) => {
+    const { career, slotId } = get();
+    if (!career) return;
+    if (patch.grindPilula === true) rastrear("diorama_pilula", {});
+    if (patch.reduzirAnimacoes === true) rastrear("diorama_reduzido", { motivo: "config" });
+    const opcoes = { esconderAtributos: false, fearless: false, ...career.opcoes, ...patch };
     const novo = { ...career, opcoes };
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);

@@ -9,6 +9,7 @@ import {
   type DesfechoCoreografia,
   type TipoInimigo,
 } from "./coreografia";
+import type { AtlasReal } from "./atlasReal";
 import { CORD, criarAtlas, prerenderCenario, TAM_INIMIGO, textoPixel, type AtlasDiorama, type CamadasCenario } from "./pixels";
 
 // 🎭 Runtime da cena do Diorama — consome a coreografia (pura) e ENCENA no canvas.
@@ -33,6 +34,7 @@ interface Inimigo {
   hitT: number; // flash de dano
   morteT: number; // >0 = animação de morte (encolhe e some)
   squash: number; // squash&stretch ao tomar hit
+  atkT: number; // >0 = animação de ataque (arte real: atk_1→atk_2 no contra-golpe)
 }
 
 interface Dano {
@@ -81,6 +83,7 @@ export interface CenaDiorama {
   definirPartida(idx: number, boss: boolean): void;
   tocarDesfecho(p: PartidaGrind): void;
   definirCtx(novo: CanvasRenderingContext2D): void; // troca o alvo de render (PiP)
+  definirAtlasReal(a: AtlasReal | null): void; // arte real (progressive enhancement)
   definirModo(m: ModoCena): void;
   definirRetrato(img: HTMLImageElement | null): void;
   definirReduzido(r: boolean): void;
@@ -105,7 +108,7 @@ export function criarCena(
   let cenarios: CamadasCenario = prerenderCenario(0, CENA_W, CENA_H);
 
   // ---- pools (pré-alocados; zero alocação no loop) ----
-  const inimigos: Inimigo[] = Array.from({ length: 6 }, () => ({ vivo: false, tipo: "minion", x: 0, alvoX: 0, frameT: 0, hitT: 0, morteT: 0, squash: 0 }));
+  const inimigos: Inimigo[] = Array.from({ length: 6 }, () => ({ vivo: false, tipo: "minion", x: 0, alvoX: 0, frameT: 0, hitT: 0, morteT: 0, squash: 0, atkT: 0 }));
   const danos: Dano[] = Array.from({ length: 16 }, () => ({ vivo: false, x: 0, y: 0, vida: 0, max: 1, txt: "", cor: "", tam: 6 }));
   const moedas: Moeda[] = Array.from({ length: 24 }, () => ({ vivo: false, x: 0, y: 0, vx: 0, vy: 0, homing: false }));
   const parts: Part[] = Array.from({ length: 48 }, () => ({ vivo: false, x: 0, y: 0, vx: 0, vy: 0, vida: 0, max: 1, cor: "" }));
@@ -114,6 +117,9 @@ export function criarCena(
   let modo: ModoCena = "normal";
   let reduzido = false;
   let retrato: HTMLImageElement | null = null;
+  let atlasReal: AtlasReal | null = null; // arte real (progressive enhancement; null = programático)
+  let estadoT = 0; // tempo no estado atual do jogador (dirige os frames da arte real)
+  let estadoPrev: "idle" | "run" | "attack" | "hit" | "death" | "victory" | "sit" = "run";
   let corpo: CorpoCoreografia | null = null;
   let rngCena: Rng = criarRng(1);
   let clock = 0; // clock do corpo (loop)
@@ -238,8 +244,12 @@ export function criarCena(
       slot.hitT = 0;
       slot.morteT = 0;
       slot.squash = 0;
+      slot.atkT = 0;
     }
   }
+
+  // duração da animação de ataque do jogador (arte real tem windup→strike→recovery)
+  const durAtaque = () => (atlasReal ? 0.36 : 0.18);
 
   function matarInimigo(idx: number, grande: boolean): void {
     const al = inimigos[idx];
@@ -302,7 +312,7 @@ export function criarCena(
       idxGolpe++;
       const al = inimigos[g.alvo];
       if (!al?.vivo || al.morteT > 0) continue;
-      ataqueT = 0.18;
+      ataqueT = durAtaque();
       jogadorSquash = 0.12;
       al.hitT = 0.12;
       al.squash = 0.14;
@@ -313,13 +323,15 @@ export function criarCena(
       if (g.mata) matarInimigo(g.alvo, al.tipo !== "minion");
     }
 
-    // contra-golpes (o jogador toma dano cosmético)
+    // contra-golpes (o jogador toma dano cosmético; o minion mais próximo "ataca")
     while (idxContra < w.contraGolpes.length && w.contraGolpes[idxContra].t <= tw) {
       const cg = w.contraGolpes[idxContra];
       idxContra++;
       jogadorEstado = "hit";
       jogadorSquash = -0.15;
       soltarDano(PX, CHAO_Y - 36, String(cg.dano), CORD.rosa, 6);
+      const atacante = inimigos.find((i) => i.vivo && i.morteT <= 0);
+      if (atacante) atacante.atkT = 0.3; // arte real: atk_1 → atk_2
     }
   }
 
@@ -334,7 +346,7 @@ export function criarCena(
       idxBeatD++;
       if (b.tipo === "duelo_golpe") {
         if (b.deQuem === "voce") {
-          ataqueT = 0.18;
+          ataqueT = durAtaque();
           jogadorSquash = 0.12;
           if (campeaoInimigo) {
             campeaoInimigo.hitT = 0.12;
@@ -430,6 +442,7 @@ export function criarCena(
       if (i.x > i.alvoX) i.x -= dt * 55;
       i.frameT += dt;
       i.hitT = Math.max(0, i.hitT - dt0);
+      i.atkT = Math.max(0, i.atkT - dt0);
       i.squash += (0 - i.squash) * Math.min(1, dt0 * 10);
     }
     if (campeaoInimigo) {
@@ -476,6 +489,14 @@ export function criarCena(
       if (p.vida <= 0) p.vivo = false;
     }
 
+    // relógio do estado do jogador (dirige os frames da arte real)
+    if (jogadorEstado !== estadoPrev) {
+      estadoT = 0;
+      estadoPrev = jogadorEstado;
+    } else {
+      estadoT += dt0;
+    }
+
     // ambiente (pétalas/vagalumes) — bem raro e barato
     if (ambienteT >= 0 && !reduzido) {
       ambienteT += dt0;
@@ -520,21 +541,93 @@ export function criarCena(
     c.restore();
   }
 
+  // Frame da ARTE REAL ancorado no baseline do JSON (pés no chão), com o MESMO
+  // squash&stretch/flip dos programáticos (transform no draw — a arte não muda o feel).
+  function drawReal(nome: string, x: number, pe: number, flip: boolean, squash: number, alpha = 1): boolean {
+    const a = atlasReal;
+    if (!a) return false;
+    const f = a.frames[nome];
+    if (!f) return false;
+    const sx = 1 + squash;
+    const sy = 1 - squash;
+    c.save();
+    c.globalAlpha = alpha;
+    c.translate(Math.round(x), Math.round(pe));
+    c.scale(flip ? -sx : sx, sy);
+    c.drawImage(a.img, f.x, f.y, f.w, f.h, -f.anchorX, -f.baselineY, f.w, f.h);
+    c.restore();
+    c.globalAlpha = 1;
+    return true;
+  }
+
+  // Estado → frame real do herói (timings da coreografia preservados). null = sem arte.
+  function frameHeroiNome(): string | null {
+    const a = atlasReal;
+    if (!a) return null;
+    const tem = (n: string) => (a.frames[n] ? n : null);
+    switch (jogadorEstado) {
+      case "idle":
+        return tem(`heroi_idle_${1 + (Math.floor(estadoT / 0.6) % 2)}`);
+      case "run":
+        return tem(`heroi_run_${1 + (Math.floor(estadoT / 0.11) % 4)}`);
+      case "attack": {
+        // windup (130ms) → strike (o hit-stop existente cai AQUI) → recovery
+        const e = durAtaque() - ataqueT;
+        return tem(e < 0.13 ? "heroi_atk_1" : e < 0.24 ? "heroi_atk_2" : "heroi_atk_3");
+      }
+      case "hit":
+        return tem("heroi_hit_1");
+      case "death":
+        return tem(estadoT < 0.3 ? "heroi_derrota_1" : "heroi_derrota_2");
+      case "victory":
+        return tem(estadoT < 0.2 ? "heroi_vitoria_1" : `heroi_vitoria_${2 + (Math.floor((estadoT - 0.2) / 0.35) % 2)}`);
+      case "sit":
+        // slots PRONTOS pra arte futura; enquanto não chega: derrota_2 (sentado) com
+        // zzz/café/teclado desenhados por código POR CIMA (bloco compartilhado abaixo)
+        return tem(modo === "dormindo" ? "heroi_dormindo" : "heroi_sentado") ?? tem("heroi_derrota_2");
+    }
+  }
+
   function desenharJogador(): void {
-    const frames = atlas.jogador[jogadorEstado];
-    const f = frames[Math.floor(jogadorFrameT * (jogadorEstado === "run" ? 8 : 3)) % frames.length];
-    // sombra
+    // sombra (ancorada no baseline — igual nas duas artes)
     c.fillStyle = "rgba(0,0,0,0.35)";
     c.beginPath();
     c.ellipse(PX, CHAO_Y + 1, 8, 2.4, 0, 0, Math.PI * 2);
     c.fill();
-    drawSprite(f, PX, CHAO_Y, false, jogadorSquash);
-    // retrato do campeão como cabeça (moldura ouro = você)
-    if (jogadorEstado !== "death" && retrato && retrato.complete && retrato.naturalWidth > 0) {
-      const py = CHAO_Y - atlas.jh - 11 + (jogadorEstado === "sit" ? 6 : 0);
-      c.fillStyle = CORD.ouro;
-      c.fillRect(PX - 7, py, 14, 14);
-      c.drawImage(retrato, PX - 6, py + 1, 12, 12);
+
+    const nomeReal = frameHeroiNome();
+    let alturaCorpo = atlas.jh;
+    if (nomeReal && drawReal(nomeReal, PX, CHAO_Y, false, jogadorSquash)) {
+      // ARTE REAL (herói já olha pra direita — sem flip)
+      const fr = atlasReal!.frames[nomeReal];
+      alturaCorpo = fr.baselineY;
+      // flash branco 60ms por cima no hit (frame pré-tingido no load do atlas)
+      if (jogadorEstado === "hit" && estadoT < 0.06) {
+        const b = atlasReal!.branco["heroi_hit_1"];
+        if (b) {
+          c.globalAlpha = 0.8;
+          c.drawImage(b, PX - fr.anchorX, CHAO_Y - fr.baselineY);
+          c.globalAlpha = 1;
+        }
+      }
+      // retrato do campeão da vez vira um selo pequeno acima (identidade preservada)
+      if (jogadorEstado !== "death" && jogadorEstado !== "sit" && retrato && retrato.complete && retrato.naturalWidth > 0) {
+        const py = CHAO_Y - alturaCorpo - 12;
+        c.fillStyle = CORD.ouro;
+        c.fillRect(PX - 6, py, 11, 11);
+        c.drawImage(retrato, PX - 5, py + 1, 9, 9);
+      }
+    } else {
+      // FALLBACK programático (Regra 4: arte é progressive enhancement)
+      const frames = atlas.jogador[jogadorEstado];
+      const f = frames[Math.floor(jogadorFrameT * (jogadorEstado === "run" ? 8 : 3)) % frames.length];
+      drawSprite(f, PX, CHAO_Y, false, jogadorSquash);
+      if (jogadorEstado !== "death" && retrato && retrato.complete && retrato.naturalWidth > 0) {
+        const py = CHAO_Y - atlas.jh - 11 + (jogadorEstado === "sit" ? 6 : 0);
+        c.fillStyle = CORD.ouro;
+        c.fillRect(PX - 7, py, 14, 14);
+        c.drawImage(retrato, PX - 6, py + 1, 12, 12);
+      }
     }
     // emote do respiro/pausa
     if (jogadorEstado === "sit") {
@@ -576,7 +669,6 @@ export function criarCena(
   function desenharInimigos(): void {
     for (const i of inimigos) {
       if (!i.vivo) continue;
-      const spr = i.hitT > 0 ? atlas.inimigos[i.tipo].hit : atlas.inimigos[i.tipo].normal[Math.floor(i.frameT * 5) % 2];
       const escala = i.morteT > 0 ? Math.max(0.05, i.morteT / 0.3) : 1;
       c.save();
       c.globalAlpha = escala;
@@ -584,6 +676,26 @@ export function criarCena(
       c.beginPath();
       c.ellipse(i.x, CHAO_Y + 1, 7 * escala, 2, 0, 0, Math.PI * 2);
       c.fill();
+      c.restore();
+
+      // ARTE REAL só pro minion melee por enquanto (caster/canhão/boss = slots futuros;
+      // camps/dragão/Barão seguem programáticos até a arte chegar — decisão documentada)
+      const nomeMin =
+        i.tipo === "minion" && atlasReal
+          ? i.morteT > 0 || i.hitT > 0
+            ? "minion_azul_hit"
+            : i.atkT > 0
+              ? i.atkT > 0.15
+                ? "minion_azul_atk_1"
+                : "minion_azul_atk_2"
+              : `minion_azul_walking_${1 + (Math.floor(i.frameT / 0.11) % 3)}`
+          : null;
+      // minion já olha pra ESQUERDA na arte (avança em direção ao herói) — sem flip
+      if (nomeMin && drawReal(nomeMin, i.x, CHAO_Y, false, i.squash + (1 - escala) * 0.4, escala)) continue;
+
+      const spr = i.hitT > 0 ? atlas.inimigos[i.tipo].hit : atlas.inimigos[i.tipo].normal[Math.floor(i.frameT * 5) % 2];
+      c.save();
+      c.globalAlpha = escala;
       drawSprite(spr, i.x, CHAO_Y, true, i.squash + (1 - escala) * 0.4);
       c.restore();
     }
@@ -597,13 +709,17 @@ export function criarCena(
       c.beginPath();
       c.ellipse(ci.x, CHAO_Y + 1, 8, 2.4, 0, 0, Math.PI * 2);
       c.fill();
-      const spr = ci.hitT > 0 ? atlas.jogador.hit[0] : atlas.jogador.idle[Math.floor(jogadorFrameT * 3) % 2];
-      // tinge de rosa via sombra colorida (barata): desenha 1px deslocado em rosa + sprite
+      // tinge de rosa via sombra colorida (barata): identifica o adversário
       c.globalAlpha = alpha * 0.65;
       c.fillStyle = CORD.rosa;
       c.fillRect(ci.x - 6, CHAO_Y - atlas.jh + 6, 12, atlas.jh - 8);
       c.globalAlpha = alpha;
-      drawSprite(spr, ci.x, CHAO_Y, true, 0);
+      // arte real: o herói espelhado (scale(-1,1)) vira o campeão inimigo; senão, programático
+      const nomeCi = atlasReal ? (ci.hitT > 0 ? "heroi_hit_1" : `heroi_idle_${1 + (Math.floor(jogadorFrameT * 1.6) % 2)}`) : null;
+      if (!nomeCi || !drawReal(nomeCi, ci.x, CHAO_Y, true, 0, alpha)) {
+        const spr = ci.hitT > 0 ? atlas.jogador.hit[0] : atlas.jogador.idle[Math.floor(jogadorFrameT * 3) % 2];
+        drawSprite(spr, ci.x, CHAO_Y, true, 0);
+      }
       textoPixel(c, opts.familia, ci.nome, ci.x, CHAO_Y - atlas.jh - 20, CORD.rosa, 6);
       c.restore();
     }
@@ -745,6 +861,9 @@ export function criarCena(
     definirCtx: (novo) => {
       c = novo;
       c.imageSmoothingEnabled = false;
+    },
+    definirAtlasReal: (a) => {
+      atlasReal = a;
     },
     definirModo: (m) => {
       modo = m;

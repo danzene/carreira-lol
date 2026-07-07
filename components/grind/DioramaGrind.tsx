@@ -7,6 +7,7 @@ import { buscarCampeoes } from "@/lib/ddragon";
 import { tocarSom } from "@/lib/som";
 import { rastrear } from "@/lib/telemetria";
 import { useCareer } from "@/store/careerStore";
+import { carregarAtlasReal } from "./diorama/atlasReal";
 import { CENA_H, CENA_W, criarCena, type CenaDiorama, type EventoCena } from "./diorama/cena";
 import { familiaPixel } from "./diorama/pixels";
 import { grindVisivel, janelaPip, marcarPip, suportaPip } from "./pip";
@@ -179,6 +180,10 @@ export default function DioramaGrind({
     });
     cenaRef.current = cena;
     cena.definirReduzido(reduzido || fpsAlvo === FPS_ECONOMIA);
+    // arte real (cacheada por sessão): aplica quando chegar; sem atlas = programático
+    void carregarAtlasReal().then((a) => {
+      if (a && cenaRef.current === cena) cena.definirAtlasReal(a);
+    });
 
     const r0 = vivoRef.current.resultado;
     if (r0?.atual) cena.definirPartida(r0.atual.idx, ehBoss(r0.atual.inicioSeg, r0.atual.duracaoSeg));

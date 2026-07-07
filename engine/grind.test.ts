@@ -1,17 +1,21 @@
 import { describe, expect, it } from "vitest";
+import { ECONOMIA } from "@/data/economia";
 import { GRIND } from "@/data/grind";
+import { SIMULACAO } from "@/data/simulacao";
 import {
   acumularSegundosGrind,
   aplicarGrind,
   estadoGrindInicial,
   fecharSemanaGrind,
   gerarItemGrind,
+  grindDisponivel,
   normalizarGrind,
   placarDoDia,
   resolverGrind,
   tetoAtingido,
 } from "./grind";
 import { criarCareerState, normalizarCareer } from "./player";
+import { simularPartida } from "./simularPartida";
 import type { Attributes, CareerState, Player } from "./types";
 
 function attrs(v: number): Attributes {
@@ -143,7 +147,7 @@ describe("grind de normais — engine puro", () => {
       for (const p of r.completas) {
         // só os campos permitidos de recompensa: $ pequeno, maestria, drop Comum
         expect(p.dinheiro).toBeLessThanOrEqual(GRIND.dinheiroVitoria);
-        expect(p.dinheiro).toBeGreaterThan(0);
+        expect(p.dinheiro).toBeGreaterThanOrEqual(0);
         expect(p.maestria).toBeLessThanOrEqual(GRIND.maestriaVitoria);
         expect(p).not.toHaveProperty("lpDelta");
         expect(p).not.toHaveProperty("coinpoints");
@@ -200,6 +204,58 @@ describe("grind de normais — engine puro", () => {
     expect(c2.grind!.semana.partidas).toBe(0);
     expect(c2.grind!.semana.dinheiro).toBe(0);
     expect(c2.grind!.totalPartidas).toBe(c1.grind!.totalPartidas);
+  });
+
+  it("kill switch: desliga a feature em 1 deploy sem quebrar o save", () => {
+    const destravada = { ...carreiraComGrind(), semanaAtual: 5 }; // semana 5: feature liberada
+    expect(grindDisponivel(destravada, true)).toBe(true);
+    expect(grindDisponivel(destravada, false)).toBe(false); // flag off ⇒ widget/heartbeat mortos
+    // o save fica INTACTO — só o gate muda (nada é apagado/migrado ao desligar)
+    expect(destravada.grind).toBeDefined();
+    // carreira nova (semana 1, unlock progressivo): ainda travada mesmo com a flag on
+    const nova = { ...criarCareerState(jogador(50)), unlocksLegacy: false };
+    expect(grindDisponivel(nova, true)).toBe(false);
+  });
+
+  it("ECONOMIA: 4 semanas de grind NO TETO rendem ≤20% do jogo ativo ($ e maestria)", () => {
+    const p = jogador(50, 50);
+    const DIAS = 28;
+
+    // lado idle: grind no teto TODOS os dias (seed nova por dia, como na borda)
+    let grindDin = 0;
+    let grindMae = 0;
+    let grindPartidas = 0;
+    for (let d = 0; d < DIAS; d++) {
+      const r = resolverGrind(p, H3, (1000 + d * 7919) >>> 0);
+      for (const m of r.completas) {
+        grindDin += m.dinheiro;
+        grindMae += m.maestria;
+        grindPartidas++;
+      }
+    }
+
+    // lado ativo: 12 soloq/dia com a MESMA matemática de combate e contexto neutro.
+    // Baseline CONSERVADOR: só bônus de vitória e maestria de partida (sem salário,
+    // stream ou drops — tudo isso deixaria o ativo ainda maior e a razão menor).
+    let ativoDin = 0;
+    let ativoMae = 0;
+    for (let d = 0; d < DIAS; d++) {
+      for (let i = 0; i < 12; i++) {
+        const res = simularPartida(p, { championId: "Ahri", forcaMetaCampeao: 50, comp: 50, compInimigo: 50 }, (d * 131 + i) >>> 0);
+        ativoDin += res.vitoria ? ECONOMIA.bonusBaseVitoria : 0;
+        ativoMae += res.vitoria ? SIMULACAO.maestriaVitoria : SIMULACAO.maestriaDerrota;
+      }
+    }
+
+    const razaoDin = grindDin / ativoDin;
+    const razaoMae = grindMae / ativoMae;
+    // Números medidos (registrados no CHANGELOG-grind): grind 546 partidas/$514/146.2
+    // de maestria vs ativo $4175/921.5 → razões 12.3% ($) e 15.9% (maestria).
+    expect(grindPartidas).toBeGreaterThan(DIAS * 15); // sanidade: o teto rende ~20 normais/dia
+    expect(razaoDin).toBeLessThanOrEqual(0.2); // critério da rodada (números no CHANGELOG-grind)
+    expect(razaoMae).toBeLessThanOrEqual(0.2);
+    expect(razaoDin).toBeGreaterThan(0.03); // piso de sanidade: o grind não é inútil
+    expect(razaoMae).toBeGreaterThan(0.03);
   });
 
   it("migração de save: sem grind e com grind corrompido abrem sem crash", () => {

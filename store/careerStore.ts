@@ -77,12 +77,12 @@ import {
   estadoGrindInicial,
   fecharSemanaGrind,
   gerarItemGrind,
+  grindDisponivel,
   resolverGrind,
   tetoAtingido,
   type ResultadoGrind,
 } from "@/engine/grind";
-import { GRIND } from "@/data/grind";
-import { cerimoniasDeUnlocks, featureLiberada, migrarUnlocks } from "@/engine/unlocks";
+import { cerimoniasDeUnlocks, migrarUnlocks } from "@/engine/unlocks";
 import { gerarItem } from "@/engine/itens";
 import { SLOTS_GEAR } from "@/data/itens";
 import { criarRng } from "@/engine/rng";
@@ -135,6 +135,7 @@ interface CareerStore {
   grindResultado: ResultadoGrind | null; // transiente: lote do dia resolvido (widget lê daqui)
   tickGrind: (deltaSegundos: number) => void;
   alternarGrind: () => void;
+  alternarOcultarGrind: () => void;
   registrarLogin: () => void;
   coletarDiaria: () => boolean;
   puxarGratis: () => Promise<ResultadoPuxada[] | null>;
@@ -206,7 +207,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
   // pendências (usado no mount e ao voltar de outra aba). Engine decide tudo em lote.
   tickGrind: (deltaSegundos) => {
     const { career: c0, slotId } = get();
-    if (!c0 || !GRIND.habilitado || !featureLiberada(c0, "grind")) return;
+    if (!c0 || !grindDisponivel(c0)) return;
     const hoje = chaveDia(Date.now());
     // seed nasce na BORDA (só usada se o dia virou / primeiro uso)
     const seedNova = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
@@ -251,6 +252,21 @@ export const useCareer = create<CareerStore>((set, get) => ({
     const lote = (novo.grind?.segundosHoje ?? 0) - segGravado >= 60;
     if (lote) segGravado = novo.grind?.segundosHoje ?? 0;
     if ((material || lote) && slotId) salvarSlot(slotId, novo);
+  },
+
+  // Mostra/oculta o WIDGET do grind (config de conforto — se ligado, continua acumulando).
+  alternarOcultarGrind: () => {
+    const { career, slotId } = get();
+    if (!career) return;
+    const opcoes = {
+      esconderAtributos: false,
+      fearless: false,
+      ...career.opcoes,
+      ocultarGrind: !career.opcoes?.ocultarGrind,
+    };
+    const novo = { ...career, opcoes };
+    set({ career: novo });
+    if (slotId) salvarSlot(slotId, novo);
   },
 
   // Liga/pausa o grind (toggle do widget). Inicializa o estado na primeira vez.

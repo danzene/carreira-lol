@@ -16,6 +16,7 @@ import AnimatedNumber from "./juice/AnimatedNumber";
 
 export default function HeaderHud() {
   const career = useCareer((s) => s.career);
+  const alternarOcultarGrind = useCareer((s) => s.alternarOcultarGrind);
   const coinpoints = useProfile((s) => s.perfil?.coinpoints ?? 0);
   const passe = usePasse((s) => s.passe);
 
@@ -101,6 +102,16 @@ export default function HeaderHud() {
               >
                 {mudo ? "🔇 ATIVAR SOM" : "🔇 SILENCIAR"}
               </button>
+              {featureLiberada(career, "grind") && (
+                <button
+                  type="button"
+                  onClick={alternarOcultarGrind}
+                  title="Esconde/mostra o widget do grind (se ligado, ele continua acumulando)"
+                  className="mt-2 w-full border-2 border-borda py-1 font-pixel text-[9px] text-suave transition hover:text-texto"
+                >
+                  {career.opcoes?.ocultarGrind ? "🛋️ MOSTRAR GRIND" : "🛋️ OCULTAR GRIND"}
+                </button>
+              )}
             </div>
           )}
         </div>

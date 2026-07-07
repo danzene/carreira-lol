@@ -4,6 +4,7 @@ import { SIMULACAO } from "@/data/simulacao";
 import { gerarItem } from "./itens";
 import { criarRng, entre } from "./rng";
 import { simularPartida } from "./simularPartida";
+import { featureLiberada } from "./unlocks";
 import type { CareerState, ChampionMastery, KDA, Player } from "./types";
 
 // 🛋️ Grind de Normais (PURO, determinístico): enquanto a aba está visível, o jogador
@@ -121,6 +122,13 @@ export function acumularSegundosGrind(g: EstadoGrind, deltaSegundos: number, hoj
 
 export function tetoAtingido(g: EstadoGrind): boolean {
   return g.segundosHoje >= GRIND.tetoSegundosDia;
+}
+
+// 🔌 Kill switch + gate de unlock num ÚNICO ponto (widget e heartbeat passam por aqui).
+// `habilitado` é injetável pra teste; em produção vem de GRIND.habilitado — desligar a
+// flag tira a feature do ar em 1 deploy sem quebrar nenhum save.
+export function grindDisponivel(career: CareerState, habilitado: boolean = GRIND.habilitado): boolean {
+  return habilitado && featureLiberada(career, "grind");
 }
 
 // ---- Resolução em lote (função de (snapshot, segundos, seed) → partidas) ----

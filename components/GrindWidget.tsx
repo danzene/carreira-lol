@@ -2,8 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { GRIND } from "@/data/grind";
-import { placarDoDia, tetoAtingido } from "@/engine/grind";
-import { featureLiberada } from "@/engine/unlocks";
+import { grindDisponivel, placarDoDia, tetoAtingido } from "@/engine/grind";
 import { tocarSom } from "@/lib/som";
 import { rastrear } from "@/lib/telemetria";
 import { useCareer } from "@/store/careerStore";
@@ -42,8 +41,8 @@ export default function GrindWidget() {
   const completasRef = useRef(0); // detecção de partida nova (micro-celebração)
 
   // heartbeat roda sempre que a feature existe; `oculto` esconde SÓ o visual
-  // (config da Fase 3: com o widget oculto o grind segue acumulando se ligado).
-  const ativo = !!career && GRIND.habilitado && featureLiberada(career, "grind");
+  // (config: com o widget oculto o grind segue acumulando se ligado).
+  const ativo = !!career && grindDisponivel(career);
   const oculto = career?.opcoes?.ocultarGrind === true;
   const ligado = career?.grind?.ligado ?? true;
 
@@ -235,7 +234,7 @@ export default function GrindWidget() {
                     </span>
                   </span>
                   <span className="shrink-0 text-suave">
-                    +${p.dinheiro}
+                    {p.dinheiro > 0 ? `+$${p.dinheiro}` : `+${p.maestria} maestria`}
                     {p.drop && <span title="Dropou item Comum"> 🎒</span>}
                   </span>
                 </li>
@@ -247,6 +246,14 @@ export default function GrindWidget() {
           Seu jogador joga normais sozinho enquanto o jogo está aberto e visível. Rende $ pequeno, maestria e às vezes um
           item Comum — até {Math.round(GRIND.tetoSegundosDia / 3600)}h por dia.
         </p>
+        <button
+          type="button"
+          onClick={() => useCareer.getState().alternarOcultarGrind()}
+          className="mt-1 text-[10px] text-suave underline-offset-2 transition hover:text-texto hover:underline"
+          title="O grind continua acumulando se estiver ligado. Reative no painel de som (🔊 no topo)."
+        >
+          ocultar widget
+        </button>
       </div>
     </div>
   );

@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import PlayerCard from "@/components/PlayerCard";
 import PainelSemana from "@/components/PainelSemana";
+import GrindDock from "@/components/grind/GrindDock";
 import HistoricoPartidas from "@/components/HistoricoPartidas";
 import ResumoSemanaModal from "@/components/ResumoSemanaModal";
 import DailyHub from "@/components/DailyHub";
@@ -74,6 +75,8 @@ export default function DashboardPage() {
       </header>
 
       <PainelSemana career={career} />
+
+      <GrindDock />
 
       <PlayerCard career={career} />
 

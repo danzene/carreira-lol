@@ -25,7 +25,7 @@ export const UNLOCKS: DefUnlock[] = [
   {
     id: "grind",
     nome: "Grind de Normais",
-    desc: "Seu jogador entra na fila sozinho enquanto o jogo está aberto — rende até 3h por dia.",
+    desc: "Seu jogador treina normais sozinho na cena do rodapé enquanto o jogo está aberto — rende até 3h por dia.",
     condicao: "Destrava na semana 2 (ou 10 partidas)",
     liberado: semana2,
   },

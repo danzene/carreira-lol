@@ -9,14 +9,16 @@ import { rastrear } from "@/lib/telemetria";
 import { useCareer } from "@/store/careerStore";
 import { CENA_H, CENA_W, criarCena, type CenaDiorama, type EventoCena } from "./diorama/cena";
 import { familiaPixel } from "./diorama/pixels";
+import { janelaPip, marcarPip, pipAberta, suportaPip } from "./pip";
 
 // 🎪 Diorama do Grind — a "fazenda viva" na tela. O canvas COREOGRAFA o que o engine
 // já decidiu (resolverGrind); zero regra de jogo aqui. Orçamento de performance:
-// rAF capado a 30fps (12fps no modo economia), pausa TOTAL com a aba oculta,
-// pré-render offscreen e pools na cena (ver diorama/cena.ts).
+// rAF capado a 30fps (12fps no modo economia), pausa TOTAL com a aba oculta (a menos
+// que a janela PiP esteja aberta — aí a cena vive NELA), pré-render offscreen e pools.
 
 const FPS_NORMAL = 30;
 const FPS_ECONOMIA = 12;
+const LS_INTRO = "carreira-diorama-intro";
 
 export interface ResumoFora {
   v: number;
@@ -26,42 +28,61 @@ export interface ResumoFora {
 
 export default function DioramaGrind({
   resultado,
-  resumo,
-  aoDispensarResumo,
   expandidoInicial = false,
 }: {
   resultado: ResultadoGrind | null;
-  resumo: ResumoFora | null;
-  aoDispensarResumo: () => void;
   expandidoInicial?: boolean;
 }) {
   const career = useCareer((s) => s.career);
   const alternar = useCareer((s) => s.alternarGrind);
+  const resumo = useCareer((s) => s.grindResumo);
+  const definirResumo = useCareer((s) => s.definirGrindResumo);
 
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const origemRef = useRef<HTMLElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cenaRef = useRef<CenaDiorama | null>(null);
   const [expandido, setExpandido] = useState(expandidoInicial);
   const [fpsAlvo, setFpsAlvo] = useState(FPS_NORMAL);
+  const [pip, setPip] = useState(false);
+  const [intro, setIntro] = useState(false);
 
   const ligado = career?.grind?.ligado ?? true;
   const noTeto = career?.grind ? tetoAtingido(career.grind) : false;
   const g = career?.grind;
-  const completas = resultado?.completas ?? [];
+  const completas = useMemo(() => resultado?.completas ?? [], [resultado]);
   const placar = resultado ? placarDoDia(resultado) : { v: 0, d: 0 };
   const dinheiroHoje = completas.reduce((s, p) => s + p.dinheiro, 0);
 
   // refs vivos pro loop (sem recriar a cena a cada render)
-  const vivoRef = useRef({ resultado, ligado, noTeto, segundos: g?.segundosHoje ?? 0, placar, dinheiroHoje });
-  vivoRef.current = { resultado, ligado, noTeto, segundos: g?.segundosHoje ?? 0, placar, dinheiroHoje };
+  const vivoRef = useRef({ resultado, placar, dinheiroHoje, segundos: g?.segundosHoje ?? 0 });
+  vivoRef.current = { resultado, placar, dinheiroHoje, segundos: g?.segundosHoje ?? 0 };
 
-  // modo economia: preferências do sistema/config (bateria entra na Fase 3/4 se disponível)
+  // modo economia: preferências do sistema/config
   const reduzido = useMemo(() => {
     if (career?.opcoes?.reduzirAnimacoes) return true;
     if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return true;
     return false;
   }, [career?.opcoes?.reduzirAnimacoes]);
 
-  // bateria fraca (quando a API existe) ⇒ modo economia automático (12fps, sem partículas)
+  // onboarding: 1 balão na primeira vez com o diorama
+  useEffect(() => {
+    try {
+      if (!window.localStorage.getItem(LS_INTRO)) setIntro(true);
+    } catch {
+      /* sem storage */
+    }
+  }, []);
+  function dispensarIntro(): void {
+    setIntro(false);
+    try {
+      window.localStorage.setItem(LS_INTRO, "1");
+    } catch {
+      /* ignora */
+    }
+  }
+
+  // bateria fraca (quando a API existe) ⇒ modo economia automático
   useEffect(() => {
     const nav = navigator as Navigator & {
       getBattery?: () => Promise<{ level: number; charging: boolean; addEventListener: (t: string, cb: () => void) => void }>;
@@ -102,7 +123,7 @@ export default function DioramaGrind({
     };
   }, []);
 
-  // ---- monta a cena + loop capado ----
+  // ---- monta a cena + loop capado (na janela certa: principal ou PiP) ----
   useEffect(() => {
     const canvas = canvasRef.current;
     const c0 = career;
@@ -126,7 +147,6 @@ export default function DioramaGrind({
       else if (ev === "penta") somDiorama("conquista", true);
       else if (ev === "derrota") somDiorama("rebaixamento", true);
       else if (ev === "fimDesfecho") {
-        // próxima partida: a "atual" do engine (se existir) vira o novo corpo
         const r = vivoRef.current.resultado;
         idxEncenado.current = r?.atual ? r.atual.idx : -1;
         if (r?.atual) cena.definirPartida(r.atual.idx, ehBoss(r.atual.inicioSeg, r.atual.duracaoSeg));
@@ -147,27 +167,26 @@ export default function DioramaGrind({
     cenaRef.current = cena;
     cena.definirReduzido(reduzido || fpsAlvo === FPS_ECONOMIA);
 
-    // estado inicial: partida atual (ou dormindo/pausado)
     const r0 = vivoRef.current.resultado;
     if (r0?.atual) cena.definirPartida(r0.atual.idx, ehBoss(r0.atual.inicioSeg, r0.atual.duracaoSeg));
     idxEncenado.current = r0?.atual?.idx ?? -1;
     idxDesfechado.current = r0?.completas.length ?? 0;
 
-    // loop com CAP de FPS (frame-skip) e pausa total com aba oculta
+    // loop com CAP de FPS; o rAF nasce na janela onde o canvas VIVE (principal ou PiP)
+    const win = janelaPip() ?? window;
     let raf = 0;
     let rodando = true;
     let ultimo = performance.now();
     let acumulado = 0;
-    const passoAlvo = () => 1 / (reduzido ? FPS_ECONOMIA : fpsAlvo);
+    const passo = 1 / (reduzido ? FPS_ECONOMIA : fpsAlvo);
 
     const frame = (now: number) => {
       if (!rodando) return;
-      raf = requestAnimationFrame(frame);
+      raf = win.requestAnimationFrame(frame);
       const dt = Math.min(0.1, (now - ultimo) / 1000);
       ultimo = now;
       acumulado += dt;
-      const passo = passoAlvo();
-      if (acumulado < passo) return; // frame-skip: só desenha no tick do cap
+      if (acumulado < passo) return;
       const passoReal = Math.min(0.2, acumulado);
       acumulado = 0;
       cena.atualizar(passoReal);
@@ -175,21 +194,22 @@ export default function DioramaGrind({
     };
 
     const iniciar = () => {
-      if (raf) cancelAnimationFrame(raf);
+      if (raf) win.cancelAnimationFrame(raf);
       ultimo = performance.now();
-      raf = requestAnimationFrame(frame);
+      raf = win.requestAnimationFrame(frame);
     };
     const parar = () => {
-      cancelAnimationFrame(raf);
+      win.cancelAnimationFrame(raf);
       raf = 0;
     };
 
     const aoVisibilidade = () => {
-      if (document.visibilityState === "visible") iniciar();
-      else parar(); // aba oculta ⇒ ZERO render/rAF (Regra 3)
+      // com a PiP aberta a cena vive nela (sempre visível); sem PiP, aba oculta ⇒ zero render
+      if (document.visibilityState === "visible" || pipAberta()) iniciar();
+      else parar();
     };
     document.addEventListener("visibilitychange", aoVisibilidade);
-    if (document.visibilityState === "visible") iniciar();
+    aoVisibilidade();
 
     return () => {
       rodando = false;
@@ -197,18 +217,16 @@ export default function DioramaGrind({
       document.removeEventListener("visibilitychange", aoVisibilidade);
       cenaRef.current = null;
     };
-    // recria a cena só quando o dia/carreira/modo economia mudam de verdade
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [career?.grind?.seedDia, career?.player.rota, reduzido, fpsAlvo]);
+  }, [career?.grind?.seedDia, career?.player.rota, reduzido, fpsAlvo, pip]);
 
-  // ---- dirige a cena conforme o engine (partida atual / desfechos / modos) ----
+  // ---- dirige a cena conforme o engine ----
   const idxEncenado = useRef(-1);
-  const idxDesfechado = useRef(0); // quantas completas já ganharam desfecho encenado
+  const idxDesfechado = useRef(0);
 
   useEffect(() => {
     const cena = cenaRef.current;
     if (!cena || !resultado) return;
-
     if (!ligado) {
       cena.definirModo("pausado");
       return;
@@ -218,26 +236,22 @@ export default function DioramaGrind({
       return;
     }
     cena.definirModo("normal");
-
-    // partida nova fechou? encena o desfecho REAL (uma por vez; o resto vai em resumo)
     if (completas.length > idxDesfechado.current && !cena.emDesfecho()) {
       const p = completas[completas.length - 1];
       idxDesfechado.current = completas.length;
       cena.tocarDesfecho(p);
       return;
     }
-    // partida atual mudou (ex.: carregou a página no meio do dia)? troca o corpo
     if (resultado.atual && resultado.atual.idx !== idxEncenado.current && !cena.emDesfecho()) {
       idxEncenado.current = resultado.atual.idx;
       cena.definirPartida(resultado.atual.idx, ehBoss(resultado.atual.inicioSeg, resultado.atual.duracaoSeg));
     }
-  }, [resultado, completas.length, ligado, noTeto]);
+  }, [resultado, completas, ligado, noTeto]);
 
-  // retrato do campeão da partida atual (cabeça do sprite)
+  // retrato do campeão da partida atual
   const championAtual = resultado?.atual?.championId ?? completas[completas.length - 1]?.championId ?? null;
   useEffect(() => {
-    const cena = cenaRef.current;
-    if (!cena || !championAtual) return;
+    if (!championAtual) return;
     let vivo = true;
     void buscarCampeoes()
       .then((cs) => {
@@ -252,7 +266,50 @@ export default function DioramaGrind({
     return () => {
       vivo = false;
     };
-  }, [championAtual]);
+  }, [championAtual, pip]);
+
+  // ---- Picture-in-Picture (Document PiP — Chrome/Edge desktop) ----
+  async function abrirPip(): Promise<void> {
+    const wrap = wrapRef.current;
+    type DPP = { requestWindow: (o: { width: number; height: number }) => Promise<Window> };
+    const dpp = (window as Window & { documentPictureInPicture?: DPP }).documentPictureInPicture;
+    if (!dpp || !wrap) return;
+    try {
+      const win = await dpp.requestWindow({ width: 520, height: 150 });
+      // copia os estilos da página (Tailwind) pra janela PiP
+      for (const ss of Array.from(document.styleSheets)) {
+        try {
+          const css = Array.from(ss.cssRules)
+            .map((r) => r.cssText)
+            .join("");
+          const st = win.document.createElement("style");
+          st.textContent = css;
+          win.document.head.appendChild(st);
+        } catch {
+          if (ss.href) {
+            const l = win.document.createElement("link");
+            l.rel = "stylesheet";
+            l.href = ss.href;
+            win.document.head.appendChild(l);
+          }
+        }
+      }
+      win.document.body.style.margin = "0";
+      win.document.body.style.background = "#0b0617";
+      origemRef.current = wrap.parentElement;
+      win.document.body.append(wrap);
+      marcarPip(win);
+      setPip(true);
+      rastrear("diorama_pip_aberto", {});
+      win.addEventListener("pagehide", () => {
+        origemRef.current?.append(wrap);
+        marcarPip(null);
+        setPip(false);
+      });
+    } catch {
+      // usuário negou/erro — segue na página
+    }
+  }
 
   if (!career?.grind) return null;
 
@@ -262,7 +319,7 @@ export default function DioramaGrind({
     .padStart(2, "0")}m`;
 
   return (
-    <div className="pointer-events-auto w-full">
+    <div ref={wrapRef} className="pointer-events-auto w-full">
       {/* faixa do diorama (o aquário) */}
       <div className="relative w-full overflow-hidden border-2 border-borda bg-fundo">
         <canvas
@@ -270,6 +327,7 @@ export default function DioramaGrind({
           width={CENA_W}
           height={CENA_H}
           onClick={() => {
+            if (intro) dispensarIntro();
             setExpandido((e) => {
               if (!e) rastrear("diorama_expandido", {});
               return !e;
@@ -280,12 +338,23 @@ export default function DioramaGrind({
           title={expandido ? "Recolher" : "Expandir o grind"}
         />
 
-        {/* resumo "enquanto você estava fora" — card sobre a cena, dispensa em 1 clique */}
-        {resumo && (resumo.v > 0 || resumo.d > 0) && (
+        {/* onboarding: 1 balão na primeira vez */}
+        {intro && !pip && (
           <button
             type="button"
-            onClick={aoDispensarResumo}
-            className="absolute inset-x-6 top-2 border-2 border-ciano/70 bg-fundo/95 px-2 py-1 text-center text-[11px] text-texto shadow-lg backdrop-blur-sm sm:inset-x-auto sm:left-1/2 sm:w-80 sm:-translate-x-1/2"
+            onClick={dispensarIntro}
+            className="absolute inset-x-4 top-1.5 z-10 border-2 border-ciano bg-fundo/95 px-2 py-1 text-center text-[11px] text-texto shadow-lg sm:inset-x-auto sm:left-1/2 sm:w-96 sm:-translate-x-1/2"
+          >
+            🛋️ Seu jogador treina normais enquanto você navega — clique pra expandir. Rende até 3h/dia. <span className="text-suave">✕</span>
+          </button>
+        )}
+
+        {/* resumo "enquanto você estava fora" */}
+        {!intro && resumo && (resumo.v > 0 || resumo.d > 0) && (
+          <button
+            type="button"
+            onClick={() => definirResumo(null)}
+            className="absolute inset-x-6 top-2 z-10 border-2 border-ciano/70 bg-fundo/95 px-2 py-1 text-center text-[11px] text-texto shadow-lg backdrop-blur-sm sm:inset-x-auto sm:left-1/2 sm:w-80 sm:-translate-x-1/2"
           >
             Enquanto você estava fora: <span className="text-emerald-400">+{resumo.v}V</span>{" "}
             <span className="text-rosa">{resumo.d}D</span> · <span className="text-amber-300">+${resumo.dinheiro}</span>
@@ -293,15 +362,27 @@ export default function DioramaGrind({
           </button>
         )}
 
-        {/* selo de estado no canto (pausado/teto) */}
-        {(!ligado || noTeto) && (
-          <span className="absolute right-1.5 top-1.5 border border-borda bg-fundo/90 px-1.5 py-0.5 font-pixel text-[8px] text-suave">
-            {!ligado ? "⏸ PAUSADO" : `😴 volta em ${fmtRest}`}
-          </span>
-        )}
+        {/* controles do canto: PiP + selo de estado */}
+        <div className="absolute right-1.5 top-1.5 flex items-center gap-1">
+          {(!ligado || noTeto) && (
+            <span className="border border-borda bg-fundo/90 px-1.5 py-0.5 font-pixel text-[8px] text-suave">
+              {!ligado ? "⏸ PAUSADO" : `😴 volta em ${fmtRest}`}
+            </span>
+          )}
+          {suportaPip() && !pip && (
+            <button
+              type="button"
+              onClick={() => void abrirPip()}
+              className="border border-borda bg-fundo/90 px-1.5 py-0.5 font-pixel text-[8px] text-suave transition hover:text-ciano"
+              title="Destacar numa janela flutuante (farm no canto do monitor)"
+            >
+              ⧉ PIP
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* HUD expandido (DOM) — lista, totais, toggle */}
+      {/* HUD expandido (DOM) */}
       {expandido && (
         <div className="border-2 border-t-0 border-borda bg-painel/95 p-2.5 backdrop-blur">
           <div className="mb-2 flex items-center justify-between text-[11px]">

@@ -133,6 +133,8 @@ interface CareerStore {
   dailyHub: { streak: number; evento: EventoLogin } | null;
   recapSemanal: RecapSemanal | null;
   grindResultado: ResultadoGrind | null; // transiente: lote do dia resolvido (widget lê daqui)
+  grindResumo: { v: number; d: number; dinheiro: number } | null; // "enquanto você estava fora" (transiente)
+  definirGrindResumo: (r: { v: number; d: number; dinheiro: number } | null) => void;
   tickGrind: (deltaSegundos: number) => void;
   alternarGrind: () => void;
   alternarOcultarGrind: () => void;
@@ -198,6 +200,8 @@ export const useCareer = create<CareerStore>((set, get) => ({
   dailyHub: null,
   recapSemanal: null,
   grindResultado: null,
+  grindResumo: null,
+  definirGrindResumo: (r) => set({ grindResumo: r }),
 
   limparDailyHub: () => set({ dailyHub: null }),
   limparRecap: () => set({ recapSemanal: null }),

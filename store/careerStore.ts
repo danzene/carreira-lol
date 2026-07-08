@@ -78,6 +78,7 @@ import {
   fecharSemanaGrind,
   gerarItemGrind,
   grindDisponivel,
+  modsDoGrind,
   resolverGrind,
   tetoAtingido,
   type ResultadoGrind,
@@ -230,7 +231,8 @@ export const useCareer = create<CareerStore>((set, get) => ({
 
     const g = acumularSegundosGrind(gAntes, deltaSegundos, hoje, seedNova);
     let novo: CareerState = { ...c0, grind: g };
-    const resultado = resolverGrind(novo.player, g.segundosHoje, g.seedDia);
+    // os talentos da árvore entram como modificadores puros (velocidade, ouro, sucata…)
+    const resultado = resolverGrind(novo.player, g.segundosHoje, g.seedDia, modsDoGrind(g));
     const ap = aplicarGrind(novo, resultado);
     novo = ap.career;
 

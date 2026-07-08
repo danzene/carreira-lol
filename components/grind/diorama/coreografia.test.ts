@@ -15,6 +15,7 @@ function partida(vitoria: boolean, extra: Partial<PartidaGrind> = {}): PartidaGr
     nota: 6.5,
     dinheiro: vitoria ? 2 : 0,
     maestria: vitoria ? 0.4 : 0.15,
+    sucata: 3,
     inicioSeg: 1620,
     duracaoSeg: 540,
     ...extra,

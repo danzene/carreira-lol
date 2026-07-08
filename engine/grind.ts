@@ -16,11 +16,19 @@ import {
   type RecompensaBau,
   type Talentos,
 } from "./grindProposito";
+import { EXPEDICAO } from "@/data/expedicao";
 import {
+  continuarExpedicao,
+  iniciarExpedicao,
+  MODS_EXP_NEUTROS,
   normalizarExpedicao,
   normalizarModo,
   normalizarRitmo,
+  recuarExpedicao,
+  ritmoDaProfundidade,
   type EstadoExpedicao,
+  type EventoFase,
+  type ModsExpedicao,
   type ModoGrind,
   type RitmoTreino,
 } from "./expedicao";
@@ -91,6 +99,8 @@ export interface EstadoGrind {
   expedicao: EstadoExpedicao | null; // corrida ativa (null = passivo / sem corrida)
   ritmo: RitmoTreino | null; // buff temporário da próxima partida (fora do snapshot ranqueado)
   recordeFaseExpedicao: number; // recorde de carreira: fase mais funda alcançada (Hall/feed)
+  expedicaoDia: string; // "YYYY-MM-DD" do contador de entradas (reseta na virada)
+  expedicoesNoDia: number; // corridas iniciadas hoje (limitador EXPEDICAO.maxPorDia)
 }
 
 export function grindSemanaVazia(): GrindSemana {
@@ -134,6 +144,8 @@ export function estadoGrindInicial(dia: string, seedDia: number): EstadoGrind {
     expedicao: null,
     ritmo: null,
     recordeFaseExpedicao: 0,
+    expedicaoDia: "",
+    expedicoesNoDia: 0,
   };
 }
 
@@ -191,6 +203,8 @@ export function normalizarGrind(bruto: unknown): EstadoGrind | undefined {
     expedicao: normalizarExpedicao(g.expedicao),
     ritmo: normalizarRitmo(g.ritmo),
     recordeFaseExpedicao: Math.max(0, Math.floor(num(g.recordeFaseExpedicao))),
+    expedicaoDia: typeof g.expedicaoDia === "string" ? g.expedicaoDia : "",
+    expedicoesNoDia: Math.max(0, Math.floor(num(g.expedicoesNoDia))),
   };
 }
 
@@ -596,6 +610,178 @@ export function equiparCosmeticoGrind(career: CareerState, tipo: "skin" | "trilh
 export function fecharSemanaGrind(career: CareerState): CareerState {
   if (!career.grind) return career;
   return { ...career, grind: { ...career.grind, semana: grindSemanaVazia() } };
+}
+
+// ============================================================================
+// 🗺️ EXPEDIÇÃO — ações sobre o CareerState (o engine puro vive em expedicao.ts).
+// NUNCA toca em elo/atributos/itens equipados/talentos: morrer só custa o loot em
+// progresso. O loot só é APLICADO ao encerrar a corrida (finalizarExpedicaoGrind).
+// ============================================================================
+
+// Mods da Expedição vindos da árvore (Fase 3 preenche a partir dos talentos).
+export function modsExpedicaoDoGrind(_g: EstadoGrind | undefined): ModsExpedicao {
+  return MODS_EXP_NEUTROS;
+}
+
+// Contador de entradas do dia (a Expedição não passa por acumularSegundosGrind).
+function entradasHoje(g: EstadoGrind, hoje: string): number {
+  return g.expedicaoDia === hoje ? g.expedicoesNoDia : 0;
+}
+
+export type MotivoBloqueioExp = "off" | "limite" | "emAndamento" | null;
+
+// Pode entrar? kill switch global (GRIND) + sub-switch (EXPEDICAO) + limitador diário +
+// não ter corrida em andamento. `habs` é injetável pra testar os kill switches.
+export function podeExpedicao(
+  career: CareerState,
+  hoje: string,
+  habs: { global?: boolean; expedicao?: boolean } = {},
+): MotivoBloqueioExp {
+  const global = habs.global ?? GRIND.habilitado;
+  const exp = habs.expedicao ?? EXPEDICAO.habilitado;
+  if (!global || !exp || !grindDisponivel(career, global)) return "off";
+  const g = career.grind;
+  if (g?.expedicao) return "emAndamento";
+  if (g && entradasHoje(g, hoje) >= EXPEDICAO.maxPorDia) return "limite";
+  return null;
+}
+
+// 🚪 Entra na Expedição: troca o modo, gasta uma entrada do dia e resolve a 1ª fase.
+export function entrarExpedicaoGrind(career: CareerState, hoje: string, seed: number): { career: CareerState; evento: EventoFase } | null {
+  if (podeExpedicao(career, hoje) !== null) return null;
+  const g0 = career.grind ?? estadoGrindInicial(hoje, seed);
+  const { exp, evento } = iniciarExpedicao(career.player, seed, modsExpedicaoDoGrind(g0));
+  const grind: EstadoGrind = {
+    ...g0,
+    modo: "EXPEDICAO",
+    expedicao: exp,
+    expedicaoDia: hoje,
+    expedicoesNoDia: entradasHoje(g0, hoje) + 1,
+  };
+  return { career: { ...career, grind }, evento };
+}
+
+// 🎲 CONTINUAR: avança e resolve a próxima fase (aposta consciente).
+export function continuarExpedicaoGrind(career: CareerState, player = career.player): { career: CareerState; evento: EventoFase } | null {
+  const g = career.grind;
+  if (!g?.expedicao || g.expedicao.status !== "escolha") return null;
+  const { exp, evento } = continuarExpedicao(g.expedicao, player, modsExpedicaoDoGrind(g));
+  if (!evento) return null;
+  return { career: { ...career, grind: { ...g, expedicao: exp } }, evento };
+}
+
+// 🛟 RECUAR: marca a corrida como encerrada com o loot no banco (finalize aplica).
+export function recuarExpedicaoGrind(career: CareerState): CareerState {
+  const g = career.grind;
+  if (!g?.expedicao || g.expedicao.status !== "escolha") return career;
+  return { ...career, grind: { ...g, expedicao: recuarExpedicao(g.expedicao) } };
+}
+
+export interface FimExpedicao {
+  career: CareerState;
+  faseLimpa: number;
+  morreu: boolean;
+  recorde: boolean; // bateu o recorde de profundidade da carreira?
+  sucata: number; // Sucata total ganha (loot das fases + baús)
+  baus: BauRolado[];
+  itens: { slot: SlotGear; seedItem: number }[]; // a borda gera com gerarItemGrind + inventário
+  cosmeticos: string[]; // cosméticos INÉDITOS ganhos nos baús
+  ritmo: RitmoTreino | null; // Ritmo concedido por esta corrida (null se não passou da fase 1)
+}
+
+// 🏁 Encerra a corrida (só quando status morto/recuou): aplica o loot GARANTIDO ao save,
+// concede o Ritmo pela profundidade, atualiza recorde e VOLTA pro passivo. Idempotente:
+// depois de aplicar, expedicao vira null e uma 2ª chamada devolve null.
+export function finalizarExpedicaoGrind(career: CareerState, hoje: string): FimExpedicao | null {
+  const g = career.grind;
+  const exp = g?.expedicao;
+  if (!g || !exp) return null;
+  if (exp.status !== "morto" && exp.status !== "recuou") return null;
+
+  const morreu = exp.status === "morto";
+  const faseLimpa = exp.faseLimpa;
+
+  let sucataGanha = exp.lootSucata;
+  let dinheiro = career.dinheiro;
+  let pool = career.player.pool;
+  const cosmeticos = [...g.cosmeticos];
+  const cosmeticosGanhos: string[] = [];
+  const itens: { slot: SlotGear; seedItem: number }[] = [];
+  const baus: BauRolado[] = [];
+  const semana = { ...g.semana };
+  let totalBaus = g.totalBaus;
+  let pityLendario = g.pityLendario;
+  let primeiroLendarioEm = g.primeiroLendarioEm;
+
+  // baús da Expedição: o tier melhora com a PROFUNDIDADE (raroBonus), respeitando o pity.
+  const baseMods = modsDoGrind(g);
+  const raroBonus = Math.min(EXPEDICAO.raroBonusMax, baseMods.raroBonus + faseLimpa * EXPEDICAO.raroBonusPorFase);
+  const modsBau: ModsGrind = { ...baseMods, raroBonus };
+  for (let i = 0; i < exp.lootBaus; i++) {
+    totalBaus += 1;
+    const seedBau = (((exp.seed ^ (totalBaus * 0x85ebca6b)) >>> 0) ^ (i * 0xc2b2ae35)) >>> 0;
+    const bau = rolarBau(seedBau, totalBaus, pityLendario, modsBau, cosmeticos);
+    pityLendario = bau.tier === "lendario" ? 0 : pityLendario + 1;
+    baus.push(bau);
+    for (const r of bau.recompensas) {
+      if (r.tipo === "sucata") sucataGanha += r.valor;
+      else if (r.tipo === "dinheiro") dinheiro += r.valor;
+      else if (r.tipo === "maestria") pool = somarMaestriaNoMaisFraco(pool, r.valor);
+      else if (r.tipo === "item") itens.push({ slot: r.slot, seedItem: r.seedItem });
+      else if (r.tipo === "cosmetico" && !cosmeticos.includes(r.id)) {
+        cosmeticos.push(r.id);
+        cosmeticosGanhos.push(r.id);
+      }
+    }
+    if (bau.tier === "comum") semana.bausComum += 1;
+    else if (bau.tier === "raro") semana.bausRaro += 1;
+    else {
+      semana.bausLendario += 1;
+      const cosm = bau.recompensas.find((r) => r.tipo === "cosmetico");
+      if (cosm && cosm.tipo === "cosmetico") semana.lendarioNome = cosm.id;
+      primeiroLendarioEm = primeiroLendarioEm ?? hoje;
+    }
+  }
+
+  const ritmo = ritmoDaProfundidade(faseLimpa);
+  const recorde = faseLimpa > g.recordeFaseExpedicao;
+  semana.sucata += sucataGanha;
+
+  const grind: EstadoGrind = {
+    ...g,
+    modo: "PASSIVO", // volta pro passivo seguro
+    expedicao: null, // corrida encerrada (idempotência: 2ª finalize devolve null)
+    sucata: g.sucata + sucataGanha,
+    cosmeticos,
+    totalBaus,
+    pityLendario,
+    primeiroLendarioEm,
+    ritmo: ritmo ?? g.ritmo, // Ritmo novo sobrescreve o não usado; se não passou da fase 1, mantém
+    recordeFaseExpedicao: Math.max(g.recordeFaseExpedicao, faseLimpa),
+    semana,
+  };
+
+  return {
+    career: { ...career, dinheiro, grind, player: { ...career.player, pool } },
+    faseLimpa,
+    morreu,
+    recorde,
+    sucata: sucataGanha,
+    baus,
+    itens,
+    cosmeticos: cosmeticosGanhos,
+    ritmo,
+  };
+}
+
+// Consome 1 carga do Ritmo ao jogar uma partida (como o `preparacao` da loja). Devolve a
+// mesma ref se não havia Ritmo. FORA do snapshot ranqueado — o snapshotDePlayer não lê isto.
+export function consumirRitmo(career: CareerState): CareerState {
+  const g = career.grind;
+  if (!g?.ritmo) return career;
+  const cargas = g.ritmo.cargas - 1;
+  const ritmo = cargas > 0 ? { ...g.ritmo, cargas } : null;
+  return { ...career, grind: { ...g, ritmo } };
 }
 
 // Placar do dia (derivado das completas — pra widget/título da aba).

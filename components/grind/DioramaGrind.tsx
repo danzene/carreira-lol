@@ -12,6 +12,7 @@ import { modsDoGrind } from "@/engine/grind";
 import { carregarAtlasReal } from "./diorama/atlasReal";
 import { CENA_H, CENA_W, criarCena, type CenaDiorama, type EventoCena } from "./diorama/cena";
 import { familiaPixel } from "./diorama/pixels";
+import PainelGrind from "./PainelGrind";
 import { grindVisivel, janelaPip, marcarPip, suportaPip } from "./pip";
 
 // 🎪 Diorama do Grind — a "fazenda viva" na tela. O canvas COREOGRAFA o que o engine
@@ -540,6 +541,8 @@ export default function DioramaGrind({
 
         {/* controles do canto: PiP + selo de estado */}
         <div className="absolute right-1.5 top-1.5 flex items-center gap-1">
+          {/* 🎁 badge de baú pronto (só o baú — badge de talento viraria spam) */}
+          {bauPendente && !pip && <span className="mr-0.5 h-2 w-2 animate-pulse rounded-full bg-amber-300" title="Baú pronto pra abrir!" />}
           {(!ligado || noTeto) && (
             <span className="border border-borda bg-fundo/90 px-1.5 py-0.5 font-pixel text-[8px] text-suave">
               {!ligado ? "⏸ PAUSADO" : `😴 volta em ${fmtRest}`}
@@ -558,62 +561,68 @@ export default function DioramaGrind({
         </div>
       </div>
 
-      {/* HUD expandido (DOM) */}
-      {expandido && (
+      {/* HUD expandido (DOM) — abas RESUMO / TALENTOS / COLEÇÃO */}
+      {expandido && g && (
         <div className="border-2 border-t-0 border-borda bg-painel/95 p-2.5 backdrop-blur">
-          <div className="mb-2 flex items-center justify-between text-[11px]">
-            <span className="text-suave">
-              Hoje: <span className="text-emerald-400">{placar.v}V</span> <span className="text-rosa">{placar.d}D</span> ·{" "}
-              <span className="text-amber-300">+${dinheiroHoje}</span>
-            </span>
-            <div className="flex items-center gap-2">
-              <span className="text-suave" title="O grind rende no máximo 3h por dia — depois o jogador descansa.">
-                {noTeto ? "teto ✔" : `⏳ ${fmtRest}`}
-              </span>
-              <button
-                type="button"
-                onClick={alternar}
-                className={`border px-2 py-0.5 font-pixel text-[8px] transition ${ligado ? "border-rosa text-rosa hover:bg-rosa hover:text-fundo" : "border-emerald-400 text-emerald-400 hover:bg-emerald-400 hover:text-fundo"}`}
-              >
-                {ligado ? "PAUSAR" : "LIGAR"}
-              </button>
-            </div>
-          </div>
-
-          {completas.length > 0 && (
-            <ul className="flex max-h-36 flex-col gap-1 overflow-y-auto">
-              {completas
-                .slice(-8)
-                .reverse()
-                .map((p) => (
-                  <li key={p.idx} className="flex items-center justify-between border border-borda bg-fundo/50 px-2 py-1 text-[11px]">
-                    <span className="truncate">
-                      <span className={p.vitoria ? "text-emerald-400" : "text-rosa"}>{p.vitoria ? "V" : "D"}</span>{" "}
-                      <span className="text-texto">{p.championId}</span>{" "}
-                      <span className="text-suave">
-                        {p.kda.k}/{p.kda.d}/{p.kda.a} · vs {p.adversario}
-                      </span>
+          <PainelGrind
+            g={g}
+            resumo={
+              <div>
+                <div className="mb-2 flex items-center justify-between text-[11px]">
+                  <span className="text-suave">
+                    Hoje: <span className="text-emerald-400">{placar.v}V</span> <span className="text-rosa">{placar.d}D</span> ·{" "}
+                    <span className="text-amber-300">+${dinheiroHoje}</span>
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-suave" title="O grind rende no máximo 3h por dia — depois o jogador descansa.">
+                      {noTeto ? "teto ✔" : `⏳ ${fmtRest}`}
                     </span>
-                    <span className="shrink-0 text-suave">
-                      {p.dinheiro > 0 ? `+$${p.dinheiro}` : `+${p.maestria} maestria`}
-                      {p.drop && <span title="Dropou item Comum"> 🎒</span>}
-                    </span>
-                  </li>
-                ))}
-            </ul>
-          )}
+                    <button
+                      type="button"
+                      onClick={alternar}
+                      className={`border px-2 py-0.5 font-pixel text-[8px] transition ${ligado ? "border-rosa text-rosa hover:bg-rosa hover:text-fundo" : "border-emerald-400 text-emerald-400 hover:bg-emerald-400 hover:text-fundo"}`}
+                    >
+                      {ligado ? "PAUSAR" : "LIGAR"}
+                    </button>
+                  </div>
+                </div>
 
-          <div className="mt-1.5 flex items-center justify-between">
-            <p className="text-[10px] text-suave">Seu jogador treina normais enquanto o jogo está aberto — até 3h/dia.</p>
-            <button
-              type="button"
-              onClick={() => useCareer.getState().alternarOcultarGrind()}
-              className="text-[10px] text-suave underline-offset-2 hover:text-texto hover:underline"
-              title="Reative no painel de som (🔊 no topo)."
-            >
-              ocultar
-            </button>
-          </div>
+                {completas.length > 0 && (
+                  <ul className="flex max-h-32 flex-col gap-1 overflow-y-auto">
+                    {completas
+                      .slice(-8)
+                      .reverse()
+                      .map((p) => (
+                        <li key={p.idx} className="flex items-center justify-between border border-borda bg-fundo/50 px-2 py-1 text-[11px]">
+                          <span className="truncate">
+                            <span className={p.vitoria ? "text-emerald-400" : "text-rosa"}>{p.vitoria ? "V" : "D"}</span>{" "}
+                            <span className="text-texto">{p.championId}</span>{" "}
+                            <span className="text-suave">
+                              {p.kda.k}/{p.kda.d}/{p.kda.a} · vs {p.adversario}
+                            </span>
+                          </span>
+                          <span className="shrink-0 text-suave">
+                            {p.dinheiro > 0 ? `+$${Math.round(p.dinheiro)}` : `+${p.maestria} maestria`}
+                            {p.drop && <span title="Dropou item Comum"> 🎒</span>}
+                          </span>
+                        </li>
+                      ))}
+                  </ul>
+                )}
+
+                <div className="mt-1.5 flex items-center justify-end">
+                  <button
+                    type="button"
+                    onClick={() => useCareer.getState().alternarOcultarGrind()}
+                    className="text-[10px] text-suave underline-offset-2 hover:text-texto hover:underline"
+                    title="Reative no painel de som (🔊 no topo)."
+                  >
+                    ocultar widget
+                  </button>
+                </div>
+              </div>
+            }
+          />
         </div>
       )}
     </div>

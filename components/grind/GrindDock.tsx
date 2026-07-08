@@ -13,7 +13,7 @@ export default function GrindDock() {
   if (!career || !grindDisponivel(career)) return null;
   if (career.opcoes?.ocultarGrind || modoVisualGrind(career.opcoes, false) === "pilula") return null;
   return (
-    <section aria-label="Grind de Normais">
+    <section aria-label="Treino (grind de normais)">
       <DioramaGrind resultado={resultado} />
     </section>
   );

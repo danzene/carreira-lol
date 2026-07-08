@@ -16,6 +16,14 @@ import {
   type RecompensaBau,
   type Talentos,
 } from "./grindProposito";
+import {
+  normalizarExpedicao,
+  normalizarModo,
+  normalizarRitmo,
+  type EstadoExpedicao,
+  type ModoGrind,
+  type RitmoTreino,
+} from "./expedicao";
 import { gerarItem } from "./itens";
 import { criarRng, entre } from "./rng";
 import { simularPartida } from "./simularPartida";
@@ -77,6 +85,12 @@ export interface EstadoGrind {
   primeiroLendarioEm?: string; // data do 1º Lendário (Hall)
   cosmeticos: string[]; // ids possuídos da Coleção do Grind
   equipado: { skin?: string; trilha?: string; pet?: string };
+
+  // 🗺️ Dois Modos de Treino (Passivo seguro × Expedição ativa/arriscada — ver expedicao.ts)
+  modo: ModoGrind; // qual modo está ativo (só UM por vez); default "PASSIVO"
+  expedicao: EstadoExpedicao | null; // corrida ativa (null = passivo / sem corrida)
+  ritmo: RitmoTreino | null; // buff temporário da próxima partida (fora do snapshot ranqueado)
+  recordeFaseExpedicao: number; // recorde de carreira: fase mais funda alcançada (Hall/feed)
 }
 
 export function grindSemanaVazia(): GrindSemana {
@@ -116,6 +130,10 @@ export function estadoGrindInicial(dia: string, seedDia: number): EstadoGrind {
     totalBaus: 0,
     cosmeticos: [],
     equipado: {},
+    modo: "PASSIVO",
+    expedicao: null,
+    ritmo: null,
+    recordeFaseExpedicao: 0,
   };
 }
 
@@ -167,6 +185,12 @@ export function normalizarGrind(bruto: unknown): EstadoGrind | undefined {
     primeiroLendarioEm: typeof g.primeiroLendarioEm === "string" ? g.primeiroLendarioEm : undefined,
     cosmeticos: Array.isArray(g.cosmeticos) ? g.cosmeticos.filter((c): c is string => typeof c === "string") : [],
     equipado: normalizarEquipado(g.equipado),
+
+    // 🗺️ dois modos (save antigo → passivo, sem corrida, sem ritmo: default seguro)
+    modo: normalizarModo(g.modo),
+    expedicao: normalizarExpedicao(g.expedicao),
+    ritmo: normalizarRitmo(g.ritmo),
+    recordeFaseExpedicao: Math.max(0, Math.floor(num(g.recordeFaseExpedicao))),
   };
 }
 

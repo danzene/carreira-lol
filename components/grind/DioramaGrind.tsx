@@ -460,7 +460,7 @@ export default function DioramaGrind({
           }}
           className="block w-full cursor-pointer"
           style={{ imageRendering: "pixelated", aspectRatio: `${CENA_W}/${CENA_H}` }}
-          title={expandido ? "Recolher" : "Expandir o grind"}
+          title={expandido ? "Recolher" : "Expandir o treino"}
         />
 
         {/* cena destacada na PiP: a página mostra o aviso; o farm roda na janelinha */}

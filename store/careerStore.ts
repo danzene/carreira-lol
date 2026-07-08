@@ -87,6 +87,7 @@ import {
   tetoAtingido,
   type ResultadoGrind,
 } from "@/engine/grind";
+import { passivoAtivo } from "@/engine/expedicao";
 import { defCosmetico, type TierBau } from "@/data/grindProposito";
 import { cerimoniasDeUnlocks, migrarUnlocks } from "@/engine/unlocks";
 import { gerarItem } from "@/engine/itens";
@@ -231,6 +232,17 @@ export const useCareer = create<CareerStore>((set, get) => ({
 
     if (!gAntes.ligado) {
       // pausado: não acumula; só garante o estado inicializado no save (1ª vez)
+      if (!c0.grind) {
+        const novo = { ...c0, grind: gAntes };
+        set({ career: novo });
+        if (slotId) salvarSlot(slotId, novo);
+      }
+      return;
+    }
+
+    // 🗺️ só UM modo ativo por vez: enquanto a Expedição está em andamento o PASSIVO não
+    // acumula nem resolve (a corrida tem loop próprio — nada progride "nas costas" do jogador).
+    if (!passivoAtivo(gAntes.modo, gAntes.expedicao)) {
       if (!c0.grind) {
         const novo = { ...c0, grind: gAntes };
         set({ career: novo });

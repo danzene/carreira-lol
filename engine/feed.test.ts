@@ -101,6 +101,25 @@ describe("feed vivo", () => {
     expect(postsSo.filter((p) => p.gatilho.startsWith("grind_")).length).toBe(1);
     for (const p of postsSo) expect(p.texto).not.toMatch(/\{[a-zA-Z]+\}/); // {grindStreak} preenchido
   });
+
+  it("grind: baú Lendário vira o post de flex (nome do cosmético preenchido)", () => {
+    const grind = {
+      ligado: true, dia: "2026-07-03", seedDia: 1, segundosHoje: 0, partidasAplicadas: 0, streakDia: 0,
+      totalPartidas: 30, maiorStreakV: 6, sucata: 0, talentos: {}, barraBau: 0, goldFracao: 0, bauPendente: null,
+      pityLendario: 0, totalBaus: 1, cosmeticos: ["skin_aureo"], equipado: {},
+      semana: { partidas: 5, vitorias: 3, dinheiro: 6, maestria: 2, maiorStreakV: 2, maiorStreakD: 1, drops: 1, sucata: 40, bausComum: 3, bausRaro: 1, bausLendario: 1, talentosComprados: 2, lendarioNome: "skin_aureo" },
+    };
+    const c = { ...carreira(), grind };
+    const f = fatosDaSemana(c);
+    expect(f.grindLendario).toBe("skin_aureo");
+    const posts = gerarPostsFeed(c, f, 3);
+    const flex = posts.find((p) => p.gatilho === "grind_lendario");
+    expect(flex).toBeDefined();
+    expect(flex!.texto).toContain("Herói Áureo"); // nome bonito do cosmético, não o id
+    expect(flex!.texto).not.toMatch(/\{[a-zA-Z]+\}/);
+    // segue no teto de 1 post de grind por semana
+    expect(posts.filter((p) => p.gatilho.startsWith("grind_")).length).toBe(1);
+  });
 });
 
 describe("entrevista pós-jogo", () => {

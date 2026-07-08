@@ -1,6 +1,11 @@
+import { defCosmetico } from "@/data/grindProposito";
 import { timeDe } from "@/data/times";
 import { criarRng, type Rng } from "./rng";
 import type { CareerState, KDA } from "./types";
+
+function nomeCosmetico(id: string): string {
+  return defCosmetico(id)?.nome ?? "um cosmético raro";
+}
 
 // 📱 Feed vivo (PURO): o mundo REAGE à sua carreira. Posts procedurais gerados por
 // seed a partir dos FATOS da semana — mesma entrada, mesmos posts. Humor > toxicidade:
@@ -65,6 +70,7 @@ export interface FatosSemana {
   grindStreakV: number; // maior sequência de vitórias em normais na semana
   grindStreakD: number; // maior sequência de derrotas
   grindDrops: number; // drops no grind na semana
+  grindLendario?: string; // cosmético do baú Lendário aberto na semana (flex máximo)
 }
 
 export function fatosDaSemana(c: CareerState): FatosSemana {
@@ -95,6 +101,7 @@ export function fatosDaSemana(c: CareerState): FatosSemana {
     grindStreakV: c.grind?.semana.maiorStreakV ?? 0,
     grindStreakD: c.grind?.semana.maiorStreakD ?? 0,
     grindDrops: c.grind?.semana.drops ?? 0,
+    grindLendario: (c.grind?.semana.bausLendario ?? 0) > 0 ? c.grind?.semana.lendarioNome : undefined,
   };
 }
 
@@ -202,6 +209,15 @@ const TEMPLATES: Record<string, Tpl[]> = {
       "o setup do {nome} se monta sozinho — mais um item saído do grind de normais 📦",
     ] },
   ],
+  grind_lendario: [
+    { arquetipo: "torcedor", peso: 80, textos: [
+      "O {nome} DROPOU A SKIN LENDÁRIA ({cosmetico}) NO GRIND!!! O CARA TEM SORTE DE CACHORRO 🔥🎁",
+      "GENTE O {nome} ABRIU UM BAÚ LENDÁRIO E VEIO {cosmetico}!!! QUERO UMA DESSAS 😭",
+    ] },
+    { arquetipo: "meme", peso: 45, textos: [
+      "{nome} farmando normal e saiu {cosmetico} lendário. a gente aqui só pega baú comum 🐸",
+    ] },
+  ],
 };
 
 function preencher(tpl: string, f: FatosSemana): string {
@@ -216,6 +232,7 @@ function preencher(tpl: string, f: FatosSemana): string {
     .replace(/\{campeao\}/g, f.campeaoProblema?.championId ?? "?")
     .replace(/\{derrotasChamp\}/g, String(f.campeaoProblema?.derrotas ?? 0))
     .replace(/\{grindStreak\}/g, String(Math.max(f.grindStreakV, f.grindStreakD)))
+    .replace(/\{cosmetico\}/g, f.grindLendario ? nomeCosmetico(f.grindLendario) : "?")
     .replace(/\{kda\}/g, f.melhorKda ? `${f.melhorKda.k}/${f.melhorKda.d}/${f.melhorKda.a}` : "?");
 }
 
@@ -230,8 +247,10 @@ function gatilhosAtivos(f: FatosSemana): { gatilho: string; relevancia: number }
   if (f.campeaoProblema) out.push({ gatilho: "campeao_problema", relevancia: 50 });
   if (f.perdeuPraRival && f.rivalId) out.push({ gatilho: "rival_provoca", relevancia: 65 });
   if (f.dropMitico) out.push({ gatilho: "drop_mitico", relevancia: 45 });
-  // grind: relevância BAIXA e NO MÁXIMO 1 gatilho (o grind não pode dominar o feed)
-  if (f.grindStreakV >= 5) out.push({ gatilho: "grind_maratona", relevancia: 40 });
+  // grind: relevância BAIXA e NO MÁXIMO 1 gatilho (o grind não pode dominar o feed).
+  // Lendário é o único com relevância alta — é o flex máximo, raríssimo.
+  if (f.grindLendario) out.push({ gatilho: "grind_lendario", relevancia: 72 });
+  else if (f.grindStreakV >= 5) out.push({ gatilho: "grind_maratona", relevancia: 40 });
   else if (f.grindStreakD >= 5) out.push({ gatilho: "grind_bagre", relevancia: 35 });
   else if (f.grindDrops > 0) out.push({ gatilho: "grind_farm", relevancia: 28 });
   if (f.partidas >= 4 && out.length === 0) out.push({ gatilho: "semana_solida", relevancia: 25 });

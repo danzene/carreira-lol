@@ -113,8 +113,16 @@ export default function RecapSemanal({ recap, onFechar }: { recap: Recap; onFech
             <span className="text-emerald-300">+${recap.grind.dinheiro}</span>
           </p>
           <p className="text-[10px] text-suave">
-            +{recap.grind.maestria.toFixed(1)} de maestria{recap.grind.drops > 0 ? ` · ${recap.grind.drops} drop(s)` : ""} — isso somou.
+            +{recap.grind.maestria.toFixed(1)} de maestria{recap.grind.drops > 0 ? ` · ${recap.grind.drops} drop(s)` : ""} · 🔩 {recap.grind.sucata} sucata
           </p>
+          {(recap.grind.bausComum + recap.grind.bausRaro + recap.grind.bausLendario > 0 || recap.grind.talentosComprados > 0) && (
+            <p className="text-[11px] text-texto">
+              🎁 {recap.grind.bausComum + recap.grind.bausRaro + recap.grind.bausLendario} baús
+              {recap.grind.bausRaro > 0 && <span className="text-ciano"> ({recap.grind.bausRaro} raro{recap.grind.bausRaro > 1 ? "s" : ""})</span>}
+              {recap.grind.bausLendario > 0 && <span className="text-amber-300"> · {recap.grind.bausLendario} LENDÁRIO!</span>}
+              {recap.grind.talentosComprados > 0 && <span className="text-suave"> · {recap.grind.talentosComprados} talento(s)</span>}
+            </p>
+          )}
         </div>
       ),
     });

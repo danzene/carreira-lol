@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { COLECAO_GRIND } from "@/data/grindProposito";
 import { CONQUISTAS } from "@/engine/conquistas";
 import { recordsVazios } from "@/engine/records";
 import { corElo } from "@/data/juice";
@@ -68,9 +69,15 @@ export default function HallPage() {
           />
         </div>
         {career.grind && career.grind.totalPartidas > 0 && (
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             <Placa emoji="🛋️" rotulo="normais jogadas (grind)" valor={`${career.grind.totalPartidas}`} />
             <Placa emoji="📈" rotulo="maior sequência em normais" valor={`${career.grind.maiorStreakV}`} />
+            <Placa emoji="🎁" rotulo="baús abertos" valor={`${career.grind.totalBaus}`} />
+            <Placa
+              emoji="👑"
+              rotulo={career.grind.primeiroLendarioEm ? `1º lendário · ${career.grind.primeiroLendarioEm}` : "coleção do grind"}
+              valor={`${career.grind.cosmeticos.length}/${COLECAO_GRIND.length}${career.grind.cosmeticos.length >= COLECAO_GRIND.length ? " ✔" : ""}`}
+            />
           </div>
         )}
       </section>

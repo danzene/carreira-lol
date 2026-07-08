@@ -26,6 +26,15 @@ interface Eng {
       expandiram: number;
       reduzidos: number;
     };
+    proposito?: {
+      baus_por_tier: KV[];
+      baus_total: number;
+      baus_pity: number;
+      talento_usuarios: number;
+      talento_pct: number;
+      respecs: number;
+      cosmeticos_equipados: number;
+    };
   } | null;
 }
 
@@ -160,6 +169,30 @@ export default function AdminEngajamento() {
                   <KpiCard rotulo="Usaram PiP" valor={Number(dados.grind.diorama.pip_usuarios)} />
                   <KpiCard rotulo="PiP: média por sessão" valor={Number(dados.grind.diorama.pip_seg_medio)} formato={(n) => `${Math.round(n / 60)}min`} />
                 </div>
+              </div>
+            )}
+            {dados.grind.proposito && (
+              <div className="mt-3">
+                <p className="mb-2 text-[11px] text-zinc-400">
+                  Grind com Propósito: a distribuição de tiers deve bater com 84/15/1% (+pity); adoção da árvore mede o &ldquo;fecha o loop&rdquo;.
+                </p>
+                <div className="mb-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <KpiCard rotulo="Baús abertos" valor={Number(dados.grind.proposito.baus_total)} />
+                  <KpiCard rotulo="Lendários por pity" valor={Number(dados.grind.proposito.baus_pity)} />
+                  <KpiCard rotulo="% do grind com talento" valor={Number(dados.grind.proposito.talento_pct)} formato={(n) => `${n}%`} />
+                  <KpiCard rotulo="Respecs" valor={Number(dados.grind.proposito.respecs)} />
+                </div>
+                <Painel>
+                  <p className="mb-1 text-[11px] text-zinc-400">Distribuição real de tiers abertos (esperado: comum ~84% · raro ~15% · lendário ~1%)</p>
+                  <BarChart
+                    dados={dados.grind.proposito.baus_por_tier.map((t) => ({
+                      x: t.k === "lendario" ? "Lendário" : t.k === "raro" ? "Raro" : "Comum",
+                      y: Number(t.v),
+                      cor: t.k === "lendario" ? "#ffd34d" : t.k === "raro" ? "#38bdf8" : "#71717a",
+                    }))}
+                    altura={150}
+                  />
+                </Painel>
               </div>
             )}
           </>

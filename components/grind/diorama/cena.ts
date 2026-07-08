@@ -1,3 +1,4 @@
+import type { TierBau } from "@/data/grindProposito";
 import { criarRng, type Rng } from "@/engine/rng";
 import type { PartidaGrind } from "@/engine/grind";
 import type { Role } from "@/engine/types";
@@ -22,8 +23,37 @@ export const CENA_H = 96;
 const CHAO_Y = CENA_H - 14; // linha do chão (pé dos sprites)
 const PX = 74; // x fixo do jogador
 
-export type EventoCena = "hit" | "kill" | "killGrande" | "moeda" | "drop" | "vitoria" | "derrota" | "fimDesfecho" | "penta";
+export type EventoCena =
+  | "hit"
+  | "kill"
+  | "killGrande"
+  | "moeda"
+  | "sucata"
+  | "drop"
+  | "vitoria"
+  | "derrota"
+  | "fimDesfecho"
+  | "penta"
+  | "bauCaiu" // o baú tocou o chão
+  | "bauPronto" // respiro: a borda deve chamar abrirBau() e devolver revelarBau()
+  | "bauComum"
+  | "bauRaro"
+  | "bauLendario"
+  | "bauFim";
 export type ModoCena = "normal" | "dormindo" | "pausado";
+
+// Cosméticos EQUIPADOS (cores) — puro visual, zero efeito em número (Regra 3).
+export interface CosmeticosCena {
+  skin?: string; // hue de tint no sprite do herói (preserva a luz)
+  trilha?: string; // cor do rastro do golpe
+  pet?: string; // cor do bichinho que segue o herói
+}
+
+// Modificadores VISUAIS vindos da árvore (a economia mora no engine).
+export interface ModsCena {
+  encenacaoMult: number; // acelera a coreografia (velocidade de ataque/dano/foco)
+  golpeDuplo: number; // 0..1 chance de um segundo golpe visual
+}
 
 interface Inimigo {
   vivo: boolean;
@@ -68,6 +98,32 @@ interface Part {
   cor: string;
 }
 
+// 🔩 Parafusos de Sucata: mesma linguagem das moedas, forma/cor distintas (ler a diferença)
+interface Sucata {
+  vivo: boolean;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  homing: boolean;
+  giro: number;
+}
+
+// 🎁 Baú: cai NEUTRO com física (2 quiques + poeira); a cor do tier só acende na ABERTURA
+interface Bau {
+  ativo: boolean;
+  x: number;
+  y: number;
+  vy: number;
+  quiques: number;
+  pousado: boolean;
+  pediuAbertura: boolean;
+  tier: TierBau | null; // null = ainda não revelado
+  cerimoniaT: number; // >0 = tocando a cerimônia do tier
+  cerimoniaMax: number;
+  nomeTrofeu?: string; // cosmético do Lendário (troféu com nome)
+}
+
 interface Faixa {
   vida: number;
   max: number;
@@ -76,6 +132,9 @@ interface Faixa {
 }
 
 const MOEDA_ALVO = { x: CENA_W - 34, y: 9 }; // contador de $ no topo-direito do canvas
+const SUCATA_ALVO = { x: CENA_W - 76, y: 9 }; // contador de Sucata (à esquerda do $)
+const BAU_X = PX + 52; // onde o baú cai (à frente do herói)
+const DUR_CERIMONIA: Record<TierBau, number> = { comum: 0.7, raro: 1.5, lendario: 3.0 };
 
 export interface CenaDiorama {
   atualizar(dt: number): void;
@@ -89,6 +148,14 @@ export interface CenaDiorama {
   definirReduzido(r: boolean): void;
   emDesfecho(): boolean;
   cenarioNome(): string;
+  // 🎯 Grind com Propósito
+  soltarBau(): void; // baú pendente ⇒ cai NEUTRO na cena
+  revelarBau(tier: TierBau, nomeTrofeu?: string): void; // a borda abriu: acende a cor e toca a cerimônia
+  pularCerimonia(): void; // clique dispensa a cerimônia (inclusive a do Lendário)
+  temBau(): boolean;
+  emCerimonia(): boolean; // cerimônia tocando (só aí o clique é "dispensar")
+  definirCosmeticos(c: CosmeticosCena): void;
+  definirMods(m: ModsCena): void;
 }
 
 export function criarCena(
@@ -100,6 +167,8 @@ export function criarCena(
     familia: string;
     placar: () => { v: number; d: number };
     dinheiroDia: () => number;
+    sucataDia: () => number;
+    barraPct: () => number; // 0..100 da barra de baú
     tetoPct: () => number;
     aoEvento: (ev: EventoCena) => void;
   },
@@ -112,12 +181,20 @@ export function criarCena(
   const danos: Dano[] = Array.from({ length: 16 }, () => ({ vivo: false, x: 0, y: 0, vida: 0, max: 1, txt: "", cor: "", tam: 6 }));
   const moedas: Moeda[] = Array.from({ length: 24 }, () => ({ vivo: false, x: 0, y: 0, vx: 0, vy: 0, homing: false }));
   const parts: Part[] = Array.from({ length: 48 }, () => ({ vivo: false, x: 0, y: 0, vx: 0, vy: 0, vida: 0, max: 1, cor: "" }));
+  const sucatas: Sucata[] = Array.from({ length: 20 }, () => ({ vivo: false, x: 0, y: 0, vx: 0, vy: 0, homing: false, giro: 0 }));
+  const bau: Bau = { ativo: false, x: BAU_X, y: 0, vy: 0, quiques: 0, pousado: false, pediuAbertura: false, tier: null, cerimoniaT: 0, cerimoniaMax: 0 };
 
   // ---- estado da cena ----
   let modo: ModoCena = "normal";
   let reduzido = false;
   let retrato: HTMLImageElement | null = null;
   let atlasReal: AtlasReal | null = null; // arte real (progressive enhancement; null = programático)
+  let cosmeticos: CosmeticosCena = {};
+  let modsCena: ModsCena = { encenacaoMult: 1, golpeDuplo: 0 };
+  let petX = PX - 16; // pet segue o herói com atraso (trailing suave)
+  let petY = CHAO_Y;
+  let petFase = 0;
+  let rastroT = 0; // trilha do golpe (cosmético)
   let estadoT = 0; // tempo no estado atual do jogador (dirige os frames da arte real)
   let estadoPrev: "idle" | "run" | "attack" | "hit" | "death" | "victory" | "sit" = "run";
   let corpo: CorpoCoreografia | null = null;
@@ -174,6 +251,51 @@ export function criarCena(
       mo.vy = -70 - rngCena() * 40;
       mo.homing = false;
     }
+  }
+
+  // 🔩 parafusos de Sucata saltam do inimigo morto e voam pro contador (arco + homing)
+  function soltarSucata(x: number, y: number, n: number): void {
+    if (reduzido) return; // modo economia: o contador anda igual, sem partícula
+    for (let i = 0; i < n; i++) {
+      const s = alocar(sucatas);
+      if (!s) return;
+      s.vivo = true;
+      s.x = x;
+      s.y = y;
+      s.vx = -10 - rngCena() * 30; // sai pra esquerda (o contador de Sucata fica antes do $)
+      s.vy = -60 - rngCena() * 40;
+      s.homing = false;
+      s.giro = rngCena() * Math.PI;
+    }
+  }
+
+  // 🎨 Tint de SKIN: o blend "color" pega hue+saturação da cor e mantém a LUMINOSIDADE
+  // do sprite — hue-shift que preserva luz e sombra da arte. Memoizado por (frame,cor):
+  // custo é 1 canvas offscreen por frame no momento de equipar, zero por frame de render.
+  const tintCache = new Map<string, HTMLCanvasElement>();
+  function frameTintado(nome: string, cor: string): HTMLCanvasElement | null {
+    const a = atlasReal;
+    if (!a) return null;
+    const f = a.frames[nome];
+    if (!f) return null;
+    const chave = `${nome}|${cor}`;
+    const pronto = tintCache.get(chave);
+    if (pronto) return pronto;
+    if (tintCache.size > 64) tintCache.clear(); // troca de skin não vaza memória
+    const cv = document.createElement("canvas");
+    cv.width = f.w;
+    cv.height = f.h;
+    const c2 = cv.getContext("2d");
+    if (!c2) return null;
+    c2.imageSmoothingEnabled = false;
+    c2.drawImage(a.img, f.x, f.y, f.w, f.h, 0, 0, f.w, f.h);
+    c2.globalCompositeOperation = "color";
+    c2.fillStyle = cor;
+    c2.fillRect(0, 0, f.w, f.h);
+    c2.globalCompositeOperation = "destination-in"; // recorta pelo alpha original
+    c2.drawImage(a.img, f.x, f.y, f.w, f.h, 0, 0, f.w, f.h);
+    tintCache.set(chave, cv);
+    return cv;
   }
 
   function soltarParts(x: number, y: number, n: number, cor: string, forca = 55): void {
@@ -257,6 +379,8 @@ export function criarCena(
     al.morteT = 0.3;
     soltarParts(al.x, CHAO_Y - 8, grande ? 10 : 6, grande ? CORD.ouro : CORD.rosa, grande ? 70 : 50);
     soltarMoedas(al.x, CHAO_Y - 10, grande ? 3 : 2);
+    soltarSucata(al.x, CHAO_Y - 9, grande ? 3 : 2); // 🔩 o minion morto solta Sucata
+    opts.aoEvento("sucata");
     hitStop = Math.max(hitStop, grande ? 0.1 : 0.07);
     if (grande) shake = Math.max(shake, 2.6);
     opts.aoEvento(grande ? "killGrande" : "kill");
@@ -314,12 +438,19 @@ export function criarCena(
       if (!al?.vivo || al.morteT > 0) continue;
       ataqueT = durAtaque();
       jogadorSquash = 0.12;
+      rastroT = 0.18; // trilha do golpe (cor do cosmético equipado)
       al.hitT = 0.12;
       al.squash = 0.14;
       soltarDano(al.x, CHAO_Y - TAM_INIMIGO[al.tipo].h - 6, String(g.dano), g.crit ? CORD.ouro : CORD.texto, g.crit ? 8 : 6);
       soltarParts(al.x - 4, CHAO_Y - 10, g.crit ? 5 : 2, CORD.branco, 40);
       if (g.crit) hitStop = Math.max(hitStop, 0.06);
       opts.aoEvento("hit");
+      // ⚔️ Golpe Duplo (talento): 2º impacto puramente VISUAL — o dano do engine não muda
+      if (rngCena() < modsCena.golpeDuplo) {
+        soltarDano(al.x + 6, CHAO_Y - TAM_INIMIGO[al.tipo].h - 12, String(Math.round(g.dano * 0.5)), CORD.ciano, 6);
+        soltarParts(al.x - 2, CHAO_Y - 12, 3, CORD.ciano, 45);
+        hitStop = Math.max(hitStop, 0.04);
+      }
       if (g.mata) matarInimigo(g.alvo, al.tipo !== "minion");
     }
 
@@ -394,6 +525,52 @@ export function criarCena(
     }
   }
 
+  // ---- 🎁 baú: física (2 quiques + poeira), gate de respiro e cerimônia por tier ----
+  function atualizarBau(dt0: number): void {
+    if (!bau.ativo) return;
+
+    if (!bau.pousado) {
+      bau.vy += 420 * dt0; // gravidade fake
+      bau.y += bau.vy * dt0;
+      const chao = CHAO_Y - 6;
+      if (bau.y >= chao) {
+        bau.y = chao;
+        if (bau.quiques >= 2) {
+          bau.pousado = true;
+          bau.vy = 0;
+          soltarParts(bau.x, CHAO_Y - 1, 5, CORD.suave, 30); // poeira
+          shake = Math.max(shake, 1.4);
+          opts.aoEvento("bauCaiu");
+        } else {
+          bau.quiques += 1;
+          bau.vy = -bau.vy * 0.45; // quica
+          soltarParts(bau.x, CHAO_Y - 1, 3, CORD.suave, 22);
+        }
+      }
+      return;
+    }
+
+    // o herói só abre num BEAT DE RESPIRO — nunca no meio de um clash
+    if (!bau.pediuAbertura && bau.tier === null) {
+      const respiro = jogadorEstado === "sit" || modo !== "normal" || !inimigos.some((i) => i.vivo && i.morteT <= 0);
+      if (respiro) {
+        bau.pediuAbertura = true;
+        opts.aoEvento("bauPronto"); // a borda chama abrirBau() e devolve revelarBau()
+      }
+      return;
+    }
+
+    if (bau.cerimoniaT > 0) {
+      bau.cerimoniaT -= dt0;
+      if (bau.cerimoniaT <= 0) {
+        bau.ativo = false;
+        bau.tier = null;
+        bau.nomeTrofeu = undefined;
+        opts.aoEvento("bauFim");
+      }
+    }
+  }
+
   function atualizar(dt0: number): void {
     // hit-stop: congela a ação (mas deixa efeitos suaves respirarem a 20%)
     let dt = dt0;
@@ -401,6 +578,9 @@ export function criarCena(
       hitStop -= dt0;
       dt = dt0 * 0.2;
     }
+    // ⚔️ velocidade de ataque/dano/foco ACELERAM a encenação (visual; o rendimento
+    // já foi decidido pelo engine na duração da partida)
+    dt *= modsCena.encenacaoMult;
     shake = Math.max(0, shake - dt0 * 14);
     if (crossfade > 0) {
       crossfade -= dt0;
@@ -408,8 +588,18 @@ export function criarCena(
     }
     jogadorFrameT += dt;
     ataqueT = Math.max(0, ataqueT - dt0);
+    rastroT = Math.max(0, rastroT - dt0);
     jogadorSquash += (0 - jogadorSquash) * Math.min(1, dt0 * 10);
     if (dropGlow > 0) dropGlow -= dt0;
+    atualizarBau(dt0);
+
+    // 🐾 pet segue o herói com atraso fofo (trailing suave) — puro cosmético
+    if (cosmeticos.pet) {
+      const alvoX = PX - 18;
+      petX += (alvoX - petX) * Math.min(1, dt0 * 3.4);
+      petFase += dt0 * 6;
+      petY = CHAO_Y - 1 + Math.sin(petFase) * 1.4;
+    }
     if (faixa) {
       faixa.vida -= dt0;
       if (faixa.vida <= 0) faixa = null;
@@ -480,6 +670,26 @@ export function criarCena(
         mo.y += (dy / d2) * 260 * dt0;
       }
     }
+    for (const s of sucatas) {
+      if (!s.vivo) continue;
+      s.giro += dt0 * 9;
+      if (!s.homing) {
+        s.x += s.vx * dt0;
+        s.y += s.vy * dt0;
+        s.vy += 300 * dt0; // mesmo arco das moedas (gravidade fake)
+        if (s.vy > 20) s.homing = true;
+      } else {
+        const dx = SUCATA_ALVO.x - s.x;
+        const dy = SUCATA_ALVO.y - s.y;
+        const d2 = Math.hypot(dx, dy);
+        if (d2 < 8) {
+          s.vivo = false;
+          continue;
+        }
+        s.x += (dx / d2) * 240 * dt0;
+        s.y += (dy / d2) * 240 * dt0;
+      }
+    }
     for (const p of parts) {
       if (!p.vivo) continue;
       p.vida -= dt0;
@@ -543,18 +753,20 @@ export function criarCena(
 
   // Frame da ARTE REAL ancorado no baseline do JSON (pés no chão), com o MESMO
   // squash&stretch/flip dos programáticos (transform no draw — a arte não muda o feel).
-  function drawReal(nome: string, x: number, pe: number, flip: boolean, squash: number, alpha = 1): boolean {
+  function drawReal(nome: string, x: number, pe: number, flip: boolean, squash: number, alpha = 1, tint?: string): boolean {
     const a = atlasReal;
     if (!a) return false;
     const f = a.frames[nome];
     if (!f) return false;
+    const tintado = tint ? frameTintado(nome, tint) : null; // skin equipada (memoizada)
     const sx = 1 + squash;
     const sy = 1 - squash;
     c.save();
     c.globalAlpha = alpha;
     c.translate(Math.round(x), Math.round(pe));
     c.scale(flip ? -sx : sx, sy);
-    c.drawImage(a.img, f.x, f.y, f.w, f.h, -f.anchorX, -f.baselineY, f.w, f.h);
+    if (tintado) c.drawImage(tintado, -f.anchorX, -f.baselineY);
+    else c.drawImage(a.img, f.x, f.y, f.w, f.h, -f.anchorX, -f.baselineY, f.w, f.h);
     c.restore();
     c.globalAlpha = 1;
     return true;
@@ -597,7 +809,7 @@ export function criarCena(
 
     const nomeReal = frameHeroiNome();
     let alturaCorpo = atlas.jh;
-    if (nomeReal && drawReal(nomeReal, PX, CHAO_Y, false, jogadorSquash)) {
+    if (nomeReal && drawReal(nomeReal, PX, CHAO_Y, false, jogadorSquash, 1, cosmeticos.skin)) {
       // ARTE REAL (herói já olha pra direita — sem flip)
       const fr = atlasReal!.frames[nomeReal];
       alturaCorpo = fr.baselineY;
@@ -725,6 +937,112 @@ export function criarCena(
     }
   }
 
+  // ➰ trilha do golpe: arco na cor do cosmético (default = branco do jogo)
+  function desenharRastro(): void {
+    if (rastroT <= 0 || reduzido) return;
+    const t = rastroT / 0.18;
+    c.save();
+    c.globalAlpha = t * 0.9;
+    c.strokeStyle = cosmeticos.trilha ?? CORD.branco;
+    c.lineWidth = 2;
+    c.beginPath();
+    c.arc(PX + 6, CHAO_Y - 14, 13, -1.1 - (1 - t) * 0.9, 0.5 - (1 - t) * 0.9);
+    c.stroke();
+    c.restore();
+    c.globalAlpha = 1;
+  }
+
+  // 🐾 pet: bichinho pixel desenhado por código, na cor do cosmético
+  function desenharPet(): void {
+    const cor = cosmeticos.pet;
+    if (!cor || modo === "dormindo") return;
+    const x = Math.round(petX);
+    const y = Math.round(petY);
+    c.fillStyle = "rgba(0,0,0,0.3)";
+    c.beginPath();
+    c.ellipse(x, CHAO_Y + 1, 4, 1.4, 0, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = cor;
+    c.fillRect(x - 3, y - 6, 7, 6); // corpo
+    c.fillRect(x - 4, y - 4, 1, 2); // patinha
+    c.fillRect(x + 4, y - 4, 1, 2);
+    c.fillStyle = CORD.fundo;
+    c.fillRect(x - 1, y - 5, 1, 1); // olhinhos
+    c.fillRect(x + 2, y - 5, 1, 1);
+  }
+
+  // 🔩 parafusos de Sucata (quadradinho com "furo" — distingue da moeda redonda/dourada)
+  function desenharSucatas(): void {
+    for (const s of sucatas) {
+      if (!s.vivo) continue;
+      const x = Math.round(s.x);
+      const y = Math.round(s.y);
+      c.fillStyle = "#b9c2d0";
+      c.fillRect(x, y, 3, 3);
+      c.fillStyle = "#6d7688";
+      c.fillRect(x + (Math.sin(s.giro) > 0 ? 1 : 0), y + 1, 1, 1);
+    }
+  }
+
+  // 🎁 baú: cai NEUTRO; a cor do tier só acende na cerimônia (antecipação máxima)
+  function desenharBau(): void {
+    if (!bau.ativo) return;
+    const x = Math.round(bau.x);
+    const y = Math.round(bau.y);
+    const rev = bau.tier !== null;
+    const t = rev ? 1 - bau.cerimoniaT / Math.max(0.001, bau.cerimoniaMax) : 0; // 0→1 na cerimônia
+    const corTier = bau.tier === "lendario" ? CORD.ouro : bau.tier === "raro" ? CORD.ciano : CORD.suave;
+
+    // 🌑 Lendário: a cena ESCURECE e um feixe sobe do baú
+    if (bau.tier === "lendario") {
+      c.fillStyle = `rgba(7,4,18,${Math.min(0.72, t * 2.2)})`;
+      c.fillRect(0, 0, CENA_W, CENA_H);
+      const g = c.createLinearGradient(x, y, x, 0);
+      g.addColorStop(0, "rgba(255,211,77,0.55)");
+      g.addColorStop(1, "rgba(255,45,126,0)");
+      c.fillStyle = g;
+      c.beginPath();
+      c.moveTo(x - 3, y);
+      c.lineTo(x + 3, y);
+      c.lineTo(x + 16, 0);
+      c.lineTo(x - 16, 0);
+      c.closePath();
+      c.fill();
+    } else if (bau.tier === "raro") {
+      c.globalAlpha = Math.min(0.5, t * 1.4); // brilho azul crescente
+      c.fillStyle = CORD.ciano;
+      c.fillRect(x - 12, y - 12, 24, 18);
+      c.globalAlpha = 1;
+    }
+
+    c.fillStyle = "rgba(0,0,0,0.35)";
+    c.beginPath();
+    c.ellipse(x, CHAO_Y + 1, 7, 2, 0, 0, Math.PI * 2);
+    c.fill();
+
+    // corpo do baú + tampa que abre na cerimônia
+    const abre = rev ? Math.min(7, t * 14) : 0;
+    c.fillStyle = rev ? corTier : "#6b5636";
+    c.fillRect(x - 6, y - 4, 12, 8);
+    c.fillStyle = rev ? CORD.branco : "#9a7d4c";
+    c.fillRect(x - 6, y - 5 - abre, 12, 3); // tampa
+    c.fillStyle = rev ? CORD.branco : "#3c3020";
+    c.fillRect(x - 1, y - 2, 2, 3); // fechadura
+
+    // troféu do Lendário sobe do baú com o nome do cosmético
+    if (bau.tier === "lendario" && bau.nomeTrofeu) {
+      const sobe = Math.min(1, t * 1.8);
+      const ty = y - 8 - sobe * 26;
+      c.globalAlpha = sobe;
+      c.fillStyle = CORD.ouro;
+      c.fillRect(x - 5, ty - 5, 10, 10);
+      c.fillStyle = CORD.branco;
+      c.fillRect(x - 3, ty - 3, 6, 6);
+      textoPixel(c, opts.familia, bau.nomeTrofeu.toUpperCase(), CENA_W / 2, CENA_H - 22, CORD.ouro, 7);
+      c.globalAlpha = 1;
+    }
+  }
+
   function desenharEfeitos(): void {
     for (const p of parts) {
       if (!p.vivo) continue;
@@ -769,7 +1087,12 @@ export function criarCena(
     // placar (topo-esquerda)
     textoPixel(c, opts.familia, `${v}V`, 10, 4, CORD.verde, 7, false);
     textoPixel(c, opts.familia, `${d}D`, 30, 4, CORD.rosa, 7, false);
-    // $ do dia (topo-direita — alvo das moedas)
+    // 🔩 Sucata (alvo dos parafusos) e $ do dia (alvo das moedas), lado a lado
+    textoPixel(c, opts.familia, `${opts.sucataDia()}`, CENA_W - 72, 4, "#b9c2d0", 7, false);
+    c.fillStyle = "#b9c2d0";
+    c.fillRect(CENA_W - 80, 5, 4, 4); // ícone do parafuso
+    c.fillStyle = "#6d7688";
+    c.fillRect(CENA_W - 79, 6, 2, 2);
     textoPixel(c, opts.familia, `$${opts.dinheiroDia()}`, CENA_W - 30, 4, CORD.ouro, 7, false);
     // mini-barra do teto (embaixo do $)
     const pct = opts.tetoPct();
@@ -777,6 +1100,25 @@ export function criarCena(
     c.fillRect(CENA_W - 30, 13, 24, 2);
     c.fillStyle = pct >= 100 ? CORD.ouro : CORD.ciano;
     c.fillRect(CENA_W - 30, 13, Math.round((Math.min(100, pct) / 100) * 24), 2);
+
+    // 🎁 barra de baú: faixa fina na BASE (não briga com nada) + baú na ponta.
+    // Últimos 10% brilham (antecipação); cheia + pendente = baú pulsando.
+    const bp = Math.min(100, opts.barraPct());
+    const larg = CENA_W - 16;
+    c.fillStyle = "rgba(36,28,64,0.9)";
+    c.fillRect(0, CENA_H - 3, CENA_W, 3);
+    const quase = bp >= 90;
+    c.fillStyle = quase ? CORD.ouro : CORD.barao;
+    if (quase && !reduzido) c.globalAlpha = 0.75 + 0.25 * Math.sin(jogadorFrameT * 8);
+    c.fillRect(0, CENA_H - 3, Math.round((bp / 100) * larg), 3);
+    c.globalAlpha = 1;
+    // ícone de baú na ponta direita
+    const bx = CENA_W - 9;
+    const by = CENA_H - 8;
+    c.fillStyle = bau.ativo || bp >= 100 ? CORD.ouro : "#6b5636";
+    c.fillRect(bx - 4, by + 2, 8, 5);
+    c.fillStyle = bau.ativo || bp >= 100 ? CORD.branco : "#9a7d4c";
+    c.fillRect(bx - 4, by, 8, 2);
   }
 
   function desenhar(): void {
@@ -825,8 +1167,12 @@ export function criarCena(
     }
 
     desenharInimigos();
+    desenharPet();
     desenharJogador();
+    desenharRastro();
+    desenharBau();
     desenharEfeitos();
+    desenharSucatas();
 
     // escurece a cena dormindo (a fogueira vira o ponto de luz)
     if (modo === "dormindo") {
@@ -877,5 +1223,54 @@ export function criarCena(
     },
     emDesfecho: () => desfecho !== null,
     cenarioNome: () => cenarios.nome,
+
+    // ---- 🎯 Grind com Propósito ----
+    soltarBau: () => {
+      if (bau.ativo) return;
+      bau.ativo = true;
+      bau.x = BAU_X;
+      bau.y = -10;
+      bau.vy = 0;
+      bau.quiques = 0;
+      bau.pousado = false;
+      bau.pediuAbertura = false;
+      bau.tier = null; // cai NEUTRO: o tier é segredo até a abertura
+      bau.cerimoniaT = 0;
+      bau.nomeTrofeu = undefined;
+    },
+    revelarBau: (tier, nomeTrofeu) => {
+      if (!bau.ativo) return;
+      bau.tier = tier;
+      bau.nomeTrofeu = nomeTrofeu;
+      bau.cerimoniaMax = DUR_CERIMONIA[tier];
+      bau.cerimoniaT = bau.cerimoniaMax;
+      if (tier === "comum") {
+        soltarMoedas(bau.x, bau.y - 6, 2);
+        soltarSucata(bau.x, bau.y - 6, 2);
+        opts.aoEvento("bauComum");
+      } else if (tier === "raro") {
+        soltarParts(bau.x, bau.y - 6, 12, CORD.ciano, 70);
+        soltarSucata(bau.x, bau.y - 6, 4);
+        shake = Math.max(shake, 2);
+        hitStop = Math.max(hitStop, 0.08);
+        opts.aoEvento("bauRaro");
+      } else {
+        soltarParts(bau.x, bau.y - 6, 18, CORD.ouro, 90);
+        soltarSucata(bau.x, bau.y - 6, 6);
+        shake = Math.max(shake, 3);
+        opts.aoEvento("bauLendario");
+      }
+    },
+    pularCerimonia: () => {
+      if (bau.ativo && bau.tier !== null && bau.cerimoniaT > 0.15) bau.cerimoniaT = 0.15;
+    },
+    temBau: () => bau.ativo,
+    emCerimonia: () => bau.ativo && bau.tier !== null && bau.cerimoniaT > 0,
+    definirCosmeticos: (novos) => {
+      cosmeticos = novos;
+    },
+    definirMods: (m) => {
+      modsCena = m;
+    },
   };
 }

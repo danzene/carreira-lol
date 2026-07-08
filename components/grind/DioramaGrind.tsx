@@ -7,6 +7,8 @@ import { buscarCampeoes } from "@/lib/ddragon";
 import { tocarSom } from "@/lib/som";
 import { rastrear } from "@/lib/telemetria";
 import { useCareer } from "@/store/careerStore";
+import { defCosmetico, GRIND_PROP } from "@/data/grindProposito";
+import { modsDoGrind } from "@/engine/grind";
 import { carregarAtlasReal } from "./diorama/atlasReal";
 import { CENA_H, CENA_W, criarCena, type CenaDiorama, type EventoCena } from "./diorama/cena";
 import { familiaPixel } from "./diorama/pixels";
@@ -52,6 +54,7 @@ export default function DioramaGrind({
   const [fpsAlvo, setFpsAlvo] = useState(FPS_NORMAL);
   const [pip, setPip] = useState(false);
   const [intro, setIntro] = useState(false);
+  const [escolhaBau, setEscolhaBau] = useState(0); // >0 = Raro com "Segunda Chance" aguardando escolha
 
   const ligado = career?.grind?.ligado ?? true;
   const noTeto = career?.grind ? tetoAtingido(career.grind) : false;
@@ -61,8 +64,8 @@ export default function DioramaGrind({
   const dinheiroHoje = completas.reduce((s, p) => s + p.dinheiro, 0);
 
   // refs vivos pro loop (sem recriar a cena a cada render)
-  const vivoRef = useRef({ resultado, placar, dinheiroHoje, segundos: g?.segundosHoje ?? 0 });
-  vivoRef.current = { resultado, placar, dinheiroHoje, segundos: g?.segundosHoje ?? 0 };
+  const vivoRef = useRef({ resultado, placar, dinheiroHoje, segundos: g?.segundosHoje ?? 0, sucata: g?.sucata ?? 0, barra: g?.barraBau ?? 0 });
+  vivoRef.current = { resultado, placar, dinheiroHoje, segundos: g?.segundosHoje ?? 0, sucata: g?.sucata ?? 0, barra: g?.barraBau ?? 0 };
   const volumeDioramaRef = useRef<number>(GRIND.volumeDiorama);
   volumeDioramaRef.current = career?.opcoes?.volumeDiorama ?? GRIND.volumeDiorama;
 
@@ -156,11 +159,25 @@ export default function DioramaGrind({
       if (ev === "kill") somDiorama("tick", false, 600);
       else if (ev === "killGrande") somDiorama("moeda");
       else if (ev === "moeda") somDiorama("tick", false, 900);
+      else if (ev === "sucata") somDiorama("tick", false, 1400); // parafuso: bipe raro
       else if (ev === "drop") somDiorama("tier2", true);
       else if (ev === "vitoria") somDiorama("missao", true);
       else if (ev === "penta") somDiorama("conquista", true);
       else if (ev === "derrota") somDiorama("rebaixamento", true);
-      else if (ev === "fimDesfecho") {
+      // 🎁 baú: som escala com o tier (o Lendário é o momento mais raro da cena)
+      else if (ev === "bauCaiu") somDiorama("tick", true);
+      else if (ev === "bauComum") somDiorama("tier1", true);
+      else if (ev === "bauRaro") somDiorama("tier3", true);
+      else if (ev === "bauLendario") somDiorama("tier5", true);
+      else if (ev === "bauPronto") {
+        // o engine já rolou o baú; a borda ABRE (aplica as recompensas) e a cena revela
+        const pend = useCareer.getState().career?.grind?.bauPendente;
+        if (pend?.opcoes) setEscolhaBau(pend.opcoes.length); // Segunda Chance: jogador escolhe
+        else {
+          const r = useCareer.getState().abrirBauGrind(0);
+          if (r) cena.revelarBau(r.tier, r.cosmetico);
+        }
+      } else if (ev === "fimDesfecho") {
         const r = vivoRef.current.resultado;
         idxEncenado.current = r?.atual ? r.atual.idx : -1;
         if (r?.atual) cena.definirPartida(r.atual.idx, ehBoss(r.atual.inicioSeg, r.atual.duracaoSeg));
@@ -175,6 +192,8 @@ export default function DioramaGrind({
       familia: familiaPixel(),
       placar: () => vivoRef.current.placar,
       dinheiroDia: () => vivoRef.current.dinheiroHoje,
+      sucataDia: () => vivoRef.current.sucata,
+      barraPct: () => (vivoRef.current.barra / GRIND_PROP.barraCheia) * 100,
       tetoPct: () => (vivoRef.current.segundos / GRIND.tetoSegundosDia) * 100,
       aoEvento,
     });
@@ -189,6 +208,17 @@ export default function DioramaGrind({
     if (r0?.atual) cena.definirPartida(r0.atual.idx, ehBoss(r0.atual.inicioSeg, r0.atual.duracaoSeg));
     idxEncenado.current = r0?.atual?.idx ?? -1;
     idxDesfechado.current = r0?.completas.length ?? 0;
+
+    // cena recriada (PiP/economia) com baú pendente ⇒ ele volta a cair; cosméticos/mods também
+    const gAtual = useCareer.getState().career?.grind;
+    if (gAtual?.bauPendente) cena.soltarBau();
+    cena.definirCosmeticos({
+      skin: gAtual?.equipado.skin ? defCosmetico(gAtual.equipado.skin)?.cor : undefined,
+      trilha: gAtual?.equipado.trilha ? defCosmetico(gAtual.equipado.trilha)?.cor : undefined,
+      pet: gAtual?.equipado.pet ? defCosmetico(gAtual.equipado.pet)?.cor : undefined,
+    });
+    const m0 = modsDoGrind(gAtual);
+    cena.definirMods({ encenacaoMult: m0.encenacaoMult, golpeDuplo: m0.golpeDuplo });
 
     // loop: cada frame agenda o PRÓXIMO na janela dona do canvas (principal ou PiP).
     // TEMPO: usamos SEMPRE o performance.now() da janela PRINCIPAL (closure) — o
@@ -304,6 +334,28 @@ export default function DioramaGrind({
     }
   }, [resultado, completas, ligado, noTeto]);
 
+  // 🎁 baú pendente no engine ⇒ cai na cena (neutro). Cosméticos e mods visuais também
+  // são espelhados aqui — o estado de jogo vive no save; a cena só apresenta.
+  const bauPendente = !!g?.bauPendente;
+  const equip = g?.equipado;
+  const talentosKey = JSON.stringify(g?.talentos ?? {});
+  useEffect(() => {
+    if (bauPendente) cenaRef.current?.soltarBau();
+  }, [bauPendente]);
+
+  useEffect(() => {
+    cenaRef.current?.definirCosmeticos({
+      skin: equip?.skin ? defCosmetico(equip.skin)?.cor : undefined,
+      trilha: equip?.trilha ? defCosmetico(equip.trilha)?.cor : undefined,
+      pet: equip?.pet ? defCosmetico(equip.pet)?.cor : undefined,
+    });
+  }, [equip?.skin, equip?.trilha, equip?.pet]);
+
+  useEffect(() => {
+    const m = modsDoGrind(useCareer.getState().career?.grind);
+    cenaRef.current?.definirMods({ encenacaoMult: m.encenacaoMult, golpeDuplo: m.golpeDuplo });
+  }, [talentosKey]);
+
   // retrato do campeão da partida atual
   const championAtual = resultado?.atual?.championId ?? completas[completas.length - 1]?.championId ?? null;
   useEffect(() => {
@@ -395,6 +447,11 @@ export default function DioramaGrind({
           height={CENA_H}
           onClick={() => {
             if (intro) dispensarIntro();
+            // clique dispensa a cerimônia do baú (inclusive a do Lendário) antes de expandir
+            if (cenaRef.current?.emCerimonia()) {
+              cenaRef.current.pularCerimonia();
+              return;
+            }
             setExpandido((e) => {
               if (!e) rastrear("diorama_expandido", {});
               return !e;
@@ -421,6 +478,39 @@ export default function DioramaGrind({
             >
               ⧉ CENA DESTACADA — TRAZER DE VOLTA
             </button>
+          </div>
+        )}
+
+        {/* 🍀 Segunda Chance (talento de Sorte): o Raro abre 2 pacotes, você escolhe 1 */}
+        {escolhaBau > 0 && (
+          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-1.5 bg-fundo/90">
+            <p className="font-pixel text-[9px] text-ciano">BAÚ RARO · ESCOLHA 1</p>
+            <div className="flex gap-2">
+              {Array.from({ length: escolhaBau }).map((_, i) => {
+                const pacote = career.grind?.bauPendente?.opcoes?.[i] ?? [];
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => {
+                      const r = useCareer.getState().abrirBauGrind(i);
+                      setEscolhaBau(0);
+                      if (r) cenaRef.current?.revelarBau(r.tier, r.cosmetico);
+                    }}
+                    className="border-2 border-borda bg-painel px-2.5 py-1.5 text-[10px] text-texto transition hover:border-ciano"
+                  >
+                    {pacote.map((x, j) => (
+                      <span key={j} className="mr-1.5">
+                        {x.tipo === "sucata" && <span className="text-[#b9c2d0]">🔩{x.valor}</span>}
+                        {x.tipo === "dinheiro" && <span className="text-amber-300">${x.valor}</span>}
+                        {x.tipo === "item" && <span className="text-suave">🎒 item</span>}
+                        {x.tipo === "maestria" && <span className="text-ciano">+{x.valor} maestria</span>}
+                      </span>
+                    ))}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
 

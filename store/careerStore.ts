@@ -72,17 +72,22 @@ import {
 } from "@/engine/diario";
 import { acumularDrop, acumularPartida, fecharSemanaStats, statsVazias } from "@/engine/statsSemana";
 import {
+  abrirBau,
   acumularSegundosGrind,
   aplicarGrind,
+  comprarTalentoGrind,
+  equiparCosmeticoGrind,
   estadoGrindInicial,
   fecharSemanaGrind,
   gerarItemGrind,
   grindDisponivel,
   modsDoGrind,
   resolverGrind,
+  respecGrind,
   tetoAtingido,
   type ResultadoGrind,
 } from "@/engine/grind";
+import { defCosmetico, type TierBau } from "@/data/grindProposito";
 import { cerimoniasDeUnlocks, migrarUnlocks } from "@/engine/unlocks";
 import { gerarItem } from "@/engine/itens";
 import { SLOTS_GEAR } from "@/data/itens";
@@ -140,6 +145,11 @@ interface CareerStore {
   alternarGrind: () => void;
   alternarOcultarGrind: () => void;
   definirOpcaoGrind: (patch: Partial<Pick<OpcoesCarreira, "grindPilula" | "reduzirAnimacoes" | "volumeDiorama">>) => void;
+  // 🎯 Grind com Propósito
+  abrirBauGrind: (escolha?: number) => { tier: TierBau; cosmetico?: string } | null;
+  comprarTalento: (id: string) => boolean;
+  respecTalentos: () => void;
+  equiparCosmetico: (tipo: "skin" | "trilha" | "pet", id?: string) => void;
   registrarLogin: () => void;
   coletarDiaria: () => boolean;
   puxarGratis: () => Promise<ResultadoPuxada[] | null>;
@@ -281,6 +291,56 @@ export const useCareer = create<CareerStore>((set, get) => ({
     if (patch.reduzirAnimacoes === true) rastrear("diorama_reduzido", { motivo: "config" });
     const opcoes = { esconderAtributos: false, fearless: false, ...career.opcoes, ...patch };
     const novo = { ...career, opcoes };
+    set({ career: novo });
+    if (slotId) salvarSlot(slotId, novo);
+  },
+
+  // 🎁 Abre o baú pendente (o tier só é REVELADO aqui). `escolha` só vale pro Raro com
+  // "Segunda Chance". Devolve {tier, cosmetico} pra cena encenar a cerimônia certa.
+  abrirBauGrind: (escolha = 0) => {
+    const { career: c0, slotId } = get();
+    if (!c0?.grind?.bauPendente) return null;
+    const ab = abrirBau(c0, chaveDia(Date.now()), escolha);
+    if (!ab) return null;
+    let novo = ab.career;
+    // item do baú Raro: raridade capada na borda, direto pro inventário
+    if (ab.item) useInventory.getState().adicionarItem(gerarItemGrind(ab.item, iLvlDe(novo)));
+    rastrear("grind_bau_aberto", { tier: ab.bau.tier, numero: ab.bau.numero, pity: ab.bau.foiPity });
+    if (ab.cosmetico) rastrear("grind_cosmetico_ganho", { id: ab.cosmetico });
+    set({ career: novo });
+    if (slotId) salvarSlot(slotId, novo);
+    return { tier: ab.bau.tier, cosmetico: ab.cosmetico ? defCosmetico(ab.cosmetico)?.nome : undefined };
+  },
+
+  // 🌳 Compra 1 nível de um nó (Sucata é o único recurso gasto — economia fechada).
+  comprarTalento: (id) => {
+    const { career: c0, slotId } = get();
+    if (!c0) return false;
+    const r = comprarTalentoGrind(c0, id);
+    if (!r) return false;
+    rastrear("grind_talento_comprado", { no: id, nivel: r.nivel });
+    set({ career: r.career });
+    if (slotId) salvarSlot(slotId, r.career);
+    return true;
+  },
+
+  // ♻️ Respec GRÁTIS: devolve toda a Sucata investida.
+  respecTalentos: () => {
+    const { career: c0, slotId } = get();
+    if (!c0?.grind) return;
+    const novo = respecGrind(c0);
+    rastrear("grind_respec", { devolvido: (novo.grind?.sucata ?? 0) - c0.grind.sucata });
+    set({ career: novo });
+    if (slotId) salvarSlot(slotId, novo);
+  },
+
+  // 🎨 Equipa 1 cosmético por tipo (puro visual — Regra 3).
+  equiparCosmetico: (tipo, id) => {
+    const { career: c0, slotId } = get();
+    if (!c0) return;
+    const novo = equiparCosmeticoGrind(c0, tipo, id);
+    if (novo === c0) return;
+    if (id) rastrear("grind_cosmetico_equipado", { tipo, id });
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
   },

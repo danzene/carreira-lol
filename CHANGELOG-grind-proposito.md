@@ -1,5 +1,12 @@
 # CHANGELOG — Grind com Propósito (Sucata · Árvore de Talentos · Baús)
 
+> **⚠️ Recalibrado na rodada "Dois Modos" (ver `CHANGELOG-dois-modos.md`):** a Sucata do
+> passivo foi reduzida ~½ (`sucataPartida 2-4→1-2`; baús `comum 8-15→4-8`, `raro 25-45→12-22`,
+> `lendário 150-250→80-130`) pra o passivo virar o CHÃO lento e a Expedição ser o acelerador
+> sem furar o horizonte da árvore. Os números de Sucata da simulação abaixo (2405/4762) são
+> da calibração ORIGINAL; os ratios de $/maestria (o teto da Regra 4) **não** mudaram, pois a
+> Sucata é economia fechada à parte.
+
 Três sistemas que vivem **dentro** do grind de normais, ligados por uma economia
 **fechada**: a Sucata só nasce jogando e só morre na árvore de talentos; os talentos
 aceleram/enriquecem o próprio grind; os baús premiam **desejo** (cosméticos do diorama),

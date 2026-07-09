@@ -123,6 +123,9 @@ export default function RecapSemanal({ recap, onFechar }: { recap: Recap; onFech
               {recap.grind.talentosComprados > 0 && <span className="text-suave"> · {recap.grind.talentosComprados} talento(s)</span>}
             </p>
           )}
+          {recap.grind.faseExpedicao > 0 && (
+            <p className="text-[11px] text-rosa">⚔️ Expedição: chegou à fase {recap.grind.faseExpedicao}</p>
+          )}
         </div>
       ),
     });

@@ -15,9 +15,10 @@ export const EXPEDICAO = {
   // tocar no passivo nem quebrar saves — o Treino continua rodando normal.
   habilitado: true,
 
-  // 🎟️ limitador de entrada: a Expedição é o EVENTO do dia, não um moedor 24h. 3 corridas
-  // por dia real (documentado). Some pra impedir a Expedição de substituir o passivo lento.
-  maxPorDia: 3,
+  // 🎟️ limitador de entrada: a Expedição é o EVENTO do dia, não um moedor 24h. 2 corridas
+  // por dia real (documentado). Segura a Expedição pra não substituir o passivo lento nem
+  // furar o horizonte da árvore (~1,5-2,5 meses combinado — ver simulação no CHANGELOG).
+  maxPorDia: 2,
 
   // ❤️ vida do herói (só existe na Expedição). Deriva da forcaRota (~0..100).
   hpBase: 60,
@@ -37,14 +38,20 @@ export const EXPEDICAO = {
   danoFracaoBase: 0.11,
   danoJitter: 0.18, // ±18% no dano (a incerteza que torna a aposta uma aposta)
 
-  // 🔩 Sucata por fase — a fonte RÁPIDA (esforço/risco), contraste do passivo lento.
-  // sucataFase = round(base * fase * (1 + (fase-1)*accel)) → superlinear (fase 10 >> fase 1).
-  sucataFaseBase: 5,
-  sucataFaseAccel: 0.16,
+  // 🔩 Sucata por fase — bônus MODESTO (o passivo continua a espinha da Sucata; a Expedição
+  // NÃO é um farm de Sucata — seu valor real é Ritmo + cosméticos + o recorde de profundidade).
+  // Deliberadamente pequena: o passivo sozinho já enche o horizonte da árvore (~57 dias), então
+  // deixar a Expedição render muito FURARIA o teto de ~1,5-2,5 meses (ver simulação no CHANGELOG).
+  // sucataFase = round(base * fase * (1 + (fase-1)*accel)) → superlinear (fase 10 > fase 1).
+  // Base pequena de propósito: a SOMA sobre muitas fases é o que conta (uma corrida funda
+  // passa por ~10 fases). Calibrado pra Expedição render ~o dobro de um dia passivo, não mais.
+  sucataFaseBase: 0.13,
+  sucataFaseAccel: 0.14,
 
-  // 🎁 baús — mais prováveis e de tier melhor no fundo. Boss garante 1 baú.
-  chanceBauBase: 0.1,
-  chanceBauPorFase: 0.015,
+  // 🎁 baús — mais prováveis e de tier melhor no fundo. Boss (a cada 5 fases) garante 1 baú;
+  // fora dele a chance é modesta (o baú é bônus de cosmético, não uma torneira de Sucata).
+  chanceBauBase: 0.05,
+  chanceBauPorFase: 0.008,
   raroBonusPorFase: 0.02, // fase funda melhora o tier (passado como raroBonus pro rolarBau)
   raroBonusMax: 0.35,
 

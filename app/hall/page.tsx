@@ -80,6 +80,11 @@ export default function HallPage() {
             />
           </div>
         )}
+        {career.grind && career.grind.recordeFaseExpedicao > 0 && (
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <Placa emoji="⚔️" rotulo="fase mais funda na Expedição" valor={`${career.grind.recordeFaseExpedicao}`} />
+          </div>
+        )}
       </section>
 
       {/* títulos internacionais */}

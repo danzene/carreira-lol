@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { GRIND } from "@/data/grind";
 import { EXPEDICAO } from "@/data/expedicao";
+import { LOJA } from "@/data/loja";
 import {
+  abrirBau,
   acumularSegundosGrind,
   aplicarGrind,
   consumirRitmo,
@@ -11,6 +13,7 @@ import {
   finalizarExpedicaoGrind,
   finalizarExpedicaoPendente,
   modsDoGrind,
+  modsExpedicaoDoGrind,
   normalizarGrind,
   podeExpedicao,
   recuarExpedicaoGrind,
@@ -18,6 +21,7 @@ import {
   type EstadoGrind,
 } from "./grind";
 import {
+  estimarProximaFase,
   forcaDaFase,
   hpMaximo,
   normalizarExpedicao,
@@ -27,6 +31,7 @@ import {
   sucataDaFase,
   RITMO_CAP,
 } from "./expedicao";
+import { sucataInvestida, talentosMaximos } from "./grindProposito";
 import { snapshotDePlayer } from "./duelo";
 import { criarCareerState } from "./player";
 import type { Attributes, CareerState, Player } from "./types";
@@ -172,9 +177,11 @@ describe("dois modos — Fase 1: motor da Expedição (fases, HP, push-your-luck
     expect(forcaDaFase(EXPEDICAO.faseBoss)).toBeGreaterThan(forcaDaFase(EXPEDICAO.faseBoss - 1) * 1.2);
   });
 
-  it("loot escala com a profundidade (fonte rápida por ESFORÇO, não por tempo)", () => {
-    expect(sucataDaFase(10)).toBeGreaterThan(sucataDaFase(1) * 8);
-    expect(sucataDaFase(5)).toBeGreaterThan(sucataDaFase(4));
+  it("loot por fase é MODESTO mas cresce com a profundidade (fase funda > fase rasa)", () => {
+    // valores pequenos de propósito (o horizonte da árvore não pode furar — ver Fase 3),
+    // mas a curva existe: uma fase funda rende mais Sucata que uma rasa.
+    expect(sucataDaFase(14)).toBeGreaterThan(sucataDaFase(2));
+    expect(sucataDaFase(20)).toBeGreaterThanOrEqual(sucataDaFase(8));
   });
 
   it("entrar troca de modo, gasta uma entrada do dia e resolve a 1ª fase", () => {
@@ -361,5 +368,99 @@ describe("dois modos — Fase 2: robustez (sair no meio não corrompe nem duplic
     expect(morto.grind!.expedicao!.status).toBe("morto");
     const { fim } = finalizarExpedicaoPendente(morto, "2026-07-07");
     expect(fim!.morreu).toBe(true);
+  });
+});
+
+// Um dia inteiro de passivo no teto, abrindo os baús → Sucata ganha no dia.
+function diaPassivo(c0: CareerState, hoje: string, seedDia: number): { career: CareerState; sucata: number } {
+  const g = acumularSegundosGrind(c0.grind!, GRIND.tetoSegundosDia, hoje, seedDia);
+  let c: CareerState = { ...c0, grind: g };
+  const r = resolverGrind(c.player, g.segundosHoje, g.seedDia, modsDoGrind(g));
+  c = aplicarGrind(c, r).career;
+  while (c.grind!.bauPendente) c = abrirBau(c, hoje)!.career;
+  return { career: c, sucata: c.grind!.sucata - c0.grind!.sucata };
+}
+
+// Jogador SENSATO na Expedição: continua enquanto o risco de morte < 50%, senão recua.
+function corridaEstrategica(c0: CareerState, hoje: string, seed: number): { career: CareerState; sucata: number; fase: number } {
+  const entrada = entrarExpedicaoGrind(c0, hoje, seed);
+  if (!entrada) return { career: c0, sucata: 0, fase: 0 };
+  let c = entrada.career;
+  for (let i = 0; i < 300; i++) {
+    const exp = c.grind!.expedicao;
+    if (!exp || exp.status !== "escolha") break;
+    const prev = estimarProximaFase(exp, c.player, modsExpedicaoDoGrind(c.grind ?? undefined));
+    if (prev.chanceMorte >= 0.5) {
+      c = recuarExpedicaoGrind(c);
+      break;
+    }
+    const cont = continuarExpedicaoGrind(c);
+    if (!cont) break;
+    c = cont.career;
+  }
+  const antes = c0.grind!.sucata;
+  const pronta = c.grind!.expedicao?.status === "escolha" ? recuarExpedicaoGrind(c) : c;
+  const fim = finalizarExpedicaoGrind(pronta, hoje);
+  if (!fim) return { career: c, sucata: c.grind!.sucata - antes, fase: 0 };
+  return { career: fim.career, sucata: fim.career.grind!.sucata - antes, fase: fim.faseLimpa };
+}
+
+describe("dois modos — Fase 3: equilíbrio (simulação dupla)", () => {
+  it("árvore completa em ~1,5–2,5 meses combinando Passivo + Expedição (não acelerou demais)", () => {
+    const DIAS = 14;
+    let c = carreira(); // talentos zerados: medindo a renda pra AFFORD a árvore
+    let passivo = 0;
+    let expedicaoTotal = 0;
+    let somaFases = 0;
+    for (let d = 0; d < DIAS; d++) {
+      const hoje = `2026-08-${String(d + 1).padStart(2, "0")}`;
+      const seedDia = (1000 + d * 7919) >>> 0;
+      const p = diaPassivo(c, hoje, seedDia);
+      c = p.career;
+      passivo += p.sucata;
+      for (let k = 0; k < EXPEDICAO.maxPorDia; k++) {
+        const r = corridaEstrategica(c, hoje, (777 + d * 31 + k * 101) >>> 0);
+        c = r.career;
+        expedicaoTotal += r.sucata;
+        somaFases += r.fase;
+      }
+    }
+    const custoArvore = sucataInvestida(talentosMaximos());
+    const rendaPassiva = passivo / DIAS;
+    const rendaCombinada = (passivo + expedicaoTotal) / DIAS;
+    const diasPassivo = custoArvore / rendaPassiva;
+    const diasCombinado = custoArvore / rendaCombinada;
+    const faseMedia = somaFases / (DIAS * EXPEDICAO.maxPorDia);
+    // números MEDIDOS congelados no CHANGELOG-dois-modos.md
+    // eslint-disable-next-line no-console
+    console.log(
+      `[sim dupla] árvore ${custoArvore} · passivo ~${rendaPassiva.toFixed(0)}/dia (${diasPassivo.toFixed(0)} dias) · combinado ~${rendaCombinada.toFixed(0)}/dia (${diasCombinado.toFixed(0)} dias) · fase média ${faseMedia.toFixed(1)}`,
+    );
+    // o jogador MAIS engajado (passivo no teto + Expedição no máximo) ainda leva ≥ ~1,5 mês
+    expect(diasCombinado).toBeGreaterThanOrEqual(45);
+    expect(diasCombinado).toBeLessThanOrEqual(75);
+    // e o passivo sozinho continua lento (a Expedição acelera, mas não trivializa)
+    expect(diasPassivo).toBeGreaterThan(diasCombinado);
+  });
+
+  it("Ritmo não fura a curva de elo: é comparável ao buff da loja e continua temporário/capado", () => {
+    // o melhor Ritmo não introduz um NOVO patamar de poder — é da ordem do 'preparacao' da loja
+    expect(RITMO_CAP.comp).toBeLessThanOrEqual(LOJA.preparacao.comp + 2);
+    expect(RITMO_CAP.counter).toBeLessThanOrEqual(LOJA.preparacao.counterLane + 1);
+    const elite = ritmoDaProfundidade(999)!; // profundíssimo ⇒ melhor variante
+    expect(elite.bonusComp).toBe(RITMO_CAP.comp);
+    expect(elite.cargas).toBeLessThanOrEqual(2); // pouquíssimas partidas, some rápido
+  });
+
+  it("talentos ligam a árvore à Expedição (mais HP; começa mais fundo)", () => {
+    const p = jogador();
+    const hpSemTalento = hpMaximo(p, modsExpedicaoDoGrind(estadoGrindInicial("2026-07-07", 1)));
+    const gComFuria: EstadoGrind = { ...estadoGrindInicial("2026-07-07", 1), talentos: { furia: 3 } };
+    const hpComFuria = hpMaximo(p, modsExpedicaoDoGrind(gComFuria));
+    expect(hpComFuria).toBeGreaterThan(hpSemTalento); // Fúria dá +HP na Expedição
+    // Trevo maxado começa 1 fase à frente
+    const gTrevo: EstadoGrind = { ...estadoGrindInicial("2026-07-07", 1), talentos: { trevo: 3 } };
+    expect(modsExpedicaoDoGrind(gTrevo).faseInicial).toBe(2);
+    expect(modsExpedicaoDoGrind(estadoGrindInicial("2026-07-07", 1)).faseInicial).toBe(1);
   });
 });

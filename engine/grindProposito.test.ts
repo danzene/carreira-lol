@@ -112,7 +112,9 @@ describe("economia FECHADA da Sucata (Regra 1)", () => {
 
 describe("REGRA 2: lista proibida varrida (talentos + QUALQUER baú)", () => {
   const PERMITIDOS = new Set(["sucata", "dinheiro", "item", "maestria", "cosmetico"]);
-  const EFEITOS_PERMITIDOS = new Set(["duracao", "encenacao", "golpeDuplo", "gold", "sucata", "barra", "raro", "pity", "escolha"]);
+  // inclui os efeitos de Expedição (expHp/expLoot/expFase): mexem só no modo de treino,
+  // nunca em PDL/CoinPoints/passe/energia/cargas/pity-do-gacha (Regra 3 da rodada Dois Modos).
+  const EFEITOS_PERMITIDOS = new Set(["duracao", "encenacao", "golpeDuplo", "gold", "sucata", "barra", "raro", "pity", "escolha", "expHp", "expLoot", "expFase"]);
 
   it("efeitos de talento não tocam PDL/CoinPoints/passe/energia/cargas/pity-do-gacha", () => {
     for (const t of TALENTOS) {

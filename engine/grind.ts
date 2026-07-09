@@ -20,6 +20,7 @@ import { EXPEDICAO } from "@/data/expedicao";
 import {
   continuarExpedicao,
   iniciarExpedicao,
+  modsExpedicaoDeTalentos,
   MODS_EXP_NEUTROS,
   normalizarExpedicao,
   normalizarModo,
@@ -68,6 +69,7 @@ export interface GrindSemana {
   bausLendario: number;
   talentosComprados: number;
   lendarioNome?: string; // cosmético do último Lendário da semana (gatilho de feed)
+  faseExpedicao: number; // fase mais funda alcançada na Expedição nesta semana (recap/feed)
 }
 
 export interface EstadoGrind {
@@ -117,6 +119,7 @@ export function grindSemanaVazia(): GrindSemana {
     bausRaro: 0,
     bausLendario: 0,
     talentosComprados: 0,
+    faseExpedicao: 0,
   };
 }
 
@@ -183,6 +186,7 @@ export function normalizarGrind(bruto: unknown): EstadoGrind | undefined {
       bausLendario: num(s?.bausLendario),
       talentosComprados: num(s?.talentosComprados),
       lendarioNome: typeof s?.lendarioNome === "string" ? s.lendarioNome : undefined,
+      faseExpedicao: num(s?.faseExpedicao),
     },
     tetoAvisadoEm: typeof g.tetoAvisadoEm === "string" ? g.tetoAvisadoEm : undefined,
 
@@ -618,9 +622,9 @@ export function fecharSemanaGrind(career: CareerState): CareerState {
 // progresso. O loot só é APLICADO ao encerrar a corrida (finalizarExpedicaoGrind).
 // ============================================================================
 
-// Mods da Expedição vindos da árvore (Fase 3 preenche a partir dos talentos).
-export function modsExpedicaoDoGrind(_g: EstadoGrind | undefined): ModsExpedicao {
-  return MODS_EXP_NEUTROS;
+// Mods da Expedição vindos da árvore (Fúria +HP, Cofre +loot, Trevo começa mais fundo).
+export function modsExpedicaoDoGrind(g: EstadoGrind | undefined): ModsExpedicao {
+  return g ? modsExpedicaoDeTalentos(g.talentos) : MODS_EXP_NEUTROS;
 }
 
 // Contador de entradas do dia (a Expedição não passa por acumularSegundosGrind).
@@ -746,6 +750,7 @@ export function finalizarExpedicaoGrind(career: CareerState, hoje: string): FimE
   const ritmo = ritmoDaProfundidade(faseLimpa);
   const recorde = faseLimpa > g.recordeFaseExpedicao;
   semana.sucata += sucataGanha;
+  semana.faseExpedicao = Math.max(semana.faseExpedicao, faseLimpa);
 
   const grind: EstadoGrind = {
     ...g,

@@ -35,6 +35,10 @@ export interface DefTalento {
     raro: number; // + chance absoluta de tier Raro no baú
     pity: number; // − no N do pity do Lendário (nunca abaixo do piso)
     escolha: number; // 1 = baú Raro abre 2 e você escolhe 1
+    // 🗺️ efeitos que ligam a árvore à EXPEDIÇÃO (o modo ativo/arriscado)
+    expHp: number; // + HP máximo do herói na Expedição
+    expLoot: number; // + fração da Sucata por fase da Expedição
+    expFase: number; // fração → começa em fase avançada (floor da soma)
   }>;
 }
 
@@ -45,27 +49,30 @@ export const TALENTOS: DefTalento[] = [
   { id: "dano", ramo: "combate", ordem: 2, nome: "Dano", desc: "+{v} — waves caem mais rápido (visual)", nivelMax: 5, custoBase: 16, custoMult: 1.5, efeito: { encenacao: 0.06 } },
   { id: "duplo", ramo: "combate", ordem: 3, nome: "Golpe Duplo", desc: "+{v} chance de golpe duplo", nivelMax: 5, custoBase: 22, custoMult: 1.55, efeito: { golpeDuplo: 0.06, encenacao: 0.02 } },
   { id: "foco", ramo: "combate", ordem: 4, nome: "Foco", desc: "+{v} velocidade extra", nivelMax: 5, custoBase: 30, custoMult: 1.6, efeito: { duracao: 0.008, encenacao: 0.04 } },
-  { id: "furia", ramo: "combate", ordem: 5, nome: "Fúria", desc: "+{v} impacto visual dos golpes", nivelMax: 3, custoBase: 45, custoMult: 1.7, efeito: { encenacao: 0.05 } },
+  { id: "furia", ramo: "combate", ordem: 5, nome: "Fúria", desc: "+{v} impacto visual · +12 HP na Expedição", nivelMax: 3, custoBase: 45, custoMult: 1.7, efeito: { encenacao: 0.05, expHp: 12 } },
 
   // 💰 FORTUNA — só $ e Sucata (maestria NÃO cresce por talento)
   { id: "gold", ramo: "fortuna", ordem: 1, nome: "Ouro do Farm", desc: "+{v} de $ por partida", nivelMax: 5, custoBase: 20, custoMult: 1.55, efeito: { gold: 0.03 } },
   { id: "catador", ramo: "fortuna", ordem: 2, nome: "Catador", desc: "+{v} de Sucata por partida", nivelMax: 5, custoBase: 18, custoMult: 1.5, efeito: { sucata: 0.08 } },
   { id: "ima", ramo: "fortuna", ordem: 3, nome: "Ímã de Baú", desc: "+{v} de carga da barra de baú", nivelMax: 5, custoBase: 24, custoMult: 1.55, efeito: { barra: 0.06 } },
   { id: "bonus", ramo: "fortuna", ordem: 4, nome: "Bônus de Kill", desc: "+{v} de $ extra por partida", nivelMax: 5, custoBase: 32, custoMult: 1.6, efeito: { gold: 0.012 } },
-  { id: "cofre", ramo: "fortuna", ordem: 5, nome: "Cofre", desc: "+{v} de Sucata extra", nivelMax: 3, custoBase: 50, custoMult: 1.7, efeito: { sucata: 0.05 } },
+  { id: "cofre", ramo: "fortuna", ordem: 5, nome: "Cofre", desc: "+{v} de Sucata extra · +10% loot na Expedição", nivelMax: 3, custoBase: 50, custoMult: 1.7, efeito: { sucata: 0.05, expLoot: 0.1 } },
 
   // 🍀 SORTE — muda a distribuição de tier e o pity (proteção, não promessa)
   { id: "raro", ramo: "sorte", ordem: 1, nome: "Faro Raro", desc: "+{v} chance de baú Raro", nivelMax: 5, custoBase: 22, custoMult: 1.55, efeito: { raro: 0.02 } },
   { id: "pity", ramo: "sorte", ordem: 2, nome: "Presságio", desc: "−{v} na espera do Lendário", nivelMax: 5, custoBase: 26, custoMult: 1.6, efeito: { pity: 4 } },
   { id: "escolha", ramo: "sorte", ordem: 3, nome: "Segunda Chance", desc: "Baú Raro abre 2 e você escolhe 1", nivelMax: 1, custoBase: 120, custoMult: 1, efeito: { escolha: 1 } },
   { id: "instinto", ramo: "sorte", ordem: 4, nome: "Instinto", desc: "+{v} chance de baú Raro extra", nivelMax: 5, custoBase: 34, custoMult: 1.6, efeito: { raro: 0.01 } },
-  { id: "trevo", ramo: "sorte", ordem: 5, nome: "Trevo", desc: "+{v} chance de baú Raro (topo)", nivelMax: 3, custoBase: 55, custoMult: 1.7, efeito: { raro: 0.015 } },
+  { id: "trevo", ramo: "sorte", ordem: 5, nome: "Trevo", desc: "+{v} chance de Raro · maxado começa 1 fase à frente", nivelMax: 3, custoBase: 55, custoMult: 1.7, efeito: { raro: 0.015, expFase: 0.34 } },
 ];
 
 export const GRIND_PROP = {
-  // 🔩 Sucata — dropa por partida (representa os minions mortos na cena)
-  sucataPartidaMin: 2,
-  sucataPartidaMax: 4,
+  // 🔩 Sucata — dropa por partida (representa os minions mortos na cena).
+  // RECALIBRADO na rodada "Dois Modos": a Sucata do passivo foi reduzida ~½ pra ele virar
+  // o CHÃO lento e seguro (~4 meses sozinho até a árvore), abrindo espaço pra Expedição ser
+  // o acelerador real sem furar o teto de ~1,5-2,5 meses combinado (números no CHANGELOG).
+  sucataPartidaMin: 1,
+  sucataPartidaMax: 2,
   respecCusto: 0, // respec GRÁTIS (incentiva experimentar — decisão documentada)
 
   // 🎁 Barra de baú — o $ coletado na cena carrega a barra.
@@ -80,10 +87,11 @@ export const GRIND_PROP = {
   pityLendarioN: 60, // Lendário garantido no máx. a cada N baús
   pityLendarioPiso: 40, // talento de Sorte reduz N até AQUI, nunca abaixo
 
-  // 💰 recompensas por baú (o $/maestria contam vs o teto; medido na simulação)
-  comum: { sucataMin: 8, sucataMax: 15, dinheiro: 1 },
-  raro: { sucataMin: 25, sucataMax: 45, dinheiro: 2, maestriaPack: 1 }, // item Comum OU +maestria
-  lendario: { sucataMin: 150, sucataMax: 250, jackpotColecaoCheia: 3 }, // ×3 se a coleção estiver completa
+  // 💰 recompensas por baú (o $/maestria contam vs o teto; medido na simulação).
+  // Sucata dos baús também reduzida ~½ na rodada "Dois Modos" (ver nota acima).
+  comum: { sucataMin: 4, sucataMax: 8, dinheiro: 1 },
+  raro: { sucataMin: 12, sucataMax: 22, dinheiro: 2, maestriaPack: 1 }, // item Comum OU +maestria
+  lendario: { sucataMin: 80, sucataMax: 130, jackpotColecaoCheia: 3 }, // ×3 se a coleção estiver completa
 } as const;
 
 // 🎨 Coleção do Grind v1 (cosméticos exclusivos do diorama — só Lendário concede).

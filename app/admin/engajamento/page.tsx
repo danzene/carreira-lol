@@ -35,6 +35,17 @@ interface Eng {
       respecs: number;
       cosmeticos_equipados: number;
     };
+    expedicao?: {
+      usuarios: number;
+      pct_dos_grinders: number;
+      corridas: number;
+      fase_final_hist: KV[];
+      escolhas_continuar: number;
+      escolhas_recuar: number;
+      taxa_continuar: number;
+      mortes: number;
+      recuos: number;
+    };
   } | null;
 }
 
@@ -190,6 +201,26 @@ export default function AdminEngajamento() {
                       y: Number(t.v),
                       cor: t.k === "lendario" ? "#ffd34d" : t.k === "raro" ? "#38bdf8" : "#71717a",
                     }))}
+                    altura={150}
+                  />
+                </Painel>
+              </div>
+            )}
+            {dados.grind.expedicao && (
+              <div className="mt-3">
+                <p className="mb-2 text-[11px] text-zinc-400">
+                  Expedição (modo ativo): a distribuição de fase-final é a curva de dificuldade REAL; a taxa de continuar mede se o dilema tem dente (perto de 100% = fácil demais; perto de 0% = assustador demais).
+                </p>
+                <div className="mb-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <KpiCard rotulo="% dos grinders na Expedição" valor={Number(dados.grind.expedicao.pct_dos_grinders)} formato={(n) => `${n}%`} />
+                  <KpiCard rotulo="Corridas" valor={Number(dados.grind.expedicao.corridas)} />
+                  <KpiCard rotulo="Taxa de continuar" valor={Number(dados.grind.expedicao.taxa_continuar)} formato={(n) => `${n}%`} />
+                  <KpiCard rotulo="Mortes vs recuos" valor={Number(dados.grind.expedicao.mortes)} formato={(n) => `${n} / ${Number(dados.grind!.expedicao!.recuos)}`} />
+                </div>
+                <Painel>
+                  <p className="mb-1 text-[11px] text-zinc-400">Distribuição da fase-final alcançada (a curva de dificuldade real — onde os jogadores param ou morrem)</p>
+                  <BarChart
+                    dados={dados.grind.expedicao.fase_final_hist.map((f) => ({ x: `F${f.k}`, y: Number(f.v), cor: "#f43f5e" }))}
                     altura={150}
                   />
                 </Painel>

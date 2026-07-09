@@ -71,6 +71,7 @@ export interface FatosSemana {
   grindStreakD: number; // maior sequência de derrotas
   grindDrops: number; // drops no grind na semana
   grindLendario?: string; // cosmético do baú Lendário aberto na semana (flex máximo)
+  grindExpedicao?: number; // fase mais funda alcançada na Expedição nesta semana
 }
 
 export function fatosDaSemana(c: CareerState): FatosSemana {
@@ -102,6 +103,7 @@ export function fatosDaSemana(c: CareerState): FatosSemana {
     grindStreakD: c.grind?.semana.maiorStreakD ?? 0,
     grindDrops: c.grind?.semana.drops ?? 0,
     grindLendario: (c.grind?.semana.bausLendario ?? 0) > 0 ? c.grind?.semana.lendarioNome : undefined,
+    grindExpedicao: (c.grind?.semana.faseExpedicao ?? 0) > 0 ? c.grind?.semana.faseExpedicao : undefined,
   };
 }
 
@@ -218,6 +220,15 @@ const TEMPLATES: Record<string, Tpl[]> = {
       "{nome} farmando normal e saiu {cosmetico} lendário. a gente aqui só pega baú comum 🐸",
     ] },
   ],
+  grind_expedicao: [
+    { arquetipo: "torcedor", peso: 70, textos: [
+      "O {nome} FUROU ATÉ A FASE {fase} DA EXPEDIÇÃO!!! scrim hardcore não assusta o cara 🔥⚔️",
+      "fase {fase} na Expedição do {nome} — mergulhou fundo no risco e voltou com o loot 💪",
+    ] },
+    { arquetipo: "meme", peso: 40, textos: [
+      "{nome} desceu até a fase {fase} da Expedição só pra sentir o cheiro do perigo ⚔️🐸",
+    ] },
+  ],
 };
 
 function preencher(tpl: string, f: FatosSemana): string {
@@ -233,6 +244,7 @@ function preencher(tpl: string, f: FatosSemana): string {
     .replace(/\{derrotasChamp\}/g, String(f.campeaoProblema?.derrotas ?? 0))
     .replace(/\{grindStreak\}/g, String(Math.max(f.grindStreakV, f.grindStreakD)))
     .replace(/\{cosmetico\}/g, f.grindLendario ? nomeCosmetico(f.grindLendario) : "?")
+    .replace(/\{fase\}/g, String(f.grindExpedicao ?? 0))
     .replace(/\{kda\}/g, f.melhorKda ? `${f.melhorKda.k}/${f.melhorKda.d}/${f.melhorKda.a}` : "?");
 }
 
@@ -250,6 +262,7 @@ function gatilhosAtivos(f: FatosSemana): { gatilho: string; relevancia: number }
   // grind: relevância BAIXA e NO MÁXIMO 1 gatilho (o grind não pode dominar o feed).
   // Lendário é o único com relevância alta — é o flex máximo, raríssimo.
   if (f.grindLendario) out.push({ gatilho: "grind_lendario", relevancia: 72 });
+  else if ((f.grindExpedicao ?? 0) >= 5) out.push({ gatilho: "grind_expedicao", relevancia: 55 });
   else if (f.grindStreakV >= 5) out.push({ gatilho: "grind_maratona", relevancia: 40 });
   else if (f.grindStreakD >= 5) out.push({ gatilho: "grind_bagre", relevancia: 35 });
   else if (f.grindDrops > 0) out.push({ gatilho: "grind_farm", relevancia: 28 });

@@ -11,7 +11,8 @@
 // A resolução de fases/HP/push-your-luck entra na Fase 1 (mesmo arquivo).
 
 import { EXPEDICAO, RITMO_VARIANTES, ehBoss } from "@/data/expedicao";
-import { GRIND_PROP } from "@/data/grindProposito";
+import { GRIND_PROP, TALENTOS } from "@/data/grindProposito";
+import type { Talentos } from "./grindProposito";
 import { criarRng, entre } from "./rng";
 import { forcaRota } from "./simularPartida";
 import type { Player } from "./types";
@@ -126,6 +127,24 @@ export interface ModsExpedicao {
 }
 
 export const MODS_EXP_NEUTROS: ModsExpedicao = { bonusHp: 0, faseInicial: 1, lootMult: 1 };
+
+// Deriva os mods de Expedição da árvore de talentos (liga árvore↔expedição). Capstones:
+// Fúria → +HP, Cofre → +loot, Trevo (maxado) → começa 1 fase à frente. Puro.
+export function modsExpedicaoDeTalentos(talentos: Talentos | undefined): ModsExpedicao {
+  if (!talentos) return MODS_EXP_NEUTROS;
+  let bonusHp = 0;
+  let lootExtra = 0;
+  let faseExtra = 0;
+  for (const t of TALENTOS) {
+    const nivel = Math.max(0, Math.min(t.nivelMax, Math.floor(talentos[t.id] ?? 0)));
+    if (nivel === 0) continue;
+    const e = t.efeito;
+    if (e.expHp) bonusHp += e.expHp * nivel;
+    if (e.expLoot) lootExtra += e.expLoot * nivel;
+    if (e.expFase) faseExtra += e.expFase * nivel;
+  }
+  return { bonusHp, lootMult: 1 + lootExtra, faseInicial: 1 + Math.floor(faseExtra) };
+}
 
 // O que aconteceu ao resolver UMA fase (pra UI encenar e pra telemetria).
 export interface EventoFase {

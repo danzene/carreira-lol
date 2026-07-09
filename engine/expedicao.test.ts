@@ -9,6 +9,7 @@ import {
   entrarExpedicaoGrind,
   estadoGrindInicial,
   finalizarExpedicaoGrind,
+  finalizarExpedicaoPendente,
   modsDoGrind,
   normalizarGrind,
   podeExpedicao,
@@ -323,5 +324,42 @@ describe("dois modos — Fase 1: motor da Expedição (fases, HP, push-your-luck
         expect(fim.ritmo.bonusCounter).toBeLessThanOrEqual(RITMO_CAP.counter);
       }
     }
+  });
+});
+
+describe("dois modos — Fase 2: robustez (sair no meio não corrompe nem duplica)", () => {
+  it("sair no MEIO (status escolha) encerra e embolsa o loot das fases COMPLETADAS", () => {
+    const c = carreira();
+    const r = entrarExpedicaoGrind(c, "2026-07-07", 55)!; // fica em "escolha"
+    expect(r.career.grind!.expedicao!.status).toBe("escolha");
+    const lootGarantido = r.career.grind!.expedicao!.lootSucata;
+    const sucataAntes = r.career.grind!.sucata;
+
+    const { career, fim } = finalizarExpedicaoPendente(r.career, "2026-07-07");
+    expect(fim).not.toBeNull();
+    expect(fim!.morreu).toBe(false); // sair no meio = recuo honroso, não morte
+    expect(career.grind!.expedicao).toBeNull(); // corrida encerrada
+    expect(career.grind!.modo).toBe("PASSIVO"); // voltou pro passivo
+    expect(career.grind!.sucata).toBeGreaterThanOrEqual(sucataAntes + lootGarantido);
+
+    // 2ª chamada é no-op (nada duplica)
+    const dupla = finalizarExpedicaoPendente(career, "2026-07-07");
+    expect(dupla.fim).toBeNull();
+    expect(dupla.career.grind!.sucata).toBe(career.grind!.sucata);
+  });
+
+  it("sem corrida ativa: finalizarExpedicaoPendente é no-op", () => {
+    const c = carreira();
+    const { career, fim } = finalizarExpedicaoPendente(c, "2026-07-07");
+    expect(fim).toBeNull();
+    expect(career).toBe(c);
+  });
+
+  it("uma corrida MORTA pendente é finalizada como morte (não vira recuo)", () => {
+    const c = carreira();
+    const morto = rodarAteMorte(c, "2026-07-07", 909090);
+    expect(morto.grind!.expedicao!.status).toBe("morto");
+    const { fim } = finalizarExpedicaoPendente(morto, "2026-07-07");
+    expect(fim!.morreu).toBe(true);
   });
 });

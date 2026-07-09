@@ -85,9 +85,16 @@ import {
   resolverGrind,
   respecGrind,
   tetoAtingido,
+  consumirRitmo,
+  entrarExpedicaoGrind,
+  continuarExpedicaoGrind,
+  recuarExpedicaoGrind,
+  finalizarExpedicaoGrind,
+  finalizarExpedicaoPendente,
   type ResultadoGrind,
+  type FimExpedicao,
 } from "@/engine/grind";
-import { passivoAtivo } from "@/engine/expedicao";
+import { passivoAtivo, type EventoFase } from "@/engine/expedicao";
 import { defCosmetico, type TierBau } from "@/data/grindProposito";
 import { cerimoniasDeUnlocks, migrarUnlocks } from "@/engine/unlocks";
 import { gerarItem } from "@/engine/itens";
@@ -187,6 +194,11 @@ interface CareerStore {
   encerrarTorneioInternacional: () => void;
   sincronizarLiga: () => void;
   encerrarTemporadaLiga: () => void;
+  // 🗺️ Expedição (modo ATIVO). entrar/continuar podem já terminar a corrida (morte) → devolvem o fim.
+  entrarExpedicao: () => { evento: EventoFase; fim: FimExpedicao | null } | null;
+  continuarExpedicao: () => { evento: EventoFase; fim: FimExpedicao | null } | null;
+  recuarExpedicao: () => FimExpedicao | null;
+  encerrarExpedicaoPendente: () => void; // robustez: sair no meio embolsa o loot garantido
   apagar: (slotId: string) => void;
   sair: () => void;
 }
@@ -194,6 +206,16 @@ interface CareerStore {
 // iLvl dos drops conforme o MMR do jogador (elo mais alto → itens melhores).
 function iLvlDe(c: CareerState): number {
   return Math.max(10, Math.min(60, Math.round((c.player.rankSoloq.mmr - 800) / 50) + 10));
+}
+
+// Efeitos colaterais ao ENCERRAR uma corrida de Expedição: itens do baú pro inventário
+// (raridade capada na borda) + telemetria. O loot em Sucata/cosmético/Ritmo já foi aplicado
+// ao save pelo finalizarExpedicaoGrind puro — aqui só o que não é puro.
+function aplicarFimExpedicao(fim: FimExpedicao): void {
+  for (const it of fim.itens) useInventory.getState().adicionarItem(gerarItemGrind(it, iLvlDe(fim.career)));
+  rastrear("expedicao_fim", { fase: fim.faseLimpa, morreu: fim.morreu, sucata: fim.sucata, baus: fim.baus.length, recorde: fim.recorde });
+  if (fim.ritmo) rastrear("expedicao_ritmo_variante", { variante: fim.ritmo.variante, fase: fim.faseLimpa });
+  for (const id of fim.cosmeticos) rastrear("grind_cosmetico_ganho", { id, origem: "expedicao" });
 }
 
 // Últimos segundos de grind já persistidos (throttle da gravação do heartbeat).
@@ -369,6 +391,80 @@ export const useCareer = create<CareerStore>((set, get) => ({
     const novo = { ...c0, grind: novoG };
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
+  },
+
+  // 🚪 Entra na Expedição (modo ATIVO). Resolve a 1ª fase; se já morre, encerra na hora.
+  entrarExpedicao: () => {
+    const { career: c0, slotId } = get();
+    if (!c0) return null;
+    const hoje = chaveDia(Date.now());
+    const seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
+    const r = entrarExpedicaoGrind(c0, hoje, seed);
+    if (!r) return null;
+    rastrear("expedicao_iniciada", { seed });
+    if (r.evento.limpou) rastrear("expedicao_fase_limpa", { fase: r.evento.fase });
+    // morte já na 1ª fase: embolsa (loot 0/quase 0) e volta pro passivo
+    let career = r.career;
+    let fim: FimExpedicao | null = null;
+    if (career.grind!.expedicao!.status === "morto") {
+      fim = finalizarExpedicaoGrind(career, hoje);
+      if (fim) {
+        aplicarFimExpedicao(fim);
+        career = fim.career;
+      }
+    }
+    set({ career });
+    if (slotId) salvarSlot(slotId, career);
+    return { evento: r.evento, fim };
+  },
+
+  // 🎲 CONTINUAR: aposta consciente — resolve a próxima fase; morte encerra e embolsa.
+  continuarExpedicao: () => {
+    const { career: c0, slotId } = get();
+    const exp = c0?.grind?.expedicao;
+    if (!c0 || !exp || exp.status !== "escolha") return null;
+    rastrear("expedicao_escolha", { escolha: "continuar", fase: exp.faseAtual });
+    const r = continuarExpedicaoGrind(c0);
+    if (!r) return null;
+    if (r.evento.limpou) rastrear("expedicao_fase_limpa", { fase: r.evento.fase });
+    const hoje = chaveDia(Date.now());
+    let career = r.career;
+    let fim: FimExpedicao | null = null;
+    if (career.grind!.expedicao!.status === "morto") {
+      fim = finalizarExpedicaoGrind(career, hoje);
+      if (fim) {
+        aplicarFimExpedicao(fim);
+        career = fim.career;
+      }
+    }
+    set({ career });
+    if (slotId) salvarSlot(slotId, career);
+    return { evento: r.evento, fim };
+  },
+
+  // 🛟 RECUAR: sai com o loot garantido — encerra e embolsa na hora (nada fica pendente).
+  recuarExpedicao: () => {
+    const { career: c0, slotId } = get();
+    const exp = c0?.grind?.expedicao;
+    if (!c0 || !exp || exp.status !== "escolha") return null;
+    rastrear("expedicao_escolha", { escolha: "recuar", fase: exp.faseLimpa });
+    const fim = finalizarExpedicaoGrind(recuarExpedicaoGrind(c0), chaveDia(Date.now()));
+    if (!fim) return null;
+    aplicarFimExpedicao(fim);
+    set({ career: fim.career });
+    if (slotId) salvarSlot(slotId, fim.career);
+    return fim;
+  },
+
+  // Robustez: fechar a aba / navegar no meio embolsa o loot das fases COMPLETADAS.
+  encerrarExpedicaoPendente: () => {
+    const { career: c0, slotId } = get();
+    if (!c0?.grind?.expedicao) return;
+    const { career, fim } = finalizarExpedicaoPendente(c0, chaveDia(Date.now()));
+    if (!fim) return;
+    aplicarFimExpedicao(fim);
+    set({ career });
+    if (slotId) salvarSlot(slotId, career);
   },
 
   // Responde a entrevista pendente (a fala vira post no feed; efeitos no engine).
@@ -548,7 +644,15 @@ export const useCareer = create<CareerStore>((set, get) => ({
     if (!slot) return false;
     definirSlotAtual(slotId);
     // migração de save (campos faltando) + relógios de recarga + migração de unlocks
-    const state = migrarUnlocks(inicializarTempo(normalizarCareer(slot.state), Date.now()));
+    let state = migrarUnlocks(inicializarTempo(normalizarCareer(slot.state), Date.now()));
+    // 🗺️ Expedição que ficou "no meio" (fechou a aba): encerra e embolsa o loot das fases
+    // COMPLETADAS — nunca resume por trás nem duplica (regra de robustez da Fase 2).
+    const pend = finalizarExpedicaoPendente(state, chaveDia(Date.now()));
+    if (pend.fim) {
+      state = pend.career;
+      for (const it of pend.fim.itens) useInventory.getState().adicionarItem(gerarItemGrind(it, iLvlDe(state)));
+      rastrear("expedicao_fim", { fase: pend.fim.faseLimpa, morreu: pend.fim.morreu, sucata: pend.fim.sucata, baus: pend.fim.baus.length, motivo: "saiu" });
+    }
     set({ career: state, slotId });
     if (state !== slot.state) salvarSlot(slotId, state);
     return true;
@@ -579,6 +683,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
       useCerimonias.getState().emitir({ tipo: "MENSAGEM", texto: "Dia difícil? Um treino leve ou um descanso podem virar o jogo.", emoji: "💜" });
     }
     novo = consumirPreparacao(novo); // buff da loja vale 1 partida
+    novo = consumirRitmo(novo); // 🔥 Ritmo de Treino (da Expedição) também vale 1 partida
     rastrear("partida_fim", { modo: "soloq", vitoria: resultado.vitoria, nota: resultado.notaPerformance, elo: novo.player.rankSoloq.elo });
     void useProfile.getState().ajustar(resultado.vitoria ? GACHA.porVitoria : GACHA.porDerrota, "partida");
     if (resultado.vitoria) {

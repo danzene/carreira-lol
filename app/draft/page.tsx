@@ -243,17 +243,26 @@ function DraftFlow() {
           player={career.player}
           ctx={(() => {
             const preparado = !!career.preparacao; // "estudo do adversário" comprado na loja
+            // 🔥 Ritmo de Treino (auge de preparo da Expedição): buff TEMPORÁRIO da próxima
+            // partida, SÓ em soloq (mesmo caminho que o consome) e FORA do snapshot ranqueado.
+            const soloq = !oficial && !internacional && !evento && !ehProva;
+            const ritmo = soloq ? career.grind?.ritmo ?? null : null;
             const base = {
               championId: info.championId,
               forcaMetaCampeao: info.forcaMetaCampeao,
-              comp: info.comp + (semLendas ? 0 : ef.bonusComp) + (semItens ? 0 : efItens.bonusComp) + (preparado ? LOJA.preparacao.comp : 0),
+              comp:
+                info.comp +
+                (semLendas ? 0 : ef.bonusComp) +
+                (semItens ? 0 : efItens.bonusComp) +
+                (preparado ? LOJA.preparacao.comp : 0) +
+                (ritmo ? ritmo.bonusComp : 0),
               compInimigo: info.compInimigo,
               bonusAtributos,
               forcaTimeAliado: (oficial || internacional) && career.contratoAtual ? forcaTimeDe(career.contratoAtual.timeId) : undefined,
               forcaTimeInimigo: adversarioId ? forcaTimeDe(adversarioId) : undefined,
               bonusInimigo: mod(career.opcoes).forcaInimigo + (evento && career.eventoAtual ? career.eventoAtual.bonusInimigo : 0),
               dificuldadeElo: !oficial && !internacional && !evento && !ehProva ? dificuldadeSoloq(career.player.rankSoloq.elo) : 0,
-              counterLane: info.counterLane + (preparado ? LOJA.preparacao.counterLane : 0),
+              counterLane: info.counterLane + (preparado ? LOJA.preparacao.counterLane : 0) + (ritmo ? ritmo.bonusCounter : 0),
               counterComp: info.counterComp,
             };
             return provaAtiva ? ajustarCtxProva(base, provaAtiva) : base; // modificadores honrados no engine

@@ -156,6 +156,9 @@ export interface CenaDiorama {
   emCerimonia(): boolean; // cerimônia tocando (só aí o clique é "dispensar")
   definirCosmeticos(c: CosmeticosCena): void;
   definirMods(m: ModsCena): void;
+  // 🗺️ Expedição (reuso do motor): esconder o HUD do passivo e a tensão crescente
+  definirHud(mostrar: boolean): void;
+  definirIntensidade(pct: number): void; // 0..1
 }
 
 export function criarCena(
@@ -220,6 +223,8 @@ export function criarCena(
   let gankT = -1; // >=0: silhueta atravessando (micro-evento)
   let ambienteT = 0; // pétalas/vagalumes
   let dropGlow = 0; // brilho do drop caindo
+  let mostrarHud = true; // false na Expedição (o HUD de HP/fase é React por cima)
+  let intensidade = 0; // 0..1 tensão crescente da Expedição (escurece + vinheta ameaçadora)
 
   function alocar<T extends { vivo: boolean }>(pool: T[]): T | null {
     for (const p of pool) if (!p.vivo) return p;
@@ -1180,7 +1185,19 @@ export function criarCena(
       c.fillRect(0, 0, CENA_W, CENA_H);
     }
 
-    desenharHud();
+    // 🗺️ Expedição: tensão crescente — escurece e pinta uma vinheta avermelhada de perigo
+    // conforme a profundidade aumenta (definirIntensidade). Draw-time puro, zero alocação.
+    if (intensidade > 0.01) {
+      c.fillStyle = `rgba(10,2,6,${0.5 * intensidade})`;
+      c.fillRect(0, 0, CENA_W, CENA_H);
+      const vg = c.createRadialGradient(CENA_W / 2, CENA_H / 2, CENA_H * 0.3, CENA_W / 2, CENA_H / 2, CENA_W * 0.6);
+      vg.addColorStop(0, "rgba(0,0,0,0)");
+      vg.addColorStop(1, `rgba(150,10,25,${0.5 * intensidade})`);
+      c.fillStyle = vg;
+      c.fillRect(0, 0, CENA_W, CENA_H);
+    }
+
+    if (mostrarHud) desenharHud();
 
     // faixa VITÓRIA/DERROTA/PENTAKILL
     if (faixa) {
@@ -1271,6 +1288,12 @@ export function criarCena(
     },
     definirMods: (m) => {
       modsCena = m;
+    },
+    definirHud: (mostrar) => {
+      mostrarHud = mostrar;
+    },
+    definirIntensidade: (pct) => {
+      intensidade = Math.max(0, Math.min(1, pct));
     },
   };
 }

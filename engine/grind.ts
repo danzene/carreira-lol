@@ -774,6 +774,22 @@ export function finalizarExpedicaoGrind(career: CareerState, hoje: string): FimE
   };
 }
 
+// 🛟 Robustez (Fase 2): encerra uma corrida que ficou "no meio" (o jogador fechou a aba /
+// navegou). Regra definida: sair encerra a corrida preservando o loot das fases COMPLETADAS
+// (a fase em andamento é perdida) — nunca resume por trás, nunca corrompe, nunca duplica.
+// Uma corrida já terminal (morto/recuou) é finalizada como está. Sem corrida → no-op.
+export function finalizarExpedicaoPendente(career: CareerState, hoje: string): { career: CareerState; fim: FimExpedicao | null } {
+  const g = career.grind;
+  const exp = g?.expedicao;
+  if (!g || !exp) return { career, fim: null };
+  const encerrada: CareerState =
+    exp.status === "escolha" || exp.status === "combate"
+      ? { ...career, grind: { ...g, expedicao: { ...exp, status: "recuou" } } }
+      : career;
+  const fim = finalizarExpedicaoGrind(encerrada, hoje);
+  return { career: fim ? fim.career : career, fim };
+}
+
 // Consome 1 carga do Ritmo ao jogar uma partida (como o `preparacao` da loja). Devolve a
 // mesma ref se não havia Ritmo. FORA do snapshot ranqueado — o snapshotDePlayer não lê isto.
 export function consumirRitmo(career: CareerState): CareerState {

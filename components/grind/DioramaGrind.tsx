@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { GRIND } from "@/data/grind";
+import { EXPEDICAO } from "@/data/expedicao";
 import { placarDoDia, tetoAtingido, type ResultadoGrind } from "@/engine/grind";
 import { buscarCampeoes } from "@/lib/ddragon";
 import { tocarSom } from "@/lib/som";
@@ -577,6 +579,15 @@ export default function DioramaGrind({
                     <span className="text-suave" title="O grind rende no máximo 3h por dia — depois o jogador descansa.">
                       {noTeto ? "teto ✔" : `⏳ ${fmtRest}`}
                     </span>
+                    {EXPEDICAO.habilitado && (
+                      <Link
+                        href="/expedicao"
+                        title="Modo ATIVO: scrim hardcore com risco de morte — só o loot da corrida está em jogo."
+                        className="border border-rosa/70 px-2 py-0.5 font-pixel text-[8px] text-rosa transition hover:bg-rosa hover:text-fundo"
+                      >
+                        ⚔️ EXPEDIÇÃO
+                      </Link>
+                    )}
                     <button
                       type="button"
                       onClick={alternar}

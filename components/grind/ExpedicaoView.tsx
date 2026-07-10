@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { EXPEDICAO, nomeFase } from "@/data/expedicao";
 import { GRIND } from "@/data/grind";
 import { defCosmetico } from "@/data/grindProposito";
+import { JORNADA, nomeRegiao, regiaoDe } from "@/data/jornada";
+import { defSkill } from "@/data/skills";
+import { desafioDisponivel, ONDAS_DESAFIO } from "@/engine/grind";
 import {
   estimarProximaFase,
   hpMaximo,
@@ -119,6 +122,12 @@ export default function ExpedicaoView() {
       trilha: gc?.equipado.trilha ? defCosmetico(gc.equipado.trilha)?.cor : undefined,
       pet: gc?.equipado.pet ? defCosmetico(gc.equipado.pet)?.cor : undefined,
     });
+    // ⚡ skills equipadas também brilham no Desafio (auto-cast visual)
+    const equipadas = (gc?.skillSlots ?? []).flatMap((id) => {
+      const s = id ? defSkill(id) : undefined;
+      return s ? [{ cor: s.cor, cooldownSeg: s.cooldownSeg }] : [];
+    });
+    cena.definirSkillsCena(equipadas);
 
     let raf = 0;
     let vivo = true;
@@ -231,8 +240,8 @@ export default function ExpedicaoView() {
     <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-4 px-4 py-6">
       <header className="flex items-center justify-between">
         <div>
-          <h1 className="font-pixel text-sm text-rosa">⚔️ EXPEDIÇÃO</h1>
-          <p className="mt-1 text-[11px] text-suave">scrim hardcore contra times acima do seu nível — o auge do preparo</p>
+          <h1 className="font-pixel text-sm text-rosa">⚔️ DESAFIO DE REGIÃO</h1>
+          <p className="mt-1 text-[11px] text-suave">o boss que trava sua jornada — 5 ondas de scrim hardcore, presencial</p>
         </div>
         <button onClick={onVoltar} className="border-2 border-borda px-3 py-1.5 text-[11px] text-suave transition hover:text-texto">
           Voltar ao Treino
@@ -342,23 +351,49 @@ function Lancamento({ onEntrar }: { onEntrar: () => void }) {
   const hoje = new Date().toISOString().slice(0, 10);
   const usadas = g?.expedicaoDia === hoje ? g.expedicoesNoDia : 0;
   const restam = Math.max(0, EXPEDICAO.maxPorDia - usadas);
+  const gate = desafioDisponivel(g);
+
+  // 🔒 fora do gate: a jornada ainda não chegou ao boss desta região
+  if (gate === null) {
+    const fase = g?.jornada.fase ?? 1;
+    const proximoGate = Math.min(JORNADA.trilhaMax, regiaoDe(fase) * JORNADA.fasesPorRegiao);
+    const conquistouTudo = (g?.jornada.bossVencidos.length ?? 0) >= JORNADA.trilhaMax / JORNADA.fasesPorRegiao;
+    return (
+      <section className="flex flex-col items-center gap-3 border-2 border-borda bg-painel p-4 text-center">
+        <p className="text-[12px] text-texto">
+          {conquistouTudo ? (
+            <>🏆 Você conquistou <span className="font-pixel text-amber-300">todas as regiões</span> desta dificuldade!</>
+          ) : (
+            <>
+              O Desafio abre quando sua jornada alcança o <span className="font-pixel text-rosa">boss da região</span> — avance o
+              Treino até a <span className="font-pixel text-ciano">fase {proximoGate}</span> (você está na {fase}).
+            </>
+          )}
+        </p>
+        <p className="text-[11px] text-suave">Deixe o Treino em ⤴ AVANÇAR e volte quando o botão ⚔️ DESAFIO! acender.</p>
+      </section>
+    );
+  }
+
   return (
     <section className="flex flex-col items-center gap-3 border-2 border-borda bg-painel p-4 text-center">
       <p className="text-[12px] text-texto">
-        Entre por <span className="font-pixel text-rosa">conta própria</span>. A leva ataca DE VERDADE: assista seu herói
-        segurar a fase, e a cada fase limpa escolha — <span className="text-rosa">mais fundo</span> ou{" "}
-        <span className="text-emerald-400">recuar com o loot</span>.
+        <span className="font-pixel text-amber-300">{nomeRegiao(regiaoDe(gate))}</span> · o boss da{" "}
+        <span className="font-pixel text-rosa">fase {gate}</span> bloqueia sua jornada. São{" "}
+        <span className="text-texto">{ONDAS_DESAFIO} ondas</span> — a última é ELE. A cada onda limpa, escolha:{" "}
+        <span className="text-rosa">seguir</span> ou <span className="text-emerald-400">recuar com o loot</span>.
       </p>
       <p className="text-[11px] text-suave">
-        Morrer só custa o loot da corrida — <span className="text-texto">jamais</span> seu elo, atributos, itens ou Sucata guardada.
+        Vencer destrava a região seguinte + Ritmo de elite. Morrer só custa o loot da corrida —{" "}
+        <span className="text-texto">jamais</span> seu elo, atributos, itens ou Sucata guardada.
       </p>
-      <p className="text-[10px] text-suave">Expedições hoje: <span className="font-pixel text-amber-300">{restam}/{EXPEDICAO.maxPorDia}</span></p>
+      <p className="text-[10px] text-suave">Tentativas hoje: <span className="font-pixel text-amber-300">{restam}/{EXPEDICAO.maxPorDia}</span></p>
       <button
         onClick={onEntrar}
         disabled={restam <= 0}
         className="border-2 border-rosa bg-rosa/10 px-5 py-2.5 font-pixel text-sm text-rosa transition enabled:hover:bg-rosa enabled:hover:text-fundo disabled:opacity-40"
       >
-        {restam > 0 ? "⚔️ ENTRAR NA EXPEDIÇÃO" : "Sem expedições hoje — volte amanhã"}
+        {restam > 0 ? "⚔️ DESAFIAR O BOSS" : "Sem tentativas hoje — treine e volte amanhã"}
       </button>
     </section>
   );
@@ -371,11 +406,19 @@ function Resultado({ fim, onVoltar, onDeNovo }: { fim: FimExpedicao; onVoltar: (
   const restam = Math.max(0, EXPEDICAO.maxPorDia - (g?.expedicaoDia === hoje ? g.expedicoesNoDia : 0));
   const nomeRitmo = fim.ritmo ? fim.ritmo.variante.replace("_", " ") : null;
   const nomesCosm = fim.cosmeticos.map((id) => defCosmetico(id)?.nome ?? id);
+  const conquistou = fim.regiaoConquistada !== null;
   return (
-    <section className={`flex flex-col items-center gap-3 border-2 p-4 text-center ${fim.morreu ? "border-rose-500/60 bg-rose-500/5" : "border-emerald-400/60 bg-emerald-400/5"}`}>
-      <h2 className="font-pixel text-sm">{fim.morreu ? "💀 VOCÊ CAIU" : "🛟 RECUOU COM O LOOT"}</h2>
+    <section className={`flex flex-col items-center gap-3 border-2 p-4 text-center ${conquistou ? "border-amber-300/70 bg-amber-300/5" : fim.morreu ? "border-rose-500/60 bg-rose-500/5" : "border-emerald-400/60 bg-emerald-400/5"}`}>
+      <h2 className="font-pixel text-sm">
+        {conquistou ? "🏆 BOSS DERROTADO — REGIÃO CONQUISTADA!" : fim.morreu ? "💀 VOCÊ CAIU" : "🛟 RECUOU COM O LOOT"}
+      </h2>
+      {conquistou && (
+        <p className="text-[11px] text-amber-300">
+          {nomeRegiao(regiaoDe(fim.regiaoConquistada! + 1))} aberta — sua jornada segue da fase {fim.regiaoConquistada! + 1}!
+        </p>
+      )}
       <p className="text-[12px] text-texto">
-        Chegou à <span className="font-pixel text-ciano">Fase {fim.faseLimpa}</span>
+        Chegou à <span className="font-pixel text-ciano">Onda {fim.faseLimpa}</span>
         {fim.recorde && <span className="ml-1 font-pixel text-amber-300">· NOVO RECORDE! 🏆</span>}
       </p>
       <div className="flex flex-wrap justify-center gap-2 text-[11px]">

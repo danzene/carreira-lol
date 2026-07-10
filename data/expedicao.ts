@@ -64,10 +64,13 @@ export const EXPEDICAO = {
 // MELHOR variante cujo `faseMin` foi alcançado (faseLimpa). Buff da PRÓXIMA partida,
 // temporário/consumível/CAPADO e FORA do snapshot ranqueado (o "auge de preparo").
 // Os bônus batem no teto RITMO_CAP (engine/expedicao.ts) — testado.
+// faseMin na escala do DESAFIO DE REGIÃO (gauntlet de 5 ondas terminando no boss):
+// região 1 = ondas 6..10 ⇒ qualquer avanço dá Aquecimento, chegar perto do boss dá
+// Scrim e MATAR o boss dá o Scrim de Elite. Regiões fundas dão elite direto (capado).
 export const RITMO_VARIANTES = [
-  { id: "aquecimento", nome: "Aquecimento", faseMin: 1, cargas: 1, bonusComp: 1, bonusCounter: 0 },
-  { id: "scrim", nome: "Scrim", faseMin: 4, cargas: 1, bonusComp: 2, bonusCounter: 1 },
-  { id: "scrim_elite", nome: "Scrim de Elite", faseMin: 8, cargas: 2, bonusComp: 4, bonusCounter: 2 },
+  { id: "aquecimento", nome: "Aquecimento", faseMin: 6, cargas: 1, bonusComp: 1, bonusCounter: 0 },
+  { id: "scrim", nome: "Scrim", faseMin: 8, cargas: 1, bonusComp: 2, bonusCounter: 1 },
+  { id: "scrim_elite", nome: "Scrim de Elite", faseMin: 10, cargas: 2, bonusComp: 4, bonusCounter: 2 },
 ] as const;
 
 export type VarianteRitmo = (typeof RITMO_VARIANTES)[number];

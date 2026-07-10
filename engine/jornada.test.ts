@@ -6,11 +6,17 @@ import {
   abrirBau,
   alternarModoAvanco,
   aplicarGrind,
+  continuarExpedicaoGrind,
+  desafioDisponivel,
+  entrarExpedicaoGrind,
   estadoGrindInicial,
+  finalizarExpedicaoGrind,
   jornadaDoGrind,
   modsDoGrind,
   normalizarGrind,
+  recuarExpedicaoGrind,
   resolverGrind,
+  ONDAS_DESAFIO,
   type EstadoGrind,
 } from "./grind";
 import { sucataInvestida, talentosMaximos } from "./grindProposito";
@@ -163,6 +169,53 @@ describe("jornada — avanço, farm, gate e parede", () => {
     expect(t.grind!.jornada.modoAvanco).toBe("farm");
     expect(alternarModoAvanco(t).grind!.jornada.modoAvanco).toBe("avancar");
     expect(t.grind!.sucata).toBe(c.grind!.sucata);
+  });
+});
+
+describe("jornada — Desafio de Região (o gate presencial)", () => {
+  it("desafioDisponivel: só no gate ainda não vencido", () => {
+    expect(desafioDisponivel(carreira({ fase: 5 }).grind)).toBeNull(); // fora do gate
+    expect(desafioDisponivel(carreira({ fase: 10, faseMax: 10 }).grind)).toBe(10);
+    expect(desafioDisponivel(carreira({ fase: 10, faseMax: 10, bossVencidos: [10] }).grind)).toBeNull(); // já vencido
+  });
+
+  it("VENCER a onda-boss do desafio conquista a região (bossVencidos) e destrava a jornada", () => {
+    const c = carreira({ fase: 10, faseMax: 10 });
+    const gate = desafioDisponivel(c.grind)!;
+    // herói fortíssimo pra atravessar as 5 ondas com segurança no teste
+    const forte: CareerState = { ...c, player: { ...c.player, atributos: attrs(99) } };
+    // procura uma seed em que o gauntlet inteiro é limpo (determinístico por seed)
+    let conquistou: number | null = null;
+    for (let s = 1; s <= 40 && conquistou === null; s++) {
+      let r = entrarExpedicaoGrind(forte, "2026-08-01", s * 613, gate - (ONDAS_DESAFIO - 1));
+      if (!r) break;
+      let atual = r.career;
+      for (let i = 0; i < 20 && atual.grind!.expedicao?.status === "escolha" && atual.grind!.expedicao!.faseLimpa < gate; i++) {
+        const cont = continuarExpedicaoGrind(atual);
+        if (!cont) break;
+        atual = cont.career;
+      }
+      const pronta = atual.grind!.expedicao?.status === "escolha" ? recuarExpedicaoGrind(atual) : atual;
+      const fim = finalizarExpedicaoGrind(pronta, "2026-08-01");
+      if (fim && fim.regiaoConquistada !== null) {
+        conquistou = fim.regiaoConquistada;
+        expect(fim.career.grind!.jornada.bossVencidos).toContain(10);
+        expect(desafioDisponivel(fim.career.grind)).toBeNull(); // gate fechado
+      } else if (fim) {
+        // corrida sem conquista NÃO destrava (morreu/recuou antes do boss)
+        expect(fim.career.grind!.jornada.bossVencidos).not.toContain(10);
+      }
+    }
+    expect(conquistou).toBe(10);
+  });
+
+  it("corrida comum (fora do gate) nunca conquista região", () => {
+    const c = carreira({ fase: 3 });
+    const r = entrarExpedicaoGrind(c, "2026-08-01", 42)!;
+    const pronta = r.career.grind!.expedicao?.status === "escolha" ? recuarExpedicaoGrind(r.career) : r.career;
+    const fim = finalizarExpedicaoGrind(pronta, "2026-08-01")!;
+    expect(fim.regiaoConquistada).toBeNull();
+    expect(fim.career.grind!.jornada.bossVencidos).toEqual([]);
   });
 });
 

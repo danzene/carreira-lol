@@ -275,10 +275,12 @@ describe("dois modos — Fase 1: motor da Expedição (fases, HP, push-your-luck
   });
 
   it("Ritmo de Treino escala por profundidade e é CAPADO (nunca fura a curva de elo)", () => {
-    expect(ritmoDaProfundidade(0)).toBeNull(); // não passou nem da fase 1
-    expect(ritmoDaProfundidade(1)!.variante).toBe("aquecimento");
-    expect(ritmoDaProfundidade(4)!.variante).toBe("scrim");
-    const elite = ritmoDaProfundidade(8)!;
+    // escala do DESAFIO (ondas 6..10 na região 1): raso demais = nada; boss = elite
+    expect(ritmoDaProfundidade(0)).toBeNull();
+    expect(ritmoDaProfundidade(5)).toBeNull(); // abaixo da 1ª onda do desafio
+    expect(ritmoDaProfundidade(6)!.variante).toBe("aquecimento");
+    expect(ritmoDaProfundidade(8)!.variante).toBe("scrim");
+    const elite = ritmoDaProfundidade(10)!;
     expect(elite.variante).toBe("scrim_elite");
     expect(elite.bonusComp).toBeLessThanOrEqual(RITMO_CAP.comp);
     expect(elite.bonusCounter).toBeLessThanOrEqual(RITMO_CAP.counter);

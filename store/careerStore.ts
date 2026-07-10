@@ -92,6 +92,12 @@ import {
   recuarExpedicaoGrind,
   finalizarExpedicaoGrind,
   finalizarExpedicaoPendente,
+  alternarModoAvanco,
+  comprarSkillGrind,
+  equiparSkillGrind,
+  respecSkillsGrind,
+  desafioDisponivel,
+  ONDAS_DESAFIO,
   type ResultadoGrind,
   type FimExpedicao,
 } from "@/engine/grind";
@@ -195,12 +201,17 @@ interface CareerStore {
   encerrarTorneioInternacional: () => void;
   sincronizarLiga: () => void;
   encerrarTemporadaLiga: () => void;
-  // 🗺️ Expedição (modo ATIVO). entrar/continuar podem já terminar a corrida (morte) → devolvem o fim.
-  // `seed` = seed da corrida (a view monta o ROTEIRO do combate com ela — teatro determinístico).
+  // 🗺️ Desafio de Região (modo ATIVO — só no gate). entrar/continuar podem já terminar
+  // a corrida (morte) → devolvem o fim. `seed` = seed da corrida (roteiro do teatro).
   entrarExpedicao: () => { evento: EventoFase; fim: FimExpedicao | null; seed: number } | null;
   continuarExpedicao: () => { evento: EventoFase; fim: FimExpedicao | null; seed: number } | null;
   recuarExpedicao: () => FimExpedicao | null;
   encerrarExpedicaoPendente: () => void; // robustez: sair no meio embolsa o loot garantido
+  // 🗺️ Jornada + ⚡ Skills
+  alternarAvanco: () => void; // FARMAR ↔ AVANÇAR
+  comprarSkill: (id: string) => boolean;
+  equiparSkill: (idx: number, id: string | null) => void;
+  respecSkills: () => void;
   apagar: (slotId: string) => void;
   sair: () => void;
 }
@@ -218,6 +229,11 @@ function aplicarFimExpedicao(fim: FimExpedicao): void {
   rastrear("expedicao_fim", { fase: fim.faseLimpa, morreu: fim.morreu, sucata: fim.sucata, baus: fim.baus.length, recorde: fim.recorde });
   if (fim.ritmo) rastrear("expedicao_ritmo_variante", { variante: fim.ritmo.variante, fase: fim.faseLimpa });
   for (const id of fim.cosmeticos) rastrear("grind_cosmetico_ganho", { id, origem: "expedicao" });
+  // 🗺️ boss da região caiu: telemetria + cerimônia (é um marco de verdade)
+  if (fim.regiaoConquistada !== null) {
+    rastrear("jornada_regiao_conquistada", { gate: fim.regiaoConquistada });
+    useCerimonias.getState().emitir({ tipo: "MENSAGEM", texto: `Boss da região derrotado! A Fase ${fim.regiaoConquistada + 1} está aberta. ⚔️🏆`, emoji: "🗺️" });
+  }
 }
 
 // Últimos segundos de grind já persistidos (throttle da gravação do heartbeat).
@@ -370,6 +386,49 @@ export const useCareer = create<CareerStore>((set, get) => ({
     if (slotId) salvarSlot(slotId, novo);
   },
 
+  // 🗺️ FARMAR ↔ AVANÇAR (a alavanca da jornada).
+  alternarAvanco: () => {
+    const { career: c0, slotId } = get();
+    if (!c0?.grind) return;
+    const novo = alternarModoAvanco(c0);
+    rastrear("jornada_modo", { modo: novo.grind!.jornada.modoAvanco, fase: novo.grind!.jornada.fase });
+    set({ career: novo });
+    if (slotId) salvarSlot(slotId, novo);
+  },
+
+  // ⚡ Compra 1 nível de skill (Sucata — economia fechada).
+  comprarSkill: (id) => {
+    const { career: c0, slotId } = get();
+    if (!c0) return false;
+    const r = comprarSkillGrind(c0, id);
+    if (!r) return false;
+    rastrear("skill_comprada", { skill: id, nivel: r.nivel });
+    set({ career: r.career });
+    if (slotId) salvarSlot(slotId, r.career);
+    return true;
+  },
+
+  // ⚡ Equipa/desequipa skill num dos 3 slots (o loadout é a decisão).
+  equiparSkill: (idx, id) => {
+    const { career: c0, slotId } = get();
+    if (!c0) return;
+    const novo = equiparSkillGrind(c0, idx, id);
+    if (novo === c0) return;
+    if (id) rastrear("skill_equipada", { skill: id, slot: idx });
+    set({ career: novo });
+    if (slotId) salvarSlot(slotId, novo);
+  },
+
+  // ⚡ Respec de skills GRÁTIS (devolve toda a Sucata; slots esvaziam).
+  respecSkills: () => {
+    const { career: c0, slotId } = get();
+    if (!c0?.grind) return;
+    const novo = respecSkillsGrind(c0);
+    rastrear("skill_respec", { devolvido: (novo.grind?.sucata ?? 0) - c0.grind.sucata });
+    set({ career: novo });
+    if (slotId) salvarSlot(slotId, novo);
+  },
+
   // 🎨 Equipa 1 cosmético por tipo (puro visual — Regra 3).
   equiparCosmetico: (tipo, id) => {
     const { career: c0, slotId } = get();
@@ -395,15 +454,18 @@ export const useCareer = create<CareerStore>((set, get) => ({
     if (slotId) salvarSlot(slotId, novo);
   },
 
-  // 🚪 Entra na Expedição (modo ATIVO). Resolve a 1ª fase; se já morre, encerra na hora.
+  // 🚪 Entra no DESAFIO DE REGIÃO (só no gate da jornada). O gauntlet começa 4 ondas
+  // antes do boss; resolve a 1ª onda — se já morre, encerra na hora.
   entrarExpedicao: () => {
     const { career: c0, slotId } = get();
     if (!c0) return null;
+    const gate = desafioDisponivel(c0.grind);
+    if (gate === null) return null; // fora do gate não há modo ativo
     const hoje = chaveDia(Date.now());
     const seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
-    const r = entrarExpedicaoGrind(c0, hoje, seed);
+    const r = entrarExpedicaoGrind(c0, hoje, seed, gate - (ONDAS_DESAFIO - 1));
     if (!r) return null;
-    rastrear("expedicao_iniciada", { seed });
+    rastrear("expedicao_iniciada", { seed, gate });
     if (r.evento.limpou) rastrear("expedicao_fase_limpa", { fase: r.evento.fase });
     // morte já na 1ª fase: embolsa (loot 0/quase 0) e volta pro passivo
     let career = r.career;

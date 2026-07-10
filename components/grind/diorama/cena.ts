@@ -159,6 +159,8 @@ export interface CenaDiorama {
   // 🗺️ Expedição (reuso do motor): esconder o HUD do passivo e a tensão crescente
   definirHud(mostrar: boolean): void;
   definirIntensidade(pct: number): void; // 0..1
+  // ⚡ skills equipadas (auto-cast visual com cooldown)
+  definirSkillsCena(skills: { cor: string; cooldownSeg: number }[]): void;
   // 🗺️ combate DIRIGIDO da Expedição (a view manda as batidas no ritmo dela)
   expIniciar(ligado: boolean): void; // true = suspende a timeline normal (campo limpo)
   expLeva(tipos: TipoInimigo[], rotulo: string, boss: boolean): void; // spawna a leva da fase
@@ -238,6 +240,9 @@ export function criarCena(
   let expHitT = 0; // herói apanhando (anim de hit)
   let expMorto = false;
   let expVitoriaT = 0; // pose de vitória entre fases
+  // ⚡ skills equipadas: auto-cast VISUAL com cooldown (espetáculo puro — o efeito real
+  // já entrou nos números do engine). Timers defasados pra não dispararem juntas.
+  let skillsCena: { cor: string; cd: number; t: number }[] = [];
 
   function alocar<T extends { vivo: boolean }>(pool: T[]): T | null {
     for (const p of pool) if (!p.vivo) return p;
@@ -643,6 +648,26 @@ export function criarCena(
 
     // parallax: anda quando o jogador corre
     if (jogadorEstado === "run") scroll += dt * 26;
+
+    // ⚡ auto-cast das skills equipadas: dispara quando há alvo e o herói está lutando
+    // (nunca dormindo/pausado/morto). Puro espetáculo — reusa pools (zero alocação).
+    if (skillsCena.length > 0 && modo === "normal" && !expMorto) {
+      const alvo = inimigos.find((i) => i.vivo && i.morteT <= 0);
+      for (const sk of skillsCena) {
+        sk.t -= dt;
+        if (sk.t > 0) continue;
+        sk.t = sk.cd;
+        if (!alvo) continue; // sem alvo: espera o próximo ciclo
+        ataqueT = durAtaque();
+        jogadorSquash = 0.12;
+        rastroT = 0.22;
+        alvo.hitT = 0.12;
+        alvo.squash = 0.12;
+        soltarParts(alvo.x - 2, CHAO_Y - 12, 7, sk.cor, 62);
+        soltarDano(alvo.x + 4, CHAO_Y - TAM_INIMIGO[alvo.tipo].h - 12, "✦", sk.cor, 9);
+        hitStop = Math.max(hitStop, 0.05);
+      }
+    }
 
     // inimigos: aproximação + timers
     for (const i of inimigos) {
@@ -1312,6 +1337,10 @@ export function criarCena(
     },
     definirIntensidade: (pct) => {
       intensidade = Math.max(0, Math.min(1, pct));
+    },
+    definirSkillsCena: (skills) => {
+      // timers defasados (0.3..0.9 do cd) pra primeira salva não sair toda junta
+      skillsCena = skills.slice(0, 3).map((s, i) => ({ cor: s.cor, cd: Math.max(3, s.cooldownSeg), t: Math.max(3, s.cooldownSeg) * (0.3 + (0.6 * i) / Math.max(1, skills.length - 1 || 1)) }));
     },
 
     // ---- 🗺️ combate dirigido da Expedição ----

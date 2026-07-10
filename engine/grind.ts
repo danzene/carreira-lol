@@ -794,11 +794,24 @@ export function podeExpedicao(
   return null;
 }
 
+// 🗺️ Desafio de Região: o gate da jornada (fase 10/20/30/40) ainda não vencido.
+// É a ÚNICA porta de entrada do modo ativo agora — o desafio começa 4 ondas antes do
+// boss (gauntlet de 5) e vencer a onda-boss conquista a região.
+export const ONDAS_DESAFIO = 5;
+
+export function desafioDisponivel(g: EstadoGrind | undefined): number | null {
+  if (!g) return null;
+  const fase = g.jornada.fase;
+  return ehGate(fase) && !g.jornada.bossVencidos.includes(fase) ? fase : null;
+}
+
 // 🚪 Entra na Expedição: troca o modo, gasta uma entrada do dia e resolve a 1ª fase.
-export function entrarExpedicaoGrind(career: CareerState, hoje: string, seed: number): { career: CareerState; evento: EventoFase } | null {
+// `faseInicial` (desafio: bossFase-4) sobrepõe o dos talentos quando presente.
+export function entrarExpedicaoGrind(career: CareerState, hoje: string, seed: number, faseInicial?: number): { career: CareerState; evento: EventoFase } | null {
   if (podeExpedicao(career, hoje) !== null) return null;
   const g0 = career.grind ?? estadoGrindInicial(hoje, seed);
-  const { exp, evento } = iniciarExpedicao(career.player, seed, modsExpedicaoDoGrind(g0));
+  const mods = modsExpedicaoDoGrind(g0);
+  const { exp, evento } = iniciarExpedicao(career.player, seed, faseInicial ? { ...mods, faseInicial } : mods);
   const grind: EstadoGrind = {
     ...g0,
     modo: "EXPEDICAO",
@@ -835,6 +848,7 @@ export interface FimExpedicao {
   itens: { slot: SlotGear; seedItem: number }[]; // a borda gera com gerarItemGrind + inventário
   cosmeticos: string[]; // cosméticos INÉDITOS ganhos nos baús
   ritmo: RitmoTreino | null; // Ritmo concedido por esta corrida (null se não passou da fase 1)
+  regiaoConquistada: number | null; // 🗺️ gate vencido nesta corrida (fase do boss) — destrava a região seguinte
 }
 
 // 🏁 Encerra a corrida (só quando status morto/recuou): aplica o loot GARANTIDO ao save,
@@ -896,6 +910,14 @@ export function finalizarExpedicaoGrind(career: CareerState, hoje: string): FimE
   semana.sucata += sucataGanha;
   semana.faseExpedicao = Math.max(semana.faseExpedicao, faseLimpa);
 
+  // 🗺️ conquista de região: limpou a onda-boss do gate pendente ⇒ a jornada destrava.
+  const gate = desafioDisponivel(g);
+  const regiaoConquistada = gate !== null && faseLimpa >= gate ? gate : null;
+  const jornada =
+    regiaoConquistada !== null
+      ? { ...g.jornada, bossVencidos: [...g.jornada.bossVencidos, regiaoConquistada] }
+      : g.jornada;
+
   const grind: EstadoGrind = {
     ...g,
     modo: "PASSIVO", // volta pro passivo seguro
@@ -908,6 +930,7 @@ export function finalizarExpedicaoGrind(career: CareerState, hoje: string): FimE
     ritmo: ritmo ?? g.ritmo, // Ritmo novo sobrescreve o não usado; se não passou da fase 1, mantém
     recordeFaseExpedicao: Math.max(g.recordeFaseExpedicao, faseLimpa),
     semana,
+    jornada,
   };
 
   return {
@@ -920,6 +943,7 @@ export function finalizarExpedicaoGrind(career: CareerState, hoje: string): FimE
     itens,
     cosmeticos: cosmeticosGanhos,
     ritmo,
+    regiaoConquistada,
   };
 }
 

@@ -4,6 +4,20 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { GRIND } from "@/data/grind";
 import { EXPEDICAO } from "@/data/expedicao";
+import { JORNADA, nomeRegiao, regiaoDe } from "@/data/jornada";
+import { defSkill } from "@/data/skills";
+import { desafioDisponivel } from "@/engine/grind";
+
+// Skills equipadas → configuração de auto-cast visual da cena (cor + cooldown).
+function skillsDaCena(slots: (string | null)[] | undefined): { cor: string; cooldownSeg: number }[] {
+  if (!slots) return [];
+  const out: { cor: string; cooldownSeg: number }[] = [];
+  for (const id of slots) {
+    const s = id ? defSkill(id) : undefined;
+    if (s) out.push({ cor: s.cor, cooldownSeg: s.cooldownSeg });
+  }
+  return out;
+}
 import { placarDoDia, tetoAtingido, type ResultadoGrind } from "@/engine/grind";
 import { buscarCampeoes } from "@/lib/ddragon";
 import { tocarSom } from "@/lib/som";
@@ -222,6 +236,7 @@ export default function DioramaGrind({
     });
     const m0 = modsDoGrind(gAtual);
     cena.definirMods({ encenacaoMult: m0.encenacaoMult, golpeDuplo: m0.golpeDuplo });
+    cena.definirSkillsCena(skillsDaCena(gAtual?.skillSlots));
 
     // loop: cada frame agenda o PRÓXIMO na janela dona do canvas (principal ou PiP).
     // TEMPO: usamos SEMPRE o performance.now() da janela PRINCIPAL (closure) — o
@@ -358,6 +373,12 @@ export default function DioramaGrind({
     const m = modsDoGrind(useCareer.getState().career?.grind);
     cenaRef.current?.definirMods({ encenacaoMult: m.encenacaoMult, golpeDuplo: m.golpeDuplo });
   }, [talentosKey]);
+
+  // ⚡ skills equipadas → auto-cast visual na cena (troca de loadout reflete na hora)
+  const skillsKey = JSON.stringify(g?.skillSlots ?? []);
+  useEffect(() => {
+    cenaRef.current?.definirSkillsCena(skillsDaCena(useCareer.getState().career?.grind?.skillSlots));
+  }, [skillsKey]);
 
   // retrato do campeão da partida atual
   const championAtual = resultado?.atual?.championId ?? completas[completas.length - 1]?.championId ?? null;
@@ -579,15 +600,6 @@ export default function DioramaGrind({
                     <span className="text-suave" title="O grind rende no máximo 3h por dia — depois o jogador descansa.">
                       {noTeto ? "teto ✔" : `⏳ ${fmtRest}`}
                     </span>
-                    {EXPEDICAO.habilitado && (
-                      <Link
-                        href="/expedicao"
-                        title="Modo ATIVO: scrim hardcore com risco de morte — só o loot da corrida está em jogo."
-                        className="border border-rosa/70 px-2 py-0.5 font-pixel text-[8px] text-rosa transition hover:bg-rosa hover:text-fundo"
-                      >
-                        ⚔️ EXPEDIÇÃO
-                      </Link>
-                    )}
                     <button
                       type="button"
                       onClick={alternar}
@@ -597,6 +609,51 @@ export default function DioramaGrind({
                     </button>
                   </div>
                 </div>
+
+                {/* 🗺️ JORNADA: fase/região, a alavanca farm/avançar e o Desafio de Região */}
+                {JORNADA.habilitado && g.jornada && (
+                  <div className="mb-2 flex items-center justify-between gap-2 border border-borda bg-fundo/50 px-2 py-1 text-[11px]">
+                    <span className="truncate text-texto" title={`Fase mais funda: ${g.jornada.faseMax}`}>
+                      🗺️ <span className="font-pixel text-[9px] text-ciano">FASE {g.jornada.fase}</span>{" "}
+                      <span className="text-suave">· {nomeRegiao(regiaoDe(g.jornada.fase))}</span>
+                    </span>
+                    <span className="flex shrink-0 items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => useCareer.getState().alternarAvanco()}
+                        title={
+                          g.jornada.modoAvanco === "avancar"
+                            ? "AVANÇAR: cada vitória sobe uma fase (mais forte, mais Sucata). Clique pra FARMAR."
+                            : "FARMAR: repete esta fase com segurança. Clique pra AVANÇAR."
+                        }
+                        className={`border px-2 py-0.5 font-pixel text-[8px] transition ${
+                          g.jornada.modoAvanco === "avancar"
+                            ? "border-ciano text-ciano hover:bg-ciano hover:text-fundo"
+                            : "border-emerald-400 text-emerald-400 hover:bg-emerald-400 hover:text-fundo"
+                        }`}
+                      >
+                        {g.jornada.modoAvanco === "avancar" ? "⤴ AVANÇAR" : "🌾 FARMAR"}
+                      </button>
+                      {EXPEDICAO.habilitado &&
+                        (desafioDisponivel(g) !== null ? (
+                          <Link
+                            href="/expedicao"
+                            title="O boss da região bloqueia a jornada — derrote-o no Desafio presencial!"
+                            className="animate-pulse border border-rosa px-2 py-0.5 font-pixel text-[8px] text-rosa transition hover:bg-rosa hover:text-fundo"
+                          >
+                            ⚔️ DESAFIO!
+                          </Link>
+                        ) : (
+                          <span
+                            className="border border-borda/60 px-2 py-0.5 font-pixel text-[8px] text-suave/60"
+                            title={`O Desafio de Região abre quando a jornada chega ao fim da região (fase ${Math.min(JORNADA.trilhaMax, regiaoDe(g.jornada.fase) * JORNADA.fasesPorRegiao)}).`}
+                          >
+                            ⚔️ desafio
+                          </span>
+                        ))}
+                    </span>
+                  </div>
+                )}
 
                 {completas.length > 0 && (
                   <ul className="flex max-h-32 flex-col gap-1 overflow-y-auto">

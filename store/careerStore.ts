@@ -301,7 +301,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
     // drops → inventário DIRETO (sem cerimônia fullscreen: grind é ambiente, não evento)
     for (const p of ap.novas) {
       if (p.drop) useInventory.getState().adicionarItem(gerarItemGrind(p.drop, iLvlDe(novo)));
-      rastrear("grind_partida", { vitoria: p.vitoria, campeao: p.championId, idx: p.idx });
+      rastrear("grind_partida", { vitoria: p.vitoria, campeao: p.championId, idx: p.idx, fase: p.fase });
     }
 
     // teto do dia: telemetria + marca o aviso (badge) uma vez por dia

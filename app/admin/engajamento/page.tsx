@@ -46,6 +46,17 @@ interface Eng {
       mortes: number;
       recuos: number;
     };
+    jornada?: {
+      fase_hist: KV[];
+      modo_avancar: number;
+      modo_farm: number;
+      skills_usuarios: number;
+      skills_compradas: number;
+      skills_respecs: number;
+      desafio_tentativas: number;
+      regioes_conquistadas: KV[];
+      conquistas_total: number;
+    };
   } | null;
 }
 
@@ -224,6 +235,29 @@ export default function AdminEngajamento() {
                     altura={150}
                   />
                 </Painel>
+              </div>
+            )}
+            {dados.grind.jornada && (
+              <div className="mt-3">
+                <p className="mb-2 text-[11px] text-zinc-400">
+                  Jornada de Treino: a distribuição de fase mostra a PAREDE real dos jogadores; o funil do Desafio (tentativas → conquistas) mede se o boss está calibrado.
+                </p>
+                <div className="mb-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <KpiCard rotulo="Modo: avançar vs farm" valor={Number(dados.grind.jornada.modo_avancar)} formato={(n) => `${n} / ${Number(dados.grind!.jornada!.modo_farm)}`} />
+                  <KpiCard rotulo="Usuários com skills" valor={Number(dados.grind.jornada.skills_usuarios)} />
+                  <KpiCard rotulo="Tentativas de Desafio" valor={Number(dados.grind.jornada.desafio_tentativas)} />
+                  <KpiCard rotulo="Regiões conquistadas" valor={Number(dados.grind.jornada.conquistas_total)} />
+                </div>
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <Painel>
+                    <p className="mb-1 text-[11px] text-zinc-400">Onde os jogadores estão (partidas por faixa de fase — a parede real)</p>
+                    <BarChart dados={dados.grind.jornada.fase_hist.map((f) => ({ x: f.k, y: Number(f.v), cor: "#38bdf8" }))} altura={150} />
+                  </Painel>
+                  <Painel>
+                    <p className="mb-1 text-[11px] text-zinc-400">Conquistas por gate (10/20/30/40 — o funil de regiões)</p>
+                    <BarChart dados={dados.grind.jornada.regioes_conquistadas.map((r) => ({ x: `Boss ${r.k}`, y: Number(r.v), cor: "#ffd34d" }))} altura={150} />
+                  </Painel>
+                </div>
               </div>
             )}
           </>

@@ -81,7 +81,8 @@ export interface GrindSemana {
   bausLendario: number;
   talentosComprados: number;
   lendarioNome?: string; // cosmético do último Lendário da semana (gatilho de feed)
-  faseExpedicao: number; // fase mais funda alcançada na Expedição nesta semana (recap/feed)
+  faseExpedicao: number; // onda mais funda alcançada no Desafio nesta semana (recap/feed)
+  faseJornada: number; // fase mais funda da JORNADA alcançada nesta semana (recap)
 }
 
 export interface EstadoGrind {
@@ -148,6 +149,7 @@ export function grindSemanaVazia(): GrindSemana {
     bausLendario: 0,
     talentosComprados: 0,
     faseExpedicao: 0,
+    faseJornada: 0,
   };
 }
 
@@ -242,6 +244,7 @@ export function normalizarGrind(bruto: unknown): EstadoGrind | undefined {
       talentosComprados: num(s?.talentosComprados),
       lendarioNome: typeof s?.lendarioNome === "string" ? s.lendarioNome : undefined,
       faseExpedicao: num(s?.faseExpedicao),
+      faseJornada: num(s?.faseJornada),
     },
     tetoAvisadoEm: typeof g.tetoAvisadoEm === "string" ? g.tetoAvisadoEm : undefined,
 
@@ -577,6 +580,7 @@ export function aplicarGrind(career: CareerState, resultado: ResultadoGrind): Ap
         jornada = { ...jornada, fase, faseMax: Math.max(jornada.faseMax, fase) };
       }
     }
+    if (p.fase !== undefined) semana.faseJornada = Math.max(semana.faseJornada, jornada.fase);
   }
 
   const inteiros = Math.floor(acumuladoGold);

@@ -80,9 +80,17 @@ export default function HallPage() {
             />
           </div>
         )}
-        {career.grind && career.grind.recordeFaseExpedicao > 0 && (
+        {career.grind && (career.grind.recordeFaseExpedicao > 0 || career.grind.jornada.faseMax > 1) && (
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <Placa emoji="⚔️" rotulo="fase mais funda na Expedição" valor={`${career.grind.recordeFaseExpedicao}`} />
+            <Placa emoji="🗺️" rotulo="fase mais funda da Jornada" valor={`${career.grind.jornada.faseMax}`} />
+            <Placa
+              emoji="🏆"
+              rotulo="regiões conquistadas"
+              valor={`${career.grind.jornada.bossVencidos.length}/4`}
+            />
+            {career.grind.recordeFaseExpedicao > 0 && (
+              <Placa emoji="⚔️" rotulo="onda mais funda no Desafio" valor={`${career.grind.recordeFaseExpedicao}`} />
+            )}
           </div>
         )}
       </section>

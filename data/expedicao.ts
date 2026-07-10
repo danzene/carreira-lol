@@ -31,12 +31,13 @@ export const EXPEDICAO = {
   faseBoss: 5,
   bossMult: 1.35, // o boss da fase-marco bate mais forte
 
-  // 🗡️ dano por fase: fração do hpMax escalada por (força da fase / poder do herói).
-  // Quando a fase iguala o herói (razão 1), custa ~danoFracaoBase do HP. Fundo demais ⇒
-  // razão > 1 ⇒ dano cresce ⇒ a morte se aproxima. O jitter seedado dá a TENSÃO (o
-  // jogador vê um risco estimado, nunca o número exato).
-  danoFracaoBase: 0.11,
-  danoJitter: 0.18, // ±18% no dano (a incerteza que torna a aposta uma aposta)
+  // 🗡️ dano por onda: fração do hpMax escalada por (força da onda / poder do herói).
+  // RECALIBRADO na rodada Jornada (0.11→0.14): o gauntlet agora é só o DESAFIO DE
+  // REGIÃO — o boss precisa ter dente (região 1 vencível sem skills ~metade das vezes;
+  // regiões fundas exigem investir em skills defensivas). Números no CHANGELOG-jornada.
+  danoFracaoBase: 0.15,
+  danoJitter: 0.28, // ±28% no dano — a incerteza que torna a aposta uma aposta (suaviza o
+  // precipício da soma de 5 ondas: sem jitter alto, 0.14→83% e 0.16→2% de vitória)
 
   // 🔩 Sucata por fase — bônus MODESTO (o passivo continua a espinha da Sucata; a Expedição
   // NÃO é um farm de Sucata — seu valor real é Ritmo + cosméticos + o recorde de profundidade).

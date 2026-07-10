@@ -415,76 +415,55 @@ describe("expedição viva — roteiro batida-a-batida (teatro determinístico)"
   });
 });
 
-// Um dia inteiro de passivo no teto, abrindo os baús → Sucata ganha no dia.
-function diaPassivo(c0: CareerState, hoje: string, seedDia: number): { career: CareerState; sucata: number } {
-  const g = acumularSegundosGrind(c0.grind!, GRIND.tetoSegundosDia, hoje, seedDia);
-  let c: CareerState = { ...c0, grind: g };
-  const r = resolverGrind(c.player, g.segundosHoje, g.seedDia, modsDoGrind(g));
-  c = aplicarGrind(c, r).career;
-  while (c.grind!.bauPendente) c = abrirBau(c, hoje)!.career;
-  return { career: c, sucata: c.grind!.sucata - c0.grind!.sucata };
-}
-
-// Jogador SENSATO na Expedição: continua enquanto o risco de morte < 50%, senão recua.
-function corridaEstrategica(c0: CareerState, hoje: string, seed: number): { career: CareerState; sucata: number; fase: number } {
-  const entrada = entrarExpedicaoGrind(c0, hoje, seed);
-  if (!entrada) return { career: c0, sucata: 0, fase: 0 };
-  let c = entrada.career;
-  for (let i = 0; i < 300; i++) {
-    const exp = c.grind!.expedicao;
-    if (!exp || exp.status !== "escolha") break;
-    const prev = estimarProximaFase(exp, c.player, modsExpedicaoDoGrind(c.grind ?? undefined));
-    if (prev.chanceMorte >= 0.5) {
-      c = recuarExpedicaoGrind(c);
-      break;
-    }
+// Tenta o DESAFIO DE REGIÃO (gauntlet de 5 ondas terminando no boss `gate`): continua
+// sempre até o boss cair ou o herói morrer. Devolve se conquistou.
+function tentarDesafio(c0: CareerState, gate: number, seed: number): boolean {
+  const r = entrarExpedicaoGrind(c0, "2026-08-01", seed, gate - 4);
+  if (!r) return false;
+  let c = r.career;
+  for (let i = 0; i < 10 && c.grind!.expedicao?.status === "escolha" && c.grind!.expedicao!.faseLimpa < gate; i++) {
     const cont = continuarExpedicaoGrind(c);
     if (!cont) break;
     c = cont.career;
   }
-  const antes = c0.grind!.sucata;
   const pronta = c.grind!.expedicao?.status === "escolha" ? recuarExpedicaoGrind(c) : c;
-  const fim = finalizarExpedicaoGrind(pronta, hoje);
-  if (!fim) return { career: c, sucata: c.grind!.sucata - antes, fase: 0 };
-  return { career: fim.career, sucata: fim.career.grind!.sucata - antes, fase: fim.faseLimpa };
+  const fim = finalizarExpedicaoGrind(pronta, "2026-08-01");
+  return fim !== null && fim.faseLimpa >= gate;
 }
 
-describe("dois modos — Fase 3: equilíbrio (simulação dupla)", () => {
-  it("árvore completa em ~1,5–2,5 meses combinando Passivo + Expedição (não acelerou demais)", () => {
-    const DIAS = 14;
-    let c = carreira(); // talentos zerados: medindo a renda pra AFFORD a árvore
-    let passivo = 0;
-    let expedicaoTotal = 0;
-    let somaFases = 0;
-    for (let d = 0; d < DIAS; d++) {
-      const hoje = `2026-08-${String(d + 1).padStart(2, "0")}`;
-      const seedDia = (1000 + d * 7919) >>> 0;
-      const p = diaPassivo(c, hoje, seedDia);
-      c = p.career;
-      passivo += p.sucata;
-      for (let k = 0; k < EXPEDICAO.maxPorDia; k++) {
-        const r = corridaEstrategica(c, hoje, (777 + d * 31 + k * 101) >>> 0);
-        c = r.career;
-        expedicaoTotal += r.sucata;
-        somaFases += r.fase;
-      }
+describe("jornada — calibração do Desafio de Região (medida)", () => {
+  const N = 60;
+  function taxa(carreiraBase: () => CareerState, gate: number): number {
+    let v = 0;
+    for (let s = 0; s < N; s++) {
+      // gate no estado (o desafio real exige) — cada tentativa parte limpa
+      const c = carreiraBase();
+      const pronta = { ...c, grind: { ...c.grind!, jornada: { ...c.grind!.jornada, fase: gate, faseMax: gate } } };
+      if (tentarDesafio(pronta, gate, (s + 1) * 7919)) v++;
     }
-    const custoArvore = sucataInvestida(talentosMaximos());
-    const rendaPassiva = passivo / DIAS;
-    const rendaCombinada = (passivo + expedicaoTotal) / DIAS;
-    const diasPassivo = custoArvore / rendaPassiva;
-    const diasCombinado = custoArvore / rendaCombinada;
-    const faseMedia = somaFases / (DIAS * EXPEDICAO.maxPorDia);
-    // números MEDIDOS congelados no CHANGELOG-dois-modos.md
+    return v / N;
+  }
+
+  it("região 1 (boss 10): vencível sem skills mas NUNCA de graça; skills defensivas ajudam de verdade", () => {
+    const semSkills = taxa(() => carreira(), 10);
+    const comSkills = taxa(() => {
+      const c = carreira();
+      return {
+        ...c,
+        grind: { ...c.grind!, skills: { muralha: 5, vampirismo: 5, furia: 5 }, skillSlots: ["muralha", "vampirismo", "furia"] },
+      };
+    }, 10);
+    // números MEDIDOS congelados no CHANGELOG-jornada.md
     // eslint-disable-next-line no-console
-    console.log(
-      `[sim dupla] árvore ${custoArvore} · passivo ~${rendaPassiva.toFixed(0)}/dia (${diasPassivo.toFixed(0)} dias) · combinado ~${rendaCombinada.toFixed(0)}/dia (${diasCombinado.toFixed(0)} dias) · fase média ${faseMedia.toFixed(1)}`,
-    );
-    // o jogador MAIS engajado (passivo no teto + Expedição no máximo) ainda leva ≥ ~1,5 mês
-    expect(diasCombinado).toBeGreaterThanOrEqual(45);
-    expect(diasCombinado).toBeLessThanOrEqual(75);
-    // e o passivo sozinho continua lento (a Expedição acelera, mas não trivializa)
-    expect(diasPassivo).toBeGreaterThan(diasCombinado);
+    console.log(`[desafio] boss 10 · sem skills ${(semSkills * 100).toFixed(0)}% · com skills defensivas ${(comSkills * 100).toFixed(0)}%`);
+    expect(semSkills).toBeGreaterThanOrEqual(0.25); // não é um paredão injusto
+    expect(semSkills).toBeLessThanOrEqual(0.85); // nem de graça — o boss tem dente
+    expect(comSkills).toBeGreaterThan(semSkills + 0.1); // investir em skills MUDA o resultado
+  });
+
+  it("região 2 (boss 20) pune quem não investiu: sem skills é quase impossível", () => {
+    const semSkills = taxa(() => carreira(), 20);
+    expect(semSkills).toBeLessThanOrEqual(0.15); // o muro que dá propósito à Sucata/skills
   });
 
   it("Ritmo não fura a curva de elo: é comparável ao buff da loja e continua temporário/capado", () => {

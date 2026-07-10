@@ -195,8 +195,9 @@ interface CareerStore {
   sincronizarLiga: () => void;
   encerrarTemporadaLiga: () => void;
   // 🗺️ Expedição (modo ATIVO). entrar/continuar podem já terminar a corrida (morte) → devolvem o fim.
-  entrarExpedicao: () => { evento: EventoFase; fim: FimExpedicao | null } | null;
-  continuarExpedicao: () => { evento: EventoFase; fim: FimExpedicao | null } | null;
+  // `seed` = seed da corrida (a view monta o ROTEIRO do combate com ela — teatro determinístico).
+  entrarExpedicao: () => { evento: EventoFase; fim: FimExpedicao | null; seed: number } | null;
+  continuarExpedicao: () => { evento: EventoFase; fim: FimExpedicao | null; seed: number } | null;
   recuarExpedicao: () => FimExpedicao | null;
   encerrarExpedicaoPendente: () => void; // robustez: sair no meio embolsa o loot garantido
   apagar: (slotId: string) => void;
@@ -415,7 +416,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
     }
     set({ career });
     if (slotId) salvarSlot(slotId, career);
-    return { evento: r.evento, fim };
+    return { evento: r.evento, fim, seed };
   },
 
   // 🎲 CONTINUAR: aposta consciente — resolve a próxima fase; morte encerra e embolsa.
@@ -423,6 +424,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
     const { career: c0, slotId } = get();
     const exp = c0?.grind?.expedicao;
     if (!c0 || !exp || exp.status !== "escolha") return null;
+    const seed = exp.seed; // capturada ANTES (na morte o finalize apaga a corrida do save)
     rastrear("expedicao_escolha", { escolha: "continuar", fase: exp.faseAtual });
     const r = continuarExpedicaoGrind(c0);
     if (!r) return null;
@@ -439,7 +441,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
     }
     set({ career });
     if (slotId) salvarSlot(slotId, career);
-    return { evento: r.evento, fim };
+    return { evento: r.evento, fim, seed };
   },
 
   // 🛟 RECUAR: sai com o loot garantido — encerra e embolsa na hora (nada fica pendente).

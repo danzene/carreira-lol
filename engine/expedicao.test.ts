@@ -28,8 +28,11 @@ import {
   normalizarRitmo,
   passivoAtivo,
   ritmoDaProfundidade,
+  roteiroDaFase,
   sucataDaFase,
+  tiposDaFase,
   RITMO_CAP,
+  type EventoFase,
 } from "./expedicao";
 import { sucataInvestida, talentosMaximos } from "./grindProposito";
 import { snapshotDePlayer } from "./duelo";
@@ -368,6 +371,45 @@ describe("dois modos — Fase 2: robustez (sair no meio não corrompe nem duplic
     expect(morto.grind!.expedicao!.status).toBe("morto");
     const { fim } = finalizarExpedicaoPendente(morto, "2026-07-07");
     expect(fim!.morreu).toBe(true);
+  });
+});
+
+describe("expedição viva — roteiro batida-a-batida (teatro determinístico)", () => {
+  function eventoSobrevive(fase = 3): EventoFase {
+    return { fase, boss: false, limpou: true, morreu: false, danoRecebido: 37, cura: 4, sucata: 2, ganhouBau: false, hpApos: 70 };
+  }
+
+  it("sobrevivência: dano fatiado soma EXATO, todos os inimigos morrem e a cura fecha no hpApos do engine", () => {
+    const ev = eventoSobrevive();
+    const rot = roteiroDaFase(4242, ev, jogador());
+    const hits = rot.batidas.filter((b) => b.t === "inimigoAtaca");
+    const kills = rot.batidas.filter((b) => b.t === "heroiMata");
+    expect(hits.reduce((s, b) => s + b.dano, 0)).toBe(ev.danoRecebido); // soma exata
+    expect(kills.length).toBe(rot.tipos.length); // leva inteira cai
+    expect(rot.batidas[rot.batidas.length - 1].t).toBe("cura");
+    expect(rot.batidas[rot.batidas.length - 1].hpApos).toBe(ev.hpApos); // teatro termina no valor real
+    expect(rot.morte).toBe(false);
+  });
+
+  it("morte: o roteiro trunca no golpe fatal — HP termina em 0 e nem todos os inimigos caem", () => {
+    const ev: EventoFase = { fase: 8, boss: false, limpou: false, morreu: true, danoRecebido: 55, cura: 0, sucata: 0, ganhouBau: false, hpApos: 0 };
+    const rot = roteiroDaFase(1337, ev, jogador());
+    const ultima = rot.batidas[rot.batidas.length - 1];
+    expect(ultima.t).toBe("inimigoAtaca"); // o golpe fatal encerra
+    expect(ultima.hpApos).toBe(0);
+    const kills = rot.batidas.filter((b) => b.t === "heroiMata").length;
+    expect(kills).toBeLessThan(rot.tipos.length); // a leva NÃO foi limpa
+    expect(rot.morte).toBe(true);
+  });
+
+  it("determinístico (mesma seed = mesmo roteiro) e o boss é o último da fila", () => {
+    const ev = eventoSobrevive(5); // fase 5 = boss
+    const a = roteiroDaFase(99, { ...ev, boss: true }, jogador());
+    const b = roteiroDaFase(99, { ...ev, boss: true }, jogador());
+    expect(JSON.stringify(a)).toBe(JSON.stringify(b));
+    expect(["barao", "dragao"]).toContain(a.tipos[a.tipos.length - 1]);
+    // leva visível respeita o pool da cena (máx. 6)
+    for (let f = 1; f <= 20; f++) expect(tiposDaFase(7, f).length).toBeLessThanOrEqual(6);
   });
 });
 

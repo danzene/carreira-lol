@@ -159,6 +159,13 @@ export interface CenaDiorama {
   // 🗺️ Expedição (reuso do motor): esconder o HUD do passivo e a tensão crescente
   definirHud(mostrar: boolean): void;
   definirIntensidade(pct: number): void; // 0..1
+  // 🗺️ combate DIRIGIDO da Expedição (a view manda as batidas no ritmo dela)
+  expIniciar(ligado: boolean): void; // true = suspende a timeline normal (campo limpo)
+  expLeva(tipos: TipoInimigo[], rotulo: string, boss: boolean): void; // spawna a leva da fase
+  expBatida(b: { t: "inimigoAtaca" | "heroiMata" | "cura"; inimigo: number; dano: number }): void;
+  expMorteHeroi(): void;
+  expFaseLimpa(rotulo: string): void;
+  expJuice(): void; // clique do jogador: golpe cosmético (tátil, zero efeito em número)
 }
 
 export function criarCena(
@@ -225,6 +232,12 @@ export function criarCena(
   let dropGlow = 0; // brilho do drop caindo
   let mostrarHud = true; // false na Expedição (o HUD de HP/fase é React por cima)
   let intensidade = 0; // 0..1 tensão crescente da Expedição (escurece + vinheta ameaçadora)
+  // 🗺️ combate DIRIGIDO da Expedição: a timeline normal é suspensa e a view manda as
+  // batidas (expBatida) no ritmo dela — o motor só encena (anims/partículas/juice).
+  let expModo = false;
+  let expHitT = 0; // herói apanhando (anim de hit)
+  let expMorto = false;
+  let expVitoriaT = 0; // pose de vitória entre fases
 
   function alocar<T extends { vivo: boolean }>(pool: T[]): T | null {
     for (const p of pool) if (!p.vivo) return p;
@@ -617,6 +630,11 @@ export function criarCena(
         zzzT = 0;
         soltarDano(PX + 8, CHAO_Y - 34, "z", CORD.suave, 6);
       }
+    } else if (expModo) {
+      // combate dirigido: sem timeline própria — o estado do herói deriva dos timers
+      expHitT = Math.max(0, expHitT - dt0);
+      expVitoriaT = Math.max(0, expVitoriaT - dt0);
+      jogadorEstado = expMorto ? "death" : expVitoriaT > 0 ? "victory" : ataqueT > 0 ? "attack" : expHitT > 0 ? "hit" : "idle";
     } else if (desfecho) {
       atualizarDesfecho(dt);
     } else {
@@ -1294,6 +1312,94 @@ export function criarCena(
     },
     definirIntensidade: (pct) => {
       intensidade = Math.max(0, Math.min(1, pct));
+    },
+
+    // ---- 🗺️ combate dirigido da Expedição ----
+    expIniciar: (ligado) => {
+      expModo = ligado;
+      expMorto = false;
+      expHitT = 0;
+      expVitoriaT = 0;
+      desfecho = null;
+      limparCampo();
+      faixa = null;
+      jogadorEstado = ligado ? "idle" : "run";
+    },
+    expLeva: (tipos, rotulo, boss) => {
+      limparCampo();
+      expMorto = false;
+      for (let i = 0; i < tipos.length && i < inimigos.length; i++) {
+        const slot = inimigos[i];
+        slot.vivo = true;
+        slot.tipo = tipos[i];
+        slot.x = CENA_W + 16 + i * 22; // entram marchando da direita
+        slot.alvoX = PX + 36 + i * 19;
+        slot.frameT = rngCena();
+        slot.hitT = 0;
+        slot.morteT = 0;
+        slot.squash = 0;
+        slot.atkT = 0;
+      }
+      faixa = { vida: 1.2, max: 1.2, txt: rotulo, cor: boss ? CORD.ouro : CORD.ciano };
+      if (boss) shake = Math.max(shake, 2);
+    },
+    expBatida: (b) => {
+      if (b.t === "inimigoAtaca") {
+        const al = inimigos[b.inimigo];
+        if (al?.vivo) {
+          al.atkT = 0.3; // arte real: atk_1 → atk_2
+          al.squash = 0.1;
+        }
+        expHitT = 0.35;
+        jogadorSquash = -0.15;
+        soltarDano(PX, CHAO_Y - 36, `-${b.dano}`, CORD.rosa, b.dano >= 20 ? 8 : 6);
+        soltarParts(PX + 4, CHAO_Y - 14, 3, CORD.rosa, 40);
+        if (b.dano >= 20) {
+          shake = Math.max(shake, 2.2);
+          hitStop = Math.max(hitStop, 0.06);
+        }
+        opts.aoEvento("hit");
+      } else if (b.t === "heroiMata") {
+        const al = inimigos[b.inimigo];
+        ataqueT = durAtaque();
+        jogadorSquash = 0.12;
+        rastroT = 0.18;
+        if (al?.vivo && al.morteT <= 0) {
+          al.hitT = 0.12;
+          al.squash = 0.14;
+          soltarDano(al.x, CHAO_Y - TAM_INIMIGO[al.tipo].h - 6, String(b.dano), al.tipo !== "minion" ? CORD.ouro : CORD.texto, al.tipo !== "minion" ? 8 : 6);
+          matarInimigo(b.inimigo, al.tipo !== "minion");
+        }
+      } else {
+        // cura leve entre fases (recompensa de limpar)
+        soltarDano(PX, CHAO_Y - 40, `+${b.dano}`, "#2ee6a0", 7);
+        soltarParts(PX, CHAO_Y - 20, 6, "#2ee6a0", 42);
+      }
+    },
+    expMorteHeroi: () => {
+      expMorto = true;
+      faixa = { vida: 1.6, max: 1.6, txt: "VOCÊ CAIU", cor: CORD.rosa };
+      shake = Math.max(shake, 3);
+      hitStop = Math.max(hitStop, 0.12);
+      soltarParts(PX, CHAO_Y - 14, 14, CORD.rosa, 70);
+      opts.aoEvento("derrota");
+    },
+    expFaseLimpa: (rotulo) => {
+      expVitoriaT = 1.1;
+      faixa = { vida: 1.2, max: 1.2, txt: rotulo, cor: CORD.ciano };
+      opts.aoEvento("vitoria");
+    },
+    expJuice: () => {
+      if (expMorto) return;
+      ataqueT = durAtaque();
+      jogadorSquash = 0.12;
+      rastroT = 0.18;
+      const alvo = inimigos.find((i) => i.vivo && i.morteT <= 0);
+      if (alvo) {
+        alvo.hitT = 0.1;
+        alvo.squash = 0.1;
+        soltarParts(alvo.x - 3, CHAO_Y - 10, 2, CORD.branco, 35);
+      }
     },
   };
 }

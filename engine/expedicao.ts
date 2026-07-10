@@ -283,6 +283,80 @@ export function recuarExpedicao(exp: EstadoExpedicao): EstadoExpedicao {
   return { ...exp, status: "recuou" };
 }
 
+// ============================================================================
+// 🎬 ROTEIRO DA FASE (teatro determinístico) — a fase já foi RESOLVIDA atomicamente
+// (anti save-scum); isto só distribui o dano decidido entre os inimigos pra UI encenar
+// um combate de verdade, batida a batida. A soma das batidas bate EXATO com o evento.
+// ============================================================================
+
+export type TipoInimigoExp = "minion" | "lobo" | "golem" | "dragao" | "barao";
+
+export interface BatidaExp {
+  t: "inimigoAtaca" | "heroiMata" | "cura";
+  inimigo: number; // índice do inimigo na leva (0-based); -1 na cura
+  dano: number; // inimigoAtaca: dano no herói · heroiMata: número cosmético do golpe · cura: valor
+  hpApos: number; // HP do herói após a batida (o teatro TERMINA no valor do engine)
+}
+
+export interface RoteiroFase {
+  fase: number;
+  boss: boolean;
+  tipos: TipoInimigoExp[]; // a leva visível (cap 6 — tamanho do pool da cena)
+  batidas: BatidaExp[];
+  morte: boolean;
+}
+
+// Leva visível da fase (cap no pool da cena). Tipos endurecem com a profundidade;
+// o boss é SEMPRE o último da fila (o confronto final da fase).
+export function tiposDaFase(seedCorrida: number, fase: number): TipoInimigoExp[] {
+  const r = criarRng((((seedCorrida ^ (fase * 0x9e3779b9)) >>> 0) ^ 0x7150) >>> 0);
+  const n = Math.min(6, Math.max(1, Math.round(EXPEDICAO.inimigosBase + fase * EXPEDICAO.inimigosPorFase)));
+  const tipos: TipoInimigoExp[] = [];
+  for (let i = 0; i < n; i++) {
+    const x = r();
+    if (fase >= 6 && x < 0.25) tipos.push("golem");
+    else if (fase >= 3 && x < 0.55) tipos.push("lobo");
+    else tipos.push("minion");
+  }
+  if (ehBoss(fase)) tipos[tipos.length - 1] = fase % 10 === 0 ? "dragao" : "barao";
+  return tipos;
+}
+
+// Constrói o roteiro a partir do EVENTO já resolvido. Sobrevivência: cada inimigo dá
+// UM golpe e morre em seguida (dano fatiado somando exato). Morte: o herói derruba só
+// parte da leva e cai no golpe final (a fase fatal não se completa).
+export function roteiroDaFase(seedCorrida: number, evento: EventoFase, player: Player): RoteiroFase {
+  const tipos = tiposDaFase(seedCorrida, evento.fase);
+  const n = tipos.length;
+  const r = criarRng((((seedCorrida ^ (evento.fase * 0x85ebca6b)) >>> 0) ^ 0xbea7) >>> 0);
+  const hpAntes = evento.morreu ? evento.danoRecebido : evento.hpApos + evento.danoRecebido - evento.cura;
+  const golpeCosmetico = () => Math.max(8, Math.round(poderHeroi(player) * entre(r, 0.3, 0.62)));
+
+  // quantos inimigos chegam a agir: todos (sobreviveu) ou ~60% da leva (morte no meio)
+  const agem = evento.morreu ? Math.max(1, Math.min(n, Math.ceil(n * 0.6))) : n;
+
+  // fatias de dano por inimigo que age (boss pesa ×2.2), normalizadas pro dano EXATO
+  const pesos: number[] = [];
+  for (let i = 0; i < agem; i++) pesos.push(entre(r, 0.6, 1.4) * (tipos[i] === "barao" || tipos[i] === "dragao" ? 2.2 : 1));
+  const somaPesos = pesos.reduce((a, b) => a + b, 0);
+  const fatias = pesos.map((p) => Math.floor((evento.danoRecebido * p) / somaPesos));
+  fatias[agem - 1] += evento.danoRecebido - fatias.reduce((a, b) => a + b, 0); // resto na última
+
+  const batidas: BatidaExp[] = [];
+  let hp = hpAntes;
+  for (let i = 0; i < agem; i++) {
+    hp -= fatias[i];
+    batidas.push({ t: "inimigoAtaca", inimigo: i, dano: fatias[i], hpApos: Math.max(0, hp) });
+    if (evento.morreu && i === agem - 1) break; // o golpe fatal encerra — ninguém mais morre
+    batidas.push({ t: "heroiMata", inimigo: i, dano: golpeCosmetico(), hpApos: Math.max(0, hp) });
+  }
+  if (!evento.morreu && evento.cura > 0) {
+    hp += evento.cura;
+    batidas.push({ t: "cura", inimigo: -1, dano: evento.cura, hpApos: hp });
+  }
+  return { fase: evento.fase, boss: evento.boss, tipos, batidas, morte: evento.morreu };
+}
+
 // Preview do risco da PRÓXIMA fase (mostrado no dilema). Honesto: usa a distribuição
 // uniforme do jitter, sem revelar o número exato que a seed já fixou.
 export interface PrevisaoFase {

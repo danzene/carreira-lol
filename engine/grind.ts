@@ -1,5 +1,6 @@
 import { GRIND, NICKS_GRIND } from "@/data/grind";
 import { GRIND_PROP } from "@/data/grindProposito";
+import { JORNADA, ehGate, forcaInimigaJornada, multSucataJornada } from "@/data/jornada";
 import { SLOTS_GEAR, type Item, type SlotGear } from "@/data/itens";
 import { SIMULACAO } from "@/data/simulacao";
 import {
@@ -103,6 +104,20 @@ export interface EstadoGrind {
   recordeFaseExpedicao: number; // recorde de carreira: fase mais funda alcançada (Hall/feed)
   expedicaoDia: string; // "YYYY-MM-DD" do contador de entradas (reseta na virada)
   expedicoesNoDia: number; // corridas iniciadas hoje (limitador EXPEDICAO.maxPorDia)
+  jornada: EstadoJornada; // 🗺️ trilha de fases do Treino (farm/avançar — ver data/jornada.ts)
+}
+
+// 🗺️ Jornada de Treino: a fase que o idle está lutando e a alavanca farm/avançar.
+// SEM morte no passivo (parede natural: WR cai, avanço estanca, nada se perde).
+export interface EstadoJornada {
+  fase: number; // fase corrente (1..trilhaMax)
+  faseMax: number; // recorde de fase alcançada (Hall/feed)
+  modoAvanco: "farm" | "avancar"; // farm = repete a fase; avancar = vitória sobe
+  bossVencidos: number[]; // gates vencidos no Desafio de Região (10/20/30/40)
+}
+
+export function jornadaInicial(): EstadoJornada {
+  return { fase: 1, faseMax: 1, modoAvanco: "avancar", bossVencidos: [] };
 }
 
 export function grindSemanaVazia(): GrindSemana {
@@ -149,12 +164,34 @@ export function estadoGrindInicial(dia: string, seedDia: number): EstadoGrind {
     recordeFaseExpedicao: 0,
     expedicaoDia: "",
     expedicoesNoDia: 0,
+    jornada: jornadaInicial(),
   };
 }
 
 // Mods da árvore deste save (usados por resolverGrind, aplicarGrind e pela cena).
 export function modsDoGrind(g: EstadoGrind | undefined): ModsGrind {
   return g ? modsGrind(g.talentos) : MODS_NEUTROS;
+}
+
+// 🗺️ Contexto da Jornada pro resolverGrind (undefined = kill switch desligado ⇒
+// comportamento pré-jornada, sem quebrar nenhum caller). `habilitado` injetável p/ teste.
+export function jornadaDoGrind(g: EstadoGrind | undefined, habilitado: boolean = JORNADA.habilitado): ContextoJornada | undefined {
+  if (!habilitado || !g) return undefined;
+  const fase = g.jornada.fase;
+  return {
+    fase,
+    forcaInimiga: forcaInimigaJornada(fase),
+    forcaAliada: 50, // + poder interno das skills (F1)
+    multSucata: multSucataJornada(fase),
+  };
+}
+
+// Alterna FARMAR ↔ AVANÇAR (decisão do jogador na UI do diorama).
+export function alternarModoAvanco(career: CareerState): CareerState {
+  const g = career.grind;
+  if (!g) return career;
+  const modoAvanco = g.jornada.modoAvanco === "farm" ? "avancar" : "farm";
+  return { ...career, grind: { ...g, jornada: { ...g.jornada, modoAvanco } } };
 }
 
 // Migração de save (chamada por normalizarCareer): shape inválido → descarta (default seguro).
@@ -209,6 +246,23 @@ export function normalizarGrind(bruto: unknown): EstadoGrind | undefined {
     recordeFaseExpedicao: Math.max(0, Math.floor(num(g.recordeFaseExpedicao))),
     expedicaoDia: typeof g.expedicaoDia === "string" ? g.expedicaoDia : "",
     expedicoesNoDia: Math.max(0, Math.floor(num(g.expedicoesNoDia))),
+    jornada: normalizarJornada(g.jornada, Math.max(0, Math.floor(num(g.recordeFaseExpedicao)))),
+  };
+}
+
+// Save antigo (sem jornada) começa na fase 1, mas o recorde da Expedição antiga vira o
+// faseMax — a profundidade que o jogador já provou é honrada no novo sistema.
+function normalizarJornada(bruto: unknown, recordeLegado: number): EstadoJornada {
+  const base = jornadaInicial();
+  if (recordeLegado > 0) base.faseMax = Math.min(JORNADA.trilhaMax, Math.max(1, recordeLegado));
+  if (!bruto || typeof bruto !== "object") return base;
+  const j = bruto as Partial<EstadoJornada>;
+  const fase = Math.min(JORNADA.trilhaMax, Math.max(1, Math.floor(num(j.fase)) || 1));
+  return {
+    fase,
+    faseMax: Math.min(JORNADA.trilhaMax, Math.max(fase, Math.floor(num(j.faseMax)) || base.faseMax)),
+    modoAvanco: j.modoAvanco === "farm" ? "farm" : "avancar",
+    bossVencidos: Array.isArray(j.bossVencidos) ? j.bossVencidos.filter((b): b is number => typeof b === "number" && ehGate(b)) : [],
   };
 }
 
@@ -296,6 +350,7 @@ export interface PartidaGrind {
   drop?: { slot: SlotGear; seedItem: number }; // raridade SEMPRE GRIND.dropRaridade
   inicioSeg: number;
   duracaoSeg: number;
+  fase?: number; // 🗺️ fase da Jornada em que foi jogada (ausente = jornada desligada)
 }
 
 export interface PartidaEmAndamento {
@@ -334,6 +389,18 @@ function escolherCampeao(pool: ChampionMastery[], anterior: string | null, r: ()
   return id;
 }
 
+// 🗺️ Contexto da Jornada pro dia (undefined = jornada desligada ⇒ comportamento antigo).
+// TODAS as partidas pendentes do tick resolvem na fase CORRENTE; o avanço acontece no
+// aplicarGrind (vitória sobe a fase), então o próximo tick já resolve na fase nova.
+// Trade-off documentado: quem volta depois de horas resolve o lote inteiro na fase da
+// manhã (a Sucata funda entra a partir do tick seguinte) — determinístico e simples.
+export interface ContextoJornada {
+  fase: number;
+  forcaInimiga: number; // forcaInimigaJornada(fase) — com PISO na calibração antiga
+  forcaAliada: number; // 50 + poder interno (skills — F1); nunca poder de carreira extra
+  multSucata: number; // multSucataJornada(fase)
+}
+
 // `mods` vêm da árvore de talentos (modsDoGrind). Default neutro mantém os callers
 // antigos válidos. IMPORTANTE (idempotência): a RECOMPENSA de cada partida depende do
 // ÍNDICE (seed), não da duração — mudar os mods reposiciona as partidas no tempo, mas
@@ -343,6 +410,7 @@ export function resolverGrind(
   segundosAcumulados: number,
   seedDia: number,
   mods: ModsGrind = MODS_NEUTROS,
+  jornada?: ContextoJornada,
 ): ResultadoGrind {
   const segundos = clampSeg(segundosAcumulados);
   const noTeto = segundos >= GRIND.tetoSegundosDia;
@@ -368,8 +436,10 @@ export function resolverGrind(
       return { completas, atual, tetoAtingido: noTeto };
     }
 
-    // resultado pela MESMA matemática de combate do jogo (nada de segundo sistema):
-    // contexto neutro de normal — sem draft, sem dificuldade de elo, times ~50.
+    // resultado pela MESMA matemática de combate do jogo (nada de segundo sistema).
+    // Sem jornada: contexto neutro antigo (47-53). Com jornada: a força inimiga escala
+    // com a fase (piso na faixa antiga — a Regra 4 nunca fura) e as skills entram como
+    // força aliada (poder INTERNO do treino, jamais poder de carreira).
     const res = simularPartida(
       jogador,
       {
@@ -377,8 +447,10 @@ export function resolverGrind(
         forcaMetaCampeao: 50,
         comp: 50,
         compInimigo: 50,
-        forcaTimeAliado: 50,
-        forcaTimeInimigo: Math.round(entre(meta, GRIND.forcaInimigaMin, GRIND.forcaInimigaMax)),
+        forcaTimeAliado: jornada ? jornada.forcaAliada : 50,
+        forcaTimeInimigo: jornada
+          ? Math.round(jornada.forcaInimiga + entre(meta, -1.5, 1.5))
+          : Math.round(entre(meta, GRIND.forcaInimigaMin, GRIND.forcaInimigaMax)),
       },
       (sp ^ 0xbeef) >>> 0,
     );
@@ -387,8 +459,10 @@ export function resolverGrind(
       ? { slot: SLOTS_GEAR[Math.floor(meta() * SLOTS_GEAR.length)].slot, seedItem: Math.floor(meta() * 0x7fffffff) }
       : undefined;
 
-    // $ escala com o talento de Ouro; maestria NÃO escala (Regra 4 — segura o teto)
+    // $ escala com o talento de Ouro; maestria NÃO escala (Regra 4 — segura o teto).
+    // Sucata escala com a PROFUNDIDADE da jornada (economia fechada — o prêmio da parede).
     const dinheiroBase = res.vitoria ? GRIND.dinheiroVitoria : GRIND.dinheiroDerrota;
+    const sucataBase = sucataDaPartida(sp, mods);
     completas.push({
       idx,
       championId,
@@ -398,10 +472,11 @@ export function resolverGrind(
       nota: res.notaPerformance,
       dinheiro: Math.round(dinheiroBase * mods.goldMult * 100) / 100,
       maestria: res.vitoria ? GRIND.maestriaVitoria : GRIND.maestriaDerrota,
-      sucata: sucataDaPartida(sp, mods),
+      sucata: jornada ? Math.max(1, Math.round(sucataBase * jornada.multSucata)) : sucataBase,
       drop,
       inicioSeg: inicio,
       duracaoSeg: duracao,
+      fase: jornada?.fase,
     });
     inicio += duracao;
     anterior = championId;
@@ -433,6 +508,7 @@ export function aplicarGrind(career: CareerState, resultado: ResultadoGrind): Ap
   let streak = g.streakDia;
   let maiorStreakV = g.maiorStreakV;
   const semana = { ...g.semana };
+  let jornada = g.jornada;
 
   // $ fracionário: acumula o carry e só entrega INTEIROS ao career.dinheiro
   let acumuladoGold = g.goldFracao;
@@ -470,6 +546,17 @@ export function aplicarGrind(career: CareerState, resultado: ResultadoGrind): Ap
     if (streak > semana.maiorStreakV) semana.maiorStreakV = streak;
     if (-streak > semana.maiorStreakD) semana.maiorStreakD = -streak;
     if (p.drop) semana.drops += 1;
+
+    // 🗺️ Jornada: vitória AVANÇA a fase (modo avançar) — o gate de região (10/20/30/40)
+    // segura até o Desafio presencial ser vencido; a trilha para no fim da 1ª dificuldade.
+    // Derrota nunca recua nem custa nada (parede sem punição — o chão do idle).
+    if (p.fase !== undefined && p.vitoria && jornada.modoAvanco === "avancar") {
+      const bloqueadaNoGate = ehGate(jornada.fase) && !jornada.bossVencidos.includes(jornada.fase);
+      if (!bloqueadaNoGate && jornada.fase < JORNADA.trilhaMax) {
+        const fase = jornada.fase + 1;
+        jornada = { ...jornada, fase, faseMax: Math.max(jornada.faseMax, fase) };
+      }
+    }
   }
 
   const inteiros = Math.floor(acumuladoGold);
@@ -490,6 +577,7 @@ export function aplicarGrind(career: CareerState, resultado: ResultadoGrind): Ap
     bauPendente,
     pityLendario,
     totalBaus,
+    jornada,
   };
 
   return {

@@ -36,6 +36,17 @@ import {
 } from "./expedicao";
 import { gerarItem } from "./itens";
 import { criarRng, entre } from "./rng";
+import {
+  comprarSkill,
+  equiparSkill,
+  modsSkills,
+  normalizarSkills,
+  normalizarSlots,
+  respecSkills,
+  slotsVazios,
+  type Skills,
+  type SkillSlots,
+} from "./skills";
 import { simularPartida } from "./simularPartida";
 import { featureLiberada } from "./unlocks";
 import type { CareerState, ChampionMastery, KDA, Player } from "./types";
@@ -105,6 +116,8 @@ export interface EstadoGrind {
   expedicaoDia: string; // "YYYY-MM-DD" do contador de entradas (reseta na virada)
   expedicoesNoDia: number; // corridas iniciadas hoje (limitador EXPEDICAO.maxPorDia)
   jornada: EstadoJornada; // 🗺️ trilha de fases do Treino (farm/avançar — ver data/jornada.ts)
+  skills: Skills; // ⚡ id da skill → nível comprado (Sucata — economia fechada)
+  skillSlots: SkillSlots; // 3 slots; só as equipadas aplicam efeito (loadout é decisão)
 }
 
 // 🗺️ Jornada de Treino: a fase que o idle está lutando e a alavanca farm/avançar.
@@ -165,6 +178,8 @@ export function estadoGrindInicial(dia: string, seedDia: number): EstadoGrind {
     expedicaoDia: "",
     expedicoesNoDia: 0,
     jornada: jornadaInicial(),
+    skills: {},
+    skillSlots: slotsVazios(),
   };
 }
 
@@ -181,7 +196,9 @@ export function jornadaDoGrind(g: EstadoGrind | undefined, habilitado: boolean =
   return {
     fase,
     forcaInimiga: forcaInimigaJornada(fase),
-    forcaAliada: 50, // + poder interno das skills (F1)
+    // poder INTERNO das skills equipadas empurra a parede (capado no engine de skills;
+    // jamais poder de carreira — só o treino sente)
+    forcaAliada: 50 + modsSkills(g.skills, g.skillSlots).poder,
     multSucata: multSucataJornada(fase),
   };
 }
@@ -200,6 +217,7 @@ export function normalizarGrind(bruto: unknown): EstadoGrind | undefined {
   const g = bruto as Partial<EstadoGrind>;
   if (typeof g.dia !== "string" || typeof g.seedDia !== "number") return undefined;
   const s = g.semana;
+  const skillsSaneadas = normalizarSkills(g.skills);
   return {
     ligado: g.ligado !== false,
     dia: g.dia,
@@ -247,6 +265,8 @@ export function normalizarGrind(bruto: unknown): EstadoGrind | undefined {
     expedicaoDia: typeof g.expedicaoDia === "string" ? g.expedicaoDia : "",
     expedicoesNoDia: Math.max(0, Math.floor(num(g.expedicoesNoDia))),
     jornada: normalizarJornada(g.jornada, Math.max(0, Math.floor(num(g.recordeFaseExpedicao)))),
+    skills: skillsSaneadas,
+    skillSlots: normalizarSlots(g.skillSlots, skillsSaneadas),
   };
 }
 
@@ -690,6 +710,33 @@ export function respecGrind(career: CareerState): CareerState {
   return { ...career, grind: { ...g, talentos: r.talentos, sucata: r.sucata } };
 }
 
+// ---- ⚡ Skills sobre o CareerState (Sucata é o único recurso — economia fechada) ----
+
+export function comprarSkillGrind(career: CareerState, id: string): { career: CareerState; nivel: number } | null {
+  const g = career.grind;
+  if (!g) return null;
+  const r = comprarSkill(g.skills, g.sucata, id);
+  if (!r) return null;
+  return { career: { ...career, grind: { ...g, skills: r.skills, sucata: r.sucata } }, nivel: r.nivel };
+}
+
+// Equipa/desequipa no slot (a mesma skill nunca ocupa dois slots).
+export function equiparSkillGrind(career: CareerState, idx: number, id: string | null): CareerState {
+  const g = career.grind;
+  if (!g) return career;
+  const slots = equiparSkill(g.skillSlots, g.skills, idx, id);
+  if (slots === g.skillSlots) return career;
+  return { ...career, grind: { ...g, skillSlots: slots } };
+}
+
+// Respec de skills GRÁTIS (mesma decisão dos talentos): devolve tudo e esvazia os slots.
+export function respecSkillsGrind(career: CareerState): CareerState {
+  const g = career.grind;
+  if (!g) return career;
+  const r = respecSkills(g.skills, g.sucata);
+  return { ...career, grind: { ...g, skills: r.skills, skillSlots: r.slots, sucata: r.sucata } };
+}
+
 // Equipa 1 cosmético por tipo (só se possuído). `id` undefined = desequipa o tipo.
 export function equiparCosmeticoGrind(career: CareerState, tipo: "skin" | "trilha" | "pet", id?: string): CareerState {
   const g = career.grind;
@@ -710,9 +757,18 @@ export function fecharSemanaGrind(career: CareerState): CareerState {
 // progresso. O loot só é APLICADO ao encerrar a corrida (finalizarExpedicaoGrind).
 // ============================================================================
 
-// Mods da Expedição vindos da árvore (Fúria +HP, Cofre +loot, Trevo começa mais fundo).
+// Mods do modo ativo: árvore (Fúria +HP, Cofre +loot, Trevo começa mais fundo) + SKILLS
+// equipadas (Muralha/Foco = escudo, Vampirismo = cura extra, Fúria/Flechas = +HP).
 export function modsExpedicaoDoGrind(g: EstadoGrind | undefined): ModsExpedicao {
-  return g ? modsExpedicaoDeTalentos(g.talentos) : MODS_EXP_NEUTROS;
+  if (!g) return MODS_EXP_NEUTROS;
+  const talentos = modsExpedicaoDeTalentos(g.talentos);
+  const sk = modsSkills(g.skills, g.skillSlots);
+  return {
+    ...talentos,
+    bonusHp: talentos.bonusHp + sk.hp,
+    danoMult: Math.max(0.5, talentos.danoMult * (1 - sk.escudo)), // nunca imortal
+    curaExtra: talentos.curaExtra + sk.cura,
+  };
 }
 
 // Contador de entradas do dia (a Expedição não passa por acumularSegundosGrind).

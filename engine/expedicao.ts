@@ -119,14 +119,16 @@ export const BARRA_CHEIA = GRIND_PROP.barraCheia;
 // trabalho dos wrappers em grind.ts (finalizarExpedicaoGrind) — mesma disciplina do baú.
 // ============================================================================
 
-// Modificadores da árvore que ajudam a Expedição (preenchidos na Fase 3; neutros aqui).
+// Modificadores da árvore (talentos) e das SKILLS equipadas que ajudam o modo ativo.
 export interface ModsExpedicao {
-  bonusHp: number; // + HP máximo do herói (talento)
+  bonusHp: number; // + HP máximo do herói (talento Fúria + skills)
   faseInicial: number; // começa em fase avançada (talento) — 1 = do início
   lootMult: number; // multiplica a Sucata por fase (talento)
+  danoMult: number; // × no dano recebido (skill Muralha/Foco: <1 = escudo; nunca 0)
+  curaExtra: number; // + fração de cura por fase limpa (skill Vampirismo)
 }
 
-export const MODS_EXP_NEUTROS: ModsExpedicao = { bonusHp: 0, faseInicial: 1, lootMult: 1 };
+export const MODS_EXP_NEUTROS: ModsExpedicao = { bonusHp: 0, faseInicial: 1, lootMult: 1, danoMult: 1, curaExtra: 0 };
 
 // Deriva os mods de Expedição da árvore de talentos (liga árvore↔expedição). Capstones:
 // Fúria → +HP, Cofre → +loot, Trevo (maxado) → começa 1 fase à frente. Puro.
@@ -143,7 +145,7 @@ export function modsExpedicaoDeTalentos(talentos: Talentos | undefined): ModsExp
     if (e.expLoot) lootExtra += e.expLoot * nivel;
     if (e.expFase) faseExtra += e.expFase * nivel;
   }
-  return { bonusHp, lootMult: 1 + lootExtra, faseInicial: 1 + Math.floor(faseExtra) };
+  return { ...MODS_EXP_NEUTROS, bonusHp, lootMult: 1 + lootExtra, faseInicial: 1 + Math.floor(faseExtra) };
 }
 
 // O que aconteceu ao resolver UMA fase (pra UI encenar e pra telemetria).
@@ -173,10 +175,11 @@ export function forcaDaFase(fase: number): number {
   return ehBoss(fase) ? base * EXPEDICAO.bossMult : base;
 }
 
-// Dano MÉDIO (sem RNG) — base do preview de risco. Cresce com a razão força-da-fase/herói.
+// Dano MÉDIO (sem RNG) — base do preview de risco. Cresce com a razão força-da-fase/herói;
+// o escudo das skills (danoMult < 1) reduz — e o preview conta com ele (honesto).
 function danoMedio(player: Player, fase: number, mods: ModsExpedicao): number {
   const razao = forcaDaFase(fase) / poderHeroi(player);
-  return hpMaximo(player, mods) * EXPEDICAO.danoFracaoBase * razao;
+  return hpMaximo(player, mods) * EXPEDICAO.danoFracaoBase * razao * mods.danoMult;
 }
 
 function rngFase(seed: number, fase: number, sal: number) {
@@ -235,8 +238,8 @@ function resolverFase(exp: EstadoExpedicao, player: Player, mods: ModsExpedicao)
     return { exp: morto, evento: { fase, boss, limpou: false, morreu: true, danoRecebido: exp.hpAtual, cura: 0, sucata: 0, ganhouBau: false, hpApos: 0 } };
   }
 
-  // ✅ limpou: bebe o dano, recupera um pouco, embolsa o loot e oferece o dilema.
-  const cura = Math.round(exp.hpMax * EXPEDICAO.curaPorFase);
+  // ✅ limpou: bebe o dano, recupera um pouco (skill Vampirismo aumenta), embolsa o loot.
+  const cura = Math.round(exp.hpMax * (EXPEDICAO.curaPorFase + mods.curaExtra));
   const hp = Math.min(exp.hpMax, exp.hpAtual - dano + cura);
   const sucata = sucataDaFase(fase, mods);
   const ganhouBau = ganhaBauNaFase(exp.seed, fase);

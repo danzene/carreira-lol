@@ -102,6 +102,12 @@ import {
   type FimExpedicao,
 } from "@/engine/grind";
 import { passivoAtivo, type EventoFase } from "@/engine/expedicao";
+import {
+  executarSessao as executarSessaoEngine,
+  definirFoco as definirFocoEngine,
+  type ParamsSessao,
+  type ResultadoSessao,
+} from "@/engine/gamingHouse";
 import { defCosmetico, type TierBau } from "@/data/grindProposito";
 import { cerimoniasDeUnlocks, migrarUnlocks } from "@/engine/unlocks";
 import { gerarItem } from "@/engine/itens";
@@ -212,6 +218,9 @@ interface CareerStore {
   comprarSkill: (id: string) => boolean;
   equiparSkill: (idx: number, id: string | null) => void;
   respecSkills: () => void;
+  // 🏠 Gaming House
+  executarSessaoCasa: (p: Omit<ParamsSessao, "agora" | "timeIdAlvo">) => ResultadoSessao | null;
+  definirFocoSemana: (foco: AtributoKey[]) => void;
   apagar: (slotId: string) => void;
   sair: () => void;
 }
@@ -425,6 +434,46 @@ export const useCareer = create<CareerStore>((set, get) => ({
     if (!c0?.grind) return;
     const novo = respecSkillsGrind(c0);
     rastrear("skill_respec", { devolvido: (novo.grind?.sucata ?? 0) - c0.grind.sucata });
+    set({ career: novo });
+    if (slotId) salvarSlot(slotId, novo);
+  },
+
+  // 🏠 Executa uma sessão da Gaming House (a MESMA energia de sempre; o engine decide).
+  // O alvo da Análise de Adversário é resolvido AQUI (próximo confronto oficial da liga).
+  executarSessaoCasa: (p) => {
+    const { career: c0, slotId } = get();
+    if (!c0) return null;
+    const career = sincronizarEnergia(c0, Date.now());
+    const timeIdAlvo = p.estacao === "ANALISE_ADVERSARIO" ? proximoConfrontoJogador(career.liga) ?? undefined : undefined;
+    const r = executarSessaoEngine(career, { ...p, timeIdAlvo, agora: Date.now() });
+    if (!r) return null;
+    // missões do passe seguem contando: sessões de treino = "treinar"; stream = "stream"
+    if (p.estacao === "SALA_DE_STREAM") usePasse.getState().progredir("stream");
+    else if (p.estacao !== "ANALISE_ADVERSARIO") usePasse.getState().progredir("treinar");
+    rastrear("sessao_treino", {
+      estacao: p.estacao,
+      intensidade: p.intensidade,
+      variante: p.variante,
+      foco: (r.career.casa?.foco ?? []).join(","),
+      mult_moral: r.mult.moral,
+      mult_foco: r.mult.foco,
+      mult_decrescente: r.mult.decrescente,
+      burnout: r.mult.burnout < 1,
+    });
+    if (r.entrouBurnout) rastrear("burnout_entrou", { fadiga: r.career.casa?.fadiga ?? 0 });
+    if (p.estacao === "ANALISE_ADVERSARIO" && timeIdAlvo) rastrear("analise_adversario_usada", { time: timeIdAlvo });
+    set({ career: r.career });
+    if (slotId) salvarSlot(slotId, r.career);
+    return r;
+  },
+
+  // 🎯 Declara o Foco da Semana (2 atributos; troca livre).
+  definirFocoSemana: (foco) => {
+    const { career: c0, slotId } = get();
+    if (!c0) return;
+    const chave = c0.temporada * 1000 + c0.semanaAtual;
+    const novo = definirFocoEngine(c0, foco, chave);
+    rastrear("foco_semana_definido", { foco: foco.join(",") });
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
   },

@@ -1,28 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { type ReactNode, useEffect, useState } from "react";
-import { ATRIBUTOS, TRACOS } from "@/data/config";
+import { useEffect, useState } from "react";
 import { LOOP } from "@/data/loop";
 import { energiaAgora, proximoUsoEm, usosRestantes } from "@/engine/tempo";
-import { featureLiberada } from "@/engine/unlocks";
-import type { AtributoKey, CareerState, TraitId } from "@/engine/types";
+import type { CareerState } from "@/engine/types";
 import { useCareer } from "@/store/careerStore";
-import AnimacaoAcao, { type TipoAcao } from "./AnimacaoAcao";
 import AnimatedNumber from "./juice/AnimatedNumber";
 
-type Painel = null | "focado" | "especial" | "mental";
-type Anim = { tipo: TipoAcao; titulo: string; legenda: string };
+// Painel da semana: energia, JOGAR, a GAMING HOUSE (o treino profundo — substituiu os
+// 4 botões vagos de TREINO/ESPECIAL/STREAM/MENTAL) e o avanço de tempo.
 
 export default function PainelSemana({ career }: { career: CareerState }) {
-  const treinar = useCareer((s) => s.treinar);
-  const streaming = useCareer((s) => s.streaming);
-  const alteracaoMental = useCareer((s) => s.alteracaoMental);
   const avancarSemana = useCareer((s) => s.avancarSemana);
-
-  const [painel, setPainel] = useState<Painel>(null);
-  const [aviso, setAviso] = useState<string | null>(null);
-  const [anim, setAnim] = useState<Anim | null>(null);
 
   const [agora, setAgora] = useState(() => Date.now());
   useEffect(() => {
@@ -37,39 +27,6 @@ export default function PainelSemana({ career }: { career: CareerState }) {
   const liberaAvancar = proximoUsoEm(career.avancosEm, agora);
   const liberaDescansar = proximoUsoEm(career.descansosEm, agora);
   const podeSoloq = energia >= LOOP.custoSoloq;
-
-  function treino(k: AtributoKey, especial: boolean) {
-    if (!treinar(k, especial)) setAviso("Sem energia.");
-    else {
-      const nome = ATRIBUTOS.find((a) => a.chave === k)?.nome ?? k;
-      setAnim({
-        tipo: especial ? "especial" : "treino",
-        titulo: especial ? "TREINO ESPECIAL" : "TREINO",
-        legenda: `${nome} ↑`,
-      });
-      setAviso(null);
-      setPainel(null);
-    }
-  }
-  function live() {
-    if (!streaming()) setAviso("Sem energia para a live.");
-    else {
-      setAnim({ tipo: "stream", titulo: "AO VIVO", legenda: `+$${LOOP.ganhoStream} · +reputação` });
-      setAviso(null);
-    }
-  }
-  function mental(t: TraitId) {
-    if (!alteracaoMental(t)) {
-      setAviso(career.player.tracos.length >= LOOP.maxTracos ? "Você já tem o máximo de traços." : "Sem energia.");
-    } else {
-      const nome = TRACOS.find((x) => x.id === t)?.nome ?? t;
-      setAnim({ tipo: "mental", titulo: "FOCO MENTAL", legenda: `Novo traço: ${nome}` });
-      setAviso(null);
-      setPainel(null);
-    }
-  }
-
-  const tracosDisponiveis = TRACOS.filter((t) => t.inicial && !(career.player.tracos ?? []).includes(t.id));
 
   return (
     <div className="border-2 border-borda bg-painel p-5">
@@ -108,69 +65,21 @@ export default function PainelSemana({ career }: { career: CareerState }) {
           </span>
           <span className="text-[9px] font-normal opacity-80">−{LOOP.custoSoloq}</span>
         </Link>
-        <Atividade rotulo={<IconeAcao acao="treino" label="TREINO" />} sub={`−${LOOP.custoTreino}`} disabled={energia < LOOP.custoTreino} onClick={() => setPainel((p) => (p === "focado" ? null : "focado"))} />
-        <Atividade rotulo={<IconeAcao acao="especial" label="ESPECIAL" />} sub={`−${LOOP.custoEspecial}`} disabled={energia < LOOP.custoEspecial} onClick={() => setPainel((p) => (p === "especial" ? null : "especial"))} />
-        <Atividade
-          rotulo={<IconeAcao acao="stream" label="STREAM" />}
-          sub={featureLiberada(career, "stream") ? `−${LOOP.custoStream} +$` : "🔒 semana 2"}
-          disabled={!featureLiberada(career, "stream") || energia < LOOP.custoStream}
-          onClick={live}
-        />
-        <Atividade
-          rotulo={<IconeAcao acao="mental" label="MENTAL" />}
-          sub={featureLiberada(career, "mental") ? `−${LOOP.custoAlteracao}` : "🔒 semana 2"}
-          disabled={!featureLiberada(career, "mental") || energia < LOOP.custoAlteracao}
-          onClick={() => setPainel((p) => (p === "mental" ? null : "mental"))}
-        />
+        {/* 🏠 os 4 botões vagos viram a GAMING HOUSE (treino profundo: estação ×
+            intensidade × foco). Ocupa o espaço deles no grid. */}
+        <Link
+          href="/casa"
+          className="col-span-2 flex flex-col items-center gap-0.5 border-2 border-ciano bg-ciano/10 px-2 py-3 text-center font-pixel text-[11px] text-ciano transition hover:bg-ciano hover:text-fundo"
+        >
+          <span className="flex flex-col items-center gap-1">
+            <span className="text-2xl leading-none">🏠</span>
+            <span>GAMING HOUSE</span>
+          </span>
+          <span className="text-[9px] font-normal opacity-80">
+            treino · stream · bem-estar{energia >= 100 ? " · ⚡ cheia!" : ""}
+          </span>
+        </Link>
       </div>
-
-      {(painel === "focado" || painel === "especial") && (
-        <div className="mt-3 border-2 border-borda bg-fundo/40 p-3">
-          <p className="mb-2 text-xs text-suave">
-            Treinar qual atributo? (+{painel === "especial" ? LOOP.ganhoEspecial : LOOP.ganhoTreino})
-          </p>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {ATRIBUTOS.map((a) => (
-              <button
-                key={a.chave}
-                type="button"
-                onClick={() => treino(a.chave, painel === "especial")}
-                className="flex flex-col items-center gap-0.5 border-2 border-borda bg-painel p-2 text-center transition hover:border-rosa"
-              >
-                <span className="text-xs text-texto">{a.nome}</span>
-                <span className="font-pixel text-[11px] text-ciano">
-                  <AnimatedNumber valor={Math.round(career.player.atributos[a.chave])} />
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {painel === "mental" && (
-        <div className="mt-3 border-2 border-borda bg-fundo/40 p-3">
-          <p className="mb-2 text-xs text-suave">Ganhar um traço novo (até {LOOP.maxTracos}):</p>
-          {tracosDisponiveis.length === 0 ? (
-            <p className="text-xs text-suave">Nenhum traço novo disponível.</p>
-          ) : (
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {tracosDisponiveis.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => mental(t.id)}
-                  className="border-2 border-borda bg-painel p-2 text-left transition hover:border-rosa"
-                >
-                  <span className="font-pixel text-[11px] text-ciano">{t.nome}</span>
-                  <span className="mt-1 block text-[12px] text-suave">{t.desc}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {aviso && <p className="mt-2 text-xs text-amber-400">{aviso}</p>}
 
       <p className="mt-3 text-center text-[11px] text-suave">
         A energia regenera sozinha (2h pra encher). Avançar/descansar a semana têm limite por tempo.
@@ -179,11 +88,7 @@ export default function PainelSemana({ career }: { career: CareerState }) {
         <button
           type="button"
           disabled={usosAvancar <= 0}
-          onClick={() => {
-            avancarSemana("normal");
-            setAviso(null);
-            setPainel(null);
-          }}
+          onClick={() => avancarSemana("normal")}
           className="flex flex-col items-center gap-0.5 border-2 border-ciano bg-ciano/10 py-3 font-pixel text-[11px] text-ciano transition hover:bg-ciano hover:text-fundo disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-ciano/10 disabled:hover:text-ciano"
         >
           ⏭️ AVANÇAR SEMANA
@@ -194,21 +99,15 @@ export default function PainelSemana({ career }: { career: CareerState }) {
         <button
           type="button"
           disabled={usosDescansar <= 0}
-          onClick={() => {
-            avancarSemana("descanso");
-            setAviso(null);
-            setPainel(null);
-          }}
+          onClick={() => avancarSemana("descanso")}
           className="flex flex-col items-center gap-0.5 border-2 border-borda bg-fundo/40 py-3 font-pixel text-[11px] text-suave transition hover:border-suave disabled:cursor-not-allowed disabled:opacity-40"
         >
           😴 DESCANSAR
           <span className="text-[9px] font-normal opacity-80">
-            {usosDescansar > 0 ? `${usosDescansar}/${LOOP.maxPassesJanela} · energia cheia` : `🔒 ${fmt(liberaDescansar)}`}
+            {usosDescansar > 0 ? `${usosDescansar}/${LOOP.maxPassesJanela} · energia cheia · zera fadiga` : `🔒 ${fmt(liberaDescansar)}`}
           </span>
         </button>
       </div>
-
-      {anim && <AnimacaoAcao tipo={anim.tipo} titulo={anim.titulo} legenda={anim.legenda} onFechar={() => setAnim(null)} />}
     </div>
   );
 }
@@ -221,37 +120,4 @@ function fmt(ms: number): string {
   if (h > 0) return `${h}h${m.toString().padStart(2, "0")}`;
   if (m > 0) return `${m}m${seg.toString().padStart(2, "0")}s`;
   return `${seg}s`;
-}
-
-function IconeAcao({ acao, label }: { acao: TipoAcao; label: string }) {
-  return (
-    <span className="flex flex-col items-center gap-1">
-      <img src={`/carreira/icones/${acao}.png`} alt="" className="img-hd h-9 w-9" />
-      <span>{label}</span>
-    </span>
-  );
-}
-
-function Atividade({
-  rotulo,
-  sub,
-  onClick,
-  disabled = false,
-}: {
-  rotulo: ReactNode;
-  sub: string;
-  onClick: () => void;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className="flex flex-col items-center gap-0.5 border-2 border-borda bg-fundo/40 px-2 py-3 text-center font-pixel text-[11px] text-texto transition hover:border-suave disabled:opacity-40"
-    >
-      {rotulo}
-      <span className="text-[9px] font-normal text-suave">{sub}</span>
-    </button>
-  );
 }

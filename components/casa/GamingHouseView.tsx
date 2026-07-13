@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ATRIBUTOS, TRACOS } from "@/data/config";
-import { CASA, ESTACOES, VARIANTES_MENTAL, type EstacaoId, type Intensidade, type VarianteMental } from "@/data/gamingHouse";
+import { CASA, ESTACOES, TIPOS_STREAM, VARIANTES_MENTAL, type EstacaoId, type Intensidade, type TipoStream, type VarianteMental } from "@/data/gamingHouse";
 import { LOOP } from "@/data/loop";
 import { timeDe } from "@/data/times";
 import { casaDe, emBurnout, multiplicadoresSessao, tendenciasDoTime } from "@/engine/gamingHouse";
@@ -31,6 +31,7 @@ export default function GamingHouseView() {
   const cenaRef = useRef<CenaCasa | null>(null);
   const [selecionada, setSelecionada] = useState<EstacaoId | null>(null);
   const [intensidade, setIntensidade] = useState<Intensidade>("normal");
+  const [tipoStream, setTipoStream] = useState<TipoStream>("ranqueada");
   const [variante, setVariante] = useState<VarianteMental | "traco">("academia");
   const [championId, setChampionId] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
@@ -122,6 +123,7 @@ export default function GamingHouseView() {
       intensidade,
       championId: championId ?? undefined,
       variante: variante === "traco" ? undefined : variante,
+      tipoStream: selecionada === "SALA_DE_STREAM" ? tipoStream : undefined,
     });
     if (!r) {
       setAviso("Sem energia pra essa sessão.");
@@ -203,6 +205,8 @@ export default function GamingHouseView() {
           estacao={selecionada}
           intensidade={intensidade}
           setIntensidade={setIntensidade}
+          tipoStream={tipoStream}
+          setTipoStream={setTipoStream}
           variante={variante}
           setVariante={setVariante}
           championId={championId}
@@ -279,12 +283,14 @@ function SeletorFoco({ atual, onConfirmar }: { atual: AtributoKey[]; onConfirmar
 }
 
 function PainelEstacao({
-  estacao, intensidade, setIntensidade, variante, setVariante, championId, setChampionId,
+  estacao, intensidade, setIntensidade, tipoStream, setTipoStream, variante, setVariante, championId, setChampionId,
   agora, energia, proximoAdv, onConfirmar, onFechar, alteracaoMental,
 }: {
   estacao: EstacaoId;
   intensidade: Intensidade;
   setIntensidade: (i: Intensidade) => void;
+  tipoStream: TipoStream;
+  setTipoStream: (t: TipoStream) => void;
   variante: VarianteMental | "traco";
   setVariante: (v: VarianteMental | "traco") => void;
   championId: string | null;
@@ -306,9 +312,11 @@ function PainelEstacao({
     (estacao === "ACADEMIA_SONO_TERAPIA" && !featureLiberada(career, "mental"));
 
   const ehMental = estacao === "ACADEMIA_SONO_TERAPIA";
+  const ehStream = estacao === "SALA_DE_STREAM";
   const varSel = ehMental && variante !== "traco" ? VARIANTES_MENTAL[variante] : null;
+  const streamSel = ehStream ? TIPOS_STREAM[tipoStream] : null;
   const recuperacao = varSel !== null && varSel.mental === 0;
-  const custo = varSel ? varSel.custo : Math.round(def.custoBase * int.custo);
+  const custo = varSel ? varSel.custo : streamSel ? streamSel.custo : Math.round(def.custoBase * int.custo);
   const semEnergia = energia < custo;
   const nSessoes = casa.sessoesSemana[estacao] ?? 0;
   const tracosDisponiveis = TRACOS.filter((t) => t.inicial && !(career.player.tracos ?? []).includes(t.id));
@@ -405,8 +413,36 @@ function PainelEstacao({
                   <p className="mb-2 text-[11px] text-amber-300">Sem confronto oficial à vista — entre numa liga pra ter o que estudar.</p>
                 ))}
 
-              {/* intensidades com números explícitos (não vale pra recuperação/análise) */}
-              {!recuperacao && estacao !== "ANALISE_ADVERSARIO" && (
+              {/* 🔴 stream: a decisão é o TIPO (co-stream destrava por reputação) */}
+              {ehStream && (
+                <div className="mb-2 grid grid-cols-1 gap-1.5 sm:grid-cols-3">
+                  {(Object.entries(TIPOS_STREAM) as [TipoStream, (typeof TIPOS_STREAM)[TipoStream]][]).map(([id, t]) => {
+                    const travado = career.player.reputacao < t.repMin;
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        disabled={travado}
+                        onClick={() => setTipoStream(id)}
+                        title={travado ? `Destrava com ${t.repMin} de reputação` : t.desc}
+                        className={`border p-1.5 text-left transition disabled:opacity-40 ${tipoStream === id && !travado ? "border-rosa bg-rosa/10" : "border-borda hover:border-suave"}`}
+                      >
+                        <span className={`block font-pixel text-[9px] ${tipoStream === id && !travado ? "text-rosa" : "text-texto"}`}>
+                          {t.emoji} {t.nome}
+                          {travado && <span className="ml-1 text-suave">🔒 rep {t.repMin}</span>}
+                        </span>
+                        <span className="block text-[10px] text-suave">
+                          +${t.dinheiro} · +{t.reputacao} rep · fadiga +{t.fadiga}
+                          {t.moral > 0 && <span className="text-sky-300"> · +{t.moral} moral</span>}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* intensidades com números explícitos (não vale pra recuperação/análise/stream) */}
+              {!recuperacao && !ehStream && estacao !== "ANALISE_ADVERSARIO" && (
                 <div className="mb-2 grid grid-cols-3 gap-1.5">
                   {(Object.entries(CASA.intensidades) as [Intensidade, (typeof CASA.intensidades)[Intensidade]][]).map(([id, i]) => (
                     <button
@@ -433,12 +469,12 @@ function PainelEstacao({
                     {estacao === "CHAMPION_PRACTICE" && def.maestria && <span className="text-amber-300"> · +{Math.round(def.maestria * fator * 10) / 10} maestria</span>}
                   </p>
                 )}
-                {def.dinheiro && <p className="text-amber-300">+${Math.round(def.dinheiro * (recuperacao ? 1 : int.ganho))} · +{def.reputacao} reputação</p>}
+                {streamSel && <p className="text-amber-300">+${streamSel.dinheiro} · +{streamSel.reputacao} reputação{streamSel.moral > 0 && <span className="text-sky-300"> · +{streamSel.moral} moral</span>}</p>}
                 {varSel && varSel.moral !== 0 && <p className="text-sky-300">+{varSel.moral} moral</p>}
                 {varSel && varSel.fadiga < 0 && <p className="text-sky-300">{varSel.fadiga} fadiga{varSel.limpaBurnout ? " · sara burnout" : ""}</p>}
                 <p className="mt-1 text-suave">
                   custo <span className="text-texto">−{custo}⚡</span>
-                  {!recuperacao && <> · fadiga <span className="text-texto">+{varSel ? varSel.fadiga : Math.round(def.fadigaBase * int.fadiga)}</span></>}
+                  {!recuperacao && <> · fadiga <span className="text-texto">+{varSel ? varSel.fadiga : streamSel ? streamSel.fadiga : Math.round(def.fadigaBase * int.fadiga)}</span></>}
                   {" · "}mult: moral <b className={mult.moral > 1 ? "text-emerald-400" : mult.moral < 1 ? "text-rose-400" : "text-texto"}>×{mult.moral.toFixed(2)}</b>
                   {mult.foco > 1 && <> · foco <b className="text-ciano">×{mult.foco.toFixed(2)}</b></>}
                   {" · "}

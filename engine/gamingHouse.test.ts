@@ -124,6 +124,21 @@ describe("gaming house — sessões: estações, intensidade, moral, foco, decre
     expect(r.fadigaDelta).toBeGreaterThanOrEqual(ESTACOES.SALA_DE_STREAM.fadigaBase);
   });
 
+  it("stream com TIPOS: react paga menos e dá Moral; co-stream tem gate de reputação", () => {
+    const c = carreira();
+    const ranqueada = sessao(c, "SALA_DE_STREAM")!; // default
+    const react = sessao(c, "SALA_DE_STREAM", { tipoStream: "react" })!;
+    expect(react.dinheiro).toBeLessThan(ranqueada.dinheiro);
+    expect(react.moralDelta).toBeGreaterThan(0); // leve e divertido
+    expect(react.fadigaDelta).toBeLessThan(ranqueada.fadigaDelta);
+    // co-stream: reputação 10 (base) < 40 ⇒ trancado
+    expect(sessao(c, "SALA_DE_STREAM", { tipoStream: "costream" })).toBeNull();
+    const famoso = { ...c, player: { ...c.player, reputacao: 50 } };
+    const cs = sessao(famoso, "SALA_DE_STREAM", { tipoStream: "costream" })!;
+    expect(cs.dinheiro).toBeGreaterThan(ranqueada.dinheiro);
+    expect(cs.reputacao).toBeGreaterThan(ranqueada.reputacao);
+  });
+
   it("bem-estar: terapia recupera Moral, sono derruba fadiga E limpa burnout, academia dá Mental", () => {
     let c = carreira({ moral: 40 });
     c = { ...c, casa: { ...casaDe(c), fadiga: 90, burnoutAte: AGORA + 9999999 } };

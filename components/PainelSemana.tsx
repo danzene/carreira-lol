@@ -76,7 +76,9 @@ export default function PainelSemana({ career }: { career: CareerState }) {
             <span>GAMING HOUSE</span>
           </span>
           <span className="text-[9px] font-normal opacity-80">
-            treino · stream · bem-estar{energia >= 100 ? " · ⚡ cheia!" : ""}
+            {focoPendente(career)
+              ? "🎯 declare o Foco da Semana!"
+              : `treino · stream · bem-estar${energia >= 100 ? " · ⚡ cheia!" : ""}`}
           </span>
         </Link>
       </div>
@@ -110,6 +112,15 @@ export default function PainelSemana({ career }: { career: CareerState }) {
       </div>
     </div>
   );
+}
+
+// O Foco da Semana está pendente? (nunca declarado, ou a semana virou e ele não foi
+// reconfirmado) — vira o lembrete no botão da casa.
+function focoPendente(career: CareerState): boolean {
+  const casa = career.casa;
+  if (!casa) return false;
+  const chave = career.temporada * 1000 + career.semanaAtual;
+  return casa.foco.length === 0 || casa.focoSemana !== chave;
 }
 
 function fmt(ms: number): string {

@@ -100,6 +100,30 @@ export default function RecapSemanal({ recap, onFechar }: { recap: Recap; onFech
     });
   }
 
+  if (recap.casa) {
+    const topAttr = Object.entries(recap.casa.ganhos).sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0))[0];
+    cards.push({
+      titulo: "GAMING HOUSE",
+      corpo: (
+        <div className="flex flex-col items-center gap-2">
+          <p className="font-pixel text-4xl text-texto">🏠 {recap.casa.sessoes}</p>
+          <p className="text-[12px] text-suave">sessões de treino na semana</p>
+          {topAttr && (
+            <p className="text-[13px] text-texto">
+              destaque: <span className="text-emerald-400">+{topAttr[1]} {topAttr[0]}</span>
+            </p>
+          )}
+          <p className="text-[11px] text-suave">😮‍💨 fadiga ao fechar: {Math.round(recap.casa.fadiga)}</p>
+          {recap.casa.foco.length > 0 && (
+            <p className={`text-[11px] ${recap.casa.focoHonrado ? "text-ciano" : "text-amber-300"}`}>
+              🎯 foco {recap.casa.foco.join(" + ")}: {recap.casa.focoHonrado ? "HONRADO ✔" : "não honrado"}
+            </p>
+          )}
+        </div>
+      ),
+    });
+  }
+
   if (recap.grind && recap.grind.partidas > 0) {
     cards.push({
       titulo: "GRIND DE NORMAIS",

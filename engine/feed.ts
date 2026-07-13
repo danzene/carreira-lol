@@ -72,6 +72,9 @@ export interface FatosSemana {
   grindDrops: number; // drops no grind na semana
   grindLendario?: string; // cosmético do baú Lendário aberto na semana (flex máximo)
   grindExpedicao?: number; // fase mais funda alcançada na Expedição nesta semana
+  // 🏠 Gaming House (máx. 1 post: burnout > grind de treino)
+  casaIntensas: number; // sessões INTENSAS na semana ("trancado na gaming house")
+  casaBurnout: boolean; // está/esteve em burnout ao fechar a semana ("precisa de férias")
 }
 
 export function fatosDaSemana(c: CareerState): FatosSemana {
@@ -104,6 +107,8 @@ export function fatosDaSemana(c: CareerState): FatosSemana {
     grindDrops: c.grind?.semana.drops ?? 0,
     grindLendario: (c.grind?.semana.bausLendario ?? 0) > 0 ? c.grind?.semana.lendarioNome : undefined,
     grindExpedicao: (c.grind?.semana.faseExpedicao ?? 0) > 0 ? c.grind?.semana.faseExpedicao : undefined,
+    casaIntensas: c.casa?.intensasSemana ?? 0,
+    casaBurnout: c.casa?.burnoutAte != null,
   };
 }
 
@@ -229,6 +234,24 @@ const TEMPLATES: Record<string, Tpl[]> = {
       "{nome} desceu até a fase {fase} da Expedição só pra sentir o cheiro do perigo ⚔️🐸",
     ] },
   ],
+  casa_grind: [
+    { arquetipo: "torcedor", peso: 60, textos: [
+      "O {nome} tá TRANCADO na gaming house essa semana — treino intenso atrás de treino intenso 🔥🏠",
+      "fontes dizem que a luz da gaming house do {nome} não apaga. O cara quer MUITO 💪",
+    ] },
+    { arquetipo: "meme", peso: 40, textos: [
+      "{nome} conhece mais o aim trainer que a própria cama essa semana 🐸🎯",
+    ] },
+  ],
+  casa_burnout: [
+    { arquetipo: "analista", peso: 60, textos: [
+      "Preocupante: {nome} mostra sinais claros de burnout. Descanso também é treino — alguém avisa a comissão.",
+      "{nome} passou do ponto no treino e o rendimento despencou. Férias já.",
+    ] },
+    { arquetipo: "meme", peso: 40, textos: [
+      "{nome} treinou tanto que virou NPC de sofá 🐸🛋️ (burnout é real)",
+    ] },
+  ],
 };
 
 function preencher(tpl: string, f: FatosSemana): string {
@@ -261,6 +284,9 @@ function gatilhosAtivos(f: FatosSemana): { gatilho: string; relevancia: number }
   if (f.dropMitico) out.push({ gatilho: "drop_mitico", relevancia: 45 });
   // grind: relevância BAIXA e NO MÁXIMO 1 gatilho (o grind não pode dominar o feed).
   // Lendário é o único com relevância alta — é o flex máximo, raríssimo.
+  // 🏠 gaming house: máx. 1 post (burnout fala mais alto que o grind de treino)
+  if (f.casaBurnout) out.push({ gatilho: "casa_burnout", relevancia: 45 });
+  else if (f.casaIntensas >= 4) out.push({ gatilho: "casa_grind", relevancia: 30 });
   if (f.grindLendario) out.push({ gatilho: "grind_lendario", relevancia: 72 });
   else if ((f.grindExpedicao ?? 0) >= 5) out.push({ gatilho: "grind_expedicao", relevancia: 55 });
   else if (f.grindStreakV >= 5) out.push({ gatilho: "grind_maratona", relevancia: 40 });

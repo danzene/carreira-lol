@@ -80,6 +80,17 @@ export default function HallPage() {
             />
           </div>
         )}
+        {career.casa && career.casa.sessoesTotal > 0 && (
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <Placa emoji="🏠" rotulo="sessões de treino" valor={`${career.casa.sessoesTotal}`} />
+            <Placa emoji="🎯" rotulo="semanas honrando o foco" valor={`${career.casa.semanasFocoHonrado}`} />
+            <Placa
+              emoji="🧗"
+              rotulo="maior marco consolidado"
+              valor={`${Math.max(0, ...Object.values(career.casa.consolidado).map((v) => v ?? 0)) || "—"}`}
+            />
+          </div>
+        )}
         {career.grind && (career.grind.recordeFaseExpedicao > 0 || career.grind.jornada.faseMax > 1) && (
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             <Placa emoji="🗺️" rotulo="fase mais funda da Jornada" valor={`${career.grind.jornada.faseMax}`} />

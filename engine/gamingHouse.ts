@@ -13,9 +13,11 @@
 import {
   CASA,
   ESTACOES,
+  TIPOS_STREAM,
   VARIANTES_MENTAL,
   type EstacaoId,
   type Intensidade,
+  type TipoStream,
   type VarianteMental,
 } from "@/data/gamingHouse";
 import type { Attributes, AtributoKey, CareerState, Classe } from "./types";
@@ -170,6 +172,7 @@ export interface ParamsSessao {
   intensidade: Intensidade;
   championId?: string; // CHAMPION_PRACTICE: campeão da pool a praticar
   variante?: VarianteMental; // ACADEMIA_SONO_TERAPIA
+  tipoStream?: TipoStream; // SALA_DE_STREAM: o trade-off é o TIPO (não a intensidade)
   timeIdAlvo?: string; // ANALISE_ADVERSARIO: o PRÓXIMO adversário oficial (borda resolve)
   agora: number; // Date.now() da borda (burnout é por tempo real)
 }
@@ -198,7 +201,11 @@ export function executarSessao(career: CareerState, p: ParamsSessao): ResultadoS
   const variante = p.estacao === "ACADEMIA_SONO_TERAPIA" ? VARIANTES_MENTAL[p.variante ?? "academia"] : null;
   const recuperacao = variante !== null && variante.mental === 0; // sono/terapia
 
-  const custo = variante ? variante.custo : Math.round(def.custoBase * int.custo);
+  // stream: a decisão é o TIPO ($ × moral × fadiga × reputação); co-stream tem gate de rep
+  const stream = p.estacao === "SALA_DE_STREAM" ? TIPOS_STREAM[p.tipoStream ?? "ranqueada"] : null;
+  if (stream && career.player.reputacao < stream.repMin) return null;
+
+  const custo = variante ? variante.custo : stream ? stream.custo : Math.round(def.custoBase * int.custo);
   if (career.player.energia < custo) return null;
   if (p.estacao === "CHAMPION_PRACTICE" && !career.player.pool.some((c) => c.championId === p.championId)) return null;
   if (p.estacao === "ANALISE_ADVERSARIO" && !p.timeIdAlvo) return null;
@@ -227,12 +234,12 @@ export function executarSessao(career: CareerState, p: ParamsSessao): ResultadoS
     maestria = { championId: p.championId, ganho };
   }
 
-  // $ e reputação (SALA_DE_STREAM — tipos detalhados na F2; base = ranqueada)
-  const dinheiro = def.dinheiro ? Math.round(def.dinheiro * (recuperacao ? 1 : int.ganho)) : 0;
-  const reputacao = def.reputacao ? round2(def.reputacao * (recuperacao ? 1 : int.ganho)) : 0;
+  // $ e reputação (SALA_DE_STREAM: definidos pelo TIPO escolhido)
+  const dinheiro = stream ? stream.dinheiro : 0;
+  const reputacao = stream ? stream.reputacao : 0;
 
   // fadiga: acumula (ou dissipa, nas variantes de recuperação)
-  const fadigaDelta = variante ? variante.fadiga : Math.round(def.fadigaBase * int.fadiga);
+  const fadigaDelta = variante ? variante.fadiga : stream ? stream.fadiga : Math.round(def.fadigaBase * int.fadiga);
   let fadiga = clamp(casa.fadiga + fadigaDelta, 0, CASA.fadigaMax);
 
   // burnout: entra ao ESTOURAR a fadiga; sai por tempo, sono ou descanso de semana
@@ -245,9 +252,9 @@ export function executarSessao(career: CareerState, p: ParamsSessao): ResultadoS
   }
   if (variante?.limpaBurnout) fadiga = clamp(fadiga, 0, CASA.fadigaMax);
 
-  // moral: intensa custa um pouco; burnout dói mais; bem-estar recupera
+  // moral: intensa custa um pouco; burnout dói mais; bem-estar/react recuperam
   const moralExtra = emBurnout(casa, p.agora) && !recuperacao ? -CASA.burnoutMoralExtra : 0;
-  const moralDelta = (variante ? variante.moral : int.moral) + moralExtra;
+  const moralDelta = (variante ? variante.moral : stream ? stream.moral : int.moral) + moralExtra;
   const moral = clamp(Math.round((career.player.moral + moralDelta) * 10) / 10, 0, 100);
 
   // análise de adversário (consumível — 1 por vez; estudar de novo troca o alvo)

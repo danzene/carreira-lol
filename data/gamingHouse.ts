@@ -78,6 +78,16 @@ export const ESTACOES: Record<EstacaoId, DefEstacao> = {
   },
 };
 
+// 🔴 Tipos de stream (a decisão da Sala de Stream — F2). A intensidade não se aplica
+// aqui: o TIPO é o trade-off ($ × moral × fadiga × reputação). Co-stream destrava por
+// reputação — o sistema de Reputação existente é o beneficiário.
+export type TipoStream = "ranqueada" | "react" | "costream";
+export const TIPOS_STREAM: Record<TipoStream, { nome: string; emoji: string; desc: string; custo: number; dinheiro: number; reputacao: number; fadiga: number; moral: number; repMin: number }> = {
+  ranqueada: { nome: "Gameplay ranqueada", emoji: "🎮", desc: "Tryhard na live: paga bem, cansa muito.", custo: 15, dinheiro: 60, reputacao: 0.5, fadiga: 18, moral: 0, repMin: 0 },
+  react: { nome: "React & variedade", emoji: "📺", desc: "Leve e divertido: menos $, mais Moral.", custo: 15, dinheiro: 35, reputacao: 0.3, fadiga: 10, moral: 4, repMin: 0 },
+  costream: { nome: "Co-stream de campeonato", emoji: "🏆", desc: "Watch party com a galera grande.", custo: 15, dinheiro: 90, reputacao: 1.0, fadiga: 14, moral: 2, repMin: 40 },
+};
+
 // Variantes da estação de bem-estar (a antiga MENTAL). A 4ª variante — ganhar TRAÇO
 // (alteração mental) — continua existindo via engine/loop.alteracaoMental (código vence).
 export const VARIANTES_MENTAL: Record<VarianteMental, { nome: string; emoji: string; custo: number; fadiga: number; moral: number; mental: number; limpaBurnout: boolean }> = {

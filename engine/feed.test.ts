@@ -102,6 +102,25 @@ describe("feed vivo", () => {
     for (const p of postsSo) expect(p.texto).not.toMatch(/\{[a-zA-Z]+\}/); // {grindStreak} preenchido
   });
 
+  it("gaming house: burnout vira post (e fala mais alto que o grind de treino)", () => {
+    const casa = {
+      fadiga: 100, burnoutAte: 999999999999999, foco: [], focoSemana: 0, sessoesSemana: {},
+      ganhosSemana: {}, intensasSemana: 6, consolidado: {}, analise: null, sessoesTotal: 10, semanasFocoHonrado: 0,
+    };
+    const c = { ...carreira(), casa };
+    const f = fatosDaSemana(c);
+    expect(f.casaBurnout).toBe(true);
+    expect(f.casaIntensas).toBe(6);
+    const gatilhos = gerarPostsFeed(c, f, 9).map((p) => p.gatilho);
+    expect(gatilhos).toContain("casa_burnout");
+    expect(gatilhos).not.toContain("casa_grind"); // burnout suprime o post de grind de treino
+
+    // sem burnout mas com semana intensa: o post de "trancado na gaming house" sai
+    const focado = { ...carreira(), casa: { ...casa, burnoutAte: null } };
+    const g2 = gerarPostsFeed(focado, fatosDaSemana(focado), 9).map((p) => p.gatilho);
+    expect(g2).toContain("casa_grind");
+  });
+
   it("grind: baú Lendário vira o post de flex (nome do cosmético preenchido)", () => {
     const grind = {
       ligado: true, dia: "2026-07-03", seedDia: 1, segundosHoje: 0, partidasAplicadas: 0, streakDia: 0,

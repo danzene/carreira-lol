@@ -105,6 +105,7 @@ import { passivoAtivo, type EventoFase } from "@/engine/expedicao";
 import {
   executarSessao as executarSessaoEngine,
   definirFoco as definirFocoEngine,
+  focoHonrado as focoHonradoCasa,
   type ParamsSessao,
   type ResultadoSessao,
 } from "@/engine/gamingHouse";
@@ -151,6 +152,13 @@ export interface RecapSemanal {
   temporada: number;
   posts: PostFeed[]; // 1-2 posts mais relevantes da semana (o mundo reagiu)
   grind?: import("@/engine/grind").GrindSemana; // totais do Grind de Normais na semana
+  casa?: {
+    sessoes: number; // sessões da semana
+    ganhos: Partial<import("@/engine/types").Attributes>; // XP por atributo (o top vira destaque)
+    fadiga: number; // fadiga ao fechar a semana
+    foco: AtributoKey[]; // o Foco declarado
+    focoHonrado: boolean; // honrou? (streak do Hall)
+  };
 }
 
 interface CareerStore {
@@ -448,8 +456,10 @@ export const useCareer = create<CareerStore>((set, get) => ({
     const r = executarSessaoEngine(career, { ...p, timeIdAlvo, agora: Date.now() });
     if (!r) return null;
     // missões do passe seguem contando: sessões de treino = "treinar"; stream = "stream"
-    if (p.estacao === "SALA_DE_STREAM") usePasse.getState().progredir("stream");
-    else if (p.estacao !== "ANALISE_ADVERSARIO") usePasse.getState().progredir("treinar");
+    if (p.estacao === "SALA_DE_STREAM") {
+      usePasse.getState().progredir("stream");
+      rastrear("stream_tipo", { tipo: p.tipoStream ?? "ranqueada" });
+    } else if (p.estacao !== "ANALISE_ADVERSARIO") usePasse.getState().progredir("treinar");
     rastrear("sessao_treino", {
       estacao: p.estacao,
       intensidade: p.intensidade,
@@ -897,6 +907,7 @@ export const useCareer = create<CareerStore>((set, get) => ({
     }
 
     // recap "wrapped" da semana que fechou + vira as stats pra próxima
+    const sessoesCasa = Object.values(antes.casa?.sessoesSemana ?? {}).reduce((a, b) => a + (b ?? 0), 0);
     const recap: RecapSemanal = {
       atual: antes.statsSemana ?? statsVazias(),
       anterior: antes.statsSemanaAnterior ?? statsVazias(),
@@ -904,6 +915,16 @@ export const useCareer = create<CareerStore>((set, get) => ({
       temporada: antes.temporada,
       posts: posts.slice(0, 2),
       grind: antes.grind && antes.grind.semana.partidas > 0 ? antes.grind.semana : undefined,
+      casa:
+        antes.casa && sessoesCasa > 0
+          ? {
+              sessoes: sessoesCasa,
+              ganhos: antes.casa.ganhosSemana,
+              fadiga: antes.casa.fadiga,
+              foco: antes.casa.foco,
+              focoHonrado: focoHonradoCasa(antes.casa),
+            }
+          : undefined,
     };
     novo = fecharSemanaGrind(fecharSemanaStats(novo));
     const unlocksSemana = cerimoniasDeUnlocks(antes, novo);

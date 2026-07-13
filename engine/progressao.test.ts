@@ -39,9 +39,15 @@ describe("progressão (Punch Club-like)", () => {
     expect(novo.player.pool.some((p) => p.championId === "ZED")).toBe(true);
   });
 
-  it("avançar a semana decai os atributos (sem treinar)", () => {
+  it("avançar a semana decai os atributos (sem treinar) — mas NUNCA abaixo do marco consolidado", () => {
+    // Gaming House (Regra 2): 20/40/60/80 viram pisos permanentes. O atributo base (40)
+    // é um marco — então o decay só morde quem está ACIMA do último piso.
     const c = carreira();
-    const antes = c.player.atributos.mecanica;
-    expect(avancarSemana(c).player.atributos.mecanica).toBeLessThan(antes);
+    const acima = { ...c, player: { ...c.player, atributos: { ...c.player.atributos, mecanica: 45 } } };
+    const depois = avancarSemana(acima);
+    expect(depois.player.atributos.mecanica).toBeLessThan(45); // enferruja...
+    expect(depois.player.atributos.mecanica).toBeGreaterThanOrEqual(40); // ...mas o piso é sagrado
+    // exatamente NO marco: não cai (treino consolidado não se rouba)
+    expect(avancarSemana(c).player.atributos.mecanica).toBe(c.player.atributos.mecanica);
   });
 });

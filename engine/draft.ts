@@ -1,5 +1,5 @@
 import type { Rng } from "./rng";
-import type { ChampionDef, Role } from "./types";
+import type { ChampionDef, Classe, Role } from "./types";
 
 // Draft 5v5 (pick & ban). PURO: recebe estado → devolve estado.
 // "azul" = seu time; "vermelho" = inimigo.
@@ -133,12 +133,16 @@ function rolesCobertas(ids: string[], map: Map<string, ChampionDef>): Set<Role> 
 // Escolha da IA (inimigo, ou coach do seu time). `comfort` só pesa pro coach.
 // `modo` muda o clima: soloq sorteia (meta pesa, mas todo mundo aparece);
 // competitivo mira os melhores. `rng` default 0 = determinístico (compatível).
+// `vies` (Análise de Adversário): classes FAVORITAS do time — quando presente, a IA
+// tende a picá-las (~2/3 das vezes que há candidato do viés). É o que torna a
+// "tendência" revelada pelo Quadro Tático VERDADEIRA e counterável no draft.
 export function escolhaIA(
   e: EstadoDraft,
   banco: ChampionDef[],
   comfort: string[] = [],
   modo: ModoDraft = "competitivo",
   rng: Rng = () => 0,
+  vies: Classe[] = [],
 ): string {
   const passo = passoAtual(e);
   if (!passo) return "";
@@ -161,6 +165,12 @@ export function escolhaIA(
   const faltam = ROLES.filter((r) => !cobertas.has(r));
   let cands = disp.filter((c) => c.rolesValidas.some((r) => faltam.includes(r)));
   if (cands.length === 0) cands = disp;
+
+  // viés de tendência: 2/3 das vezes restringe aos candidatos das classes favoritas
+  if (vies.length > 0 && rng() < 0.67) {
+    const doVies = cands.filter((c) => c.classes.some((cl) => vies.includes(cl)));
+    if (doVies.length > 0) cands = doVies;
+  }
 
   if (modo === "soloq") {
     // soloq real: sorteio PONDERADO pela meta — os fortes aparecem mais, mas

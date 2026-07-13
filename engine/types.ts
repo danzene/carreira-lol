@@ -260,4 +260,5 @@ export interface CareerState {
   statsSemana?: StatsSemana; // stats da semana corrente (recap ao avançar)
   statsSemanaAnterior?: StatsSemana; // pra comparação ↑↓ no recap
   grind?: import("./grind").EstadoGrind; // Grind de Normais (camada idle; ausente em saves antigos)
+  casa?: import("./gamingHouse").EstadoCasa; // 🏠 Gaming House (sessões de treino; ausente em saves antigos)
 }

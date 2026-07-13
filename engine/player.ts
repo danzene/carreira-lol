@@ -1,5 +1,6 @@
 import { CRIACAO, INICIO } from "@/data/config";
 import { OPCOES_PADRAO } from "@/data/opcoes";
+import { normalizarCasa } from "./gamingHouse";
 import { normalizarGrind } from "./grind";
 import type { Attributes, CareerState, ChampionMastery, OpcoesCarreira, Player, Role, TraitId } from "./types";
 
@@ -141,6 +142,7 @@ export function normalizarCareer(bruto: CareerState): CareerState {
     prova:
       bruto.prova && typeof bruto.prova.semana === "number" && Array.isArray(bruto.prova.resultados) ? bruto.prova : undefined,
     grind: normalizarGrind(bruto.grind), // idle: shape inválido/ausente → undefined (seguro)
+    casa: normalizarCasa(bruto.casa), // 🏠 gaming house: save antigo ganha defaults seguros
     player: {
       nome: p.nome ?? "Jogador",
       nacionalidade: p.nacionalidade ?? "Brasil",

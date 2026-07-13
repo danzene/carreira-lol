@@ -2,8 +2,9 @@ import { LOOP } from "@/data/loop";
 import { mod } from "@/data/opcoes";
 import { PATCH } from "@/data/patch";
 import { efeitoLendas } from "./gacha";
+import { casaDe, consolidar, decairComPisos, fecharSemanaCasa } from "./gamingHouse";
 import { bonusInstalacoes } from "./transferencias";
-import type { Attributes, AtributoKey, CareerState, TraitId } from "./types";
+import type { AtributoKey, CareerState, TraitId } from "./types";
 
 // Loop semanal (PURO): energia, atividades e avanço de tempo.
 
@@ -11,16 +12,6 @@ function clamp(v: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, v));
 }
 const round2 = (v: number): number => Math.round(v * 100) / 100;
-
-// Decaimento semanal dos atributos (estilo Punch Club): sem treinar, você enferruja.
-function decair(attrs: Attributes, total: number): Attributes {
-  if (total <= 0) return attrs;
-  const novo: Attributes = { ...attrs };
-  (Object.keys(novo) as AtributoKey[]).forEach((k) => {
-    novo[k] = clamp(round2(novo[k] - total), 0, 100);
-  });
-  return novo;
-}
 
 export function temEnergia(career: CareerState, custo: number): boolean {
   return career.player.energia >= custo;
@@ -103,9 +94,18 @@ export function avancarSemana(career: CareerState, modo: "normal" | "descanso" =
   const semanaGlobal = (temporada - 1) * LOOP.semanasPorTemporada + semanaAtual;
   const patchVigente = Math.floor((semanaGlobal - 1) / PATCH.semanasPorPatch) + 1;
 
-  // o tempo passa: atributos decaem (mais no difícil; lendas reduzem).
+  // o tempo passa: atributos decaem SUAVE (mais no difícil; lendas reduzem) — mas o
+  // decay NUNCA cruza um marco consolidado (20/40/60/80): treino não se rouba (Regra 2
+  // da Gaming House; a lição do Punch Club). Consolidamos ANTES de decair, então
+  // qualquer fonte de XP (sessão, partida, coach, bootcamp) conta pro piso.
+  const casa0 = casaDe(career);
+  const consolidado = consolidar(career.player.atributos, casa0.consolidado);
   const decaimento = LOOP.decaimentoSemanal * mod(career.opcoes).decaimento * (1 - efeitoLendas(career).reducaoDecaimento);
-  const atributos = decair(career.player.atributos, decaimento);
+  const atributos = decairComPisos(career.player.atributos, consolidado, decaimento);
 
-  return { ...career, semanaAtual, temporada, patchVigente, player: { ...career.player, energia, moral, atributos } };
+  // a casa vira a semana junto: fadiga dissipa (descanso zera + limpa burnout),
+  // contadores semanais zeram, streak do Foco fecha.
+  const casa = { ...fecharSemanaCasa(casa0, modo), consolidado };
+
+  return { ...career, semanaAtual, temporada, patchVigente, casa, player: { ...career.player, energia, moral, atributos } };
 }

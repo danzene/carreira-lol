@@ -13,7 +13,20 @@ import type { AtributoKey, TraitId } from "@/engine/types";
 import { tocarSom } from "@/lib/som";
 import { useCareer } from "@/store/careerStore";
 import { familiaPixel } from "../grind/diorama/pixels";
+import { carregarArteCasa, type PoseCasa } from "./arteCasa";
 import { CASA_H, CASA_W, criarCenaCasa, type CenaCasa } from "./cenaCasa";
+
+// pose da FACECAM por estação (Bem-estar varia com a variante escolhida)
+function poseDaSessao(estacao: EstacaoId, variante?: VarianteMental | "traco"): PoseCasa {
+  if (estacao === "AIM_TRAINER") return "mirando";
+  if (estacao === "ANALISE_ADVERSARIO") return "quadro";
+  if (estacao === "ACADEMIA_SONO_TERAPIA") {
+    if (variante === "sono") return "dormindo";
+    if (variante === "terapia") return "terapia";
+    return "peso";
+  }
+  return "digitando"; // replay/scrim/1v1/stream/campeão: teclado é vida
+}
 
 // 🏠 Gaming House — a tela que substitui os 4 botões vagos. Clicar numa estação abre o
 // painel com NÚMEROS EXPLÍCITOS (intensidades, multiplicadores de moral/foco/rendimento)
@@ -72,6 +85,10 @@ export default function GamingHouseView() {
     ctx.imageSmoothingEnabled = false;
     const cena = criarCenaCasa(ctx, { rota: c0.player.rota, familia: familiaPixel() });
     cenaRef.current = cena;
+    // 🎨 arte real (progressive enhancement — sem ela a cena programática segura)
+    void carregarArteCasa().then((a) => {
+      if (cenaRef.current === cena) cena.definirArte(a);
+    });
 
     let raf = 0;
     let vivo = true;
@@ -113,7 +130,7 @@ export default function GamingHouseView() {
 
   const aoClicarCena = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    const est = cenaRef.current?.estacaoEm((e.clientX - rect.left) / rect.width);
+    const est = cenaRef.current?.estacaoEm((e.clientX - rect.left) / rect.width, (e.clientY - rect.top) / rect.height);
     if (est) {
       setSelecionada((s) => (s === est ? null : est));
       setIntensidade("normal");
@@ -148,17 +165,24 @@ export default function GamingHouseView() {
     }
     setAviso(null);
     const est = selecionada;
+    const varianteSessao = est === "ACADEMIA_SONO_TERAPIA" && variante !== "traco" ? variante : undefined;
     tocarSom("tick", 0.5);
-    cenaRef.current?.irPara(est, 2.6, () => {
-      // fim do teatro: os +X reais flutuam (o engine já aplicou tudo no clique)
-      const itens = Object.entries(r.ganhos).map(([k, v]) => ({ txt: `+${v} ${NOME_ATTR[k as AtributoKey] ?? k}`, cor: "#2ee6a0" }));
-      if (r.maestria) itens.push({ txt: `+${r.maestria.ganho} maestria`, cor: "#ffd34d" });
-      if (r.dinheiro > 0) itens.push({ txt: `+$${r.dinheiro}`, cor: "#ffd34d" });
-      if (r.moralDelta > 0) itens.push({ txt: `+${r.moralDelta} moral`, cor: "#7ec8ff" });
-      if (r.fadigaDelta < 0) itens.push({ txt: `${r.fadigaDelta} fadiga`, cor: "#7ec8ff" });
-      cenaRef.current?.soltarGanhos(itens);
-      tocarSom(r.entrouBurnout ? "rebaixamento" : "moeda", 0.5);
-    });
+    cenaRef.current?.irPara(
+      est,
+      3.4,
+      () => {
+        // fim do teatro: os +X reais flutuam (o engine já aplicou tudo no clique)
+        const itens = Object.entries(r.ganhos).map(([k, v]) => ({ txt: `+${v} ${NOME_ATTR[k as AtributoKey] ?? k}`, cor: "#2ee6a0" }));
+        if (r.maestria) itens.push({ txt: `+${r.maestria.ganho} maestria`, cor: "#ffd34d" });
+        if (r.dinheiro > 0) itens.push({ txt: `+$${r.dinheiro}`, cor: "#ffd34d" });
+        if (r.moralDelta > 0) itens.push({ txt: `+${r.moralDelta} moral`, cor: "#7ec8ff" });
+        if (r.fadigaDelta < 0) itens.push({ txt: `${r.fadigaDelta} fadiga`, cor: "#7ec8ff" });
+        cenaRef.current?.soltarGanhos(itens);
+        tocarSom(r.entrouBurnout ? "rebaixamento" : "moeda", 0.5);
+      },
+      poseDaSessao(est, variante),
+      varianteSessao,
+    );
     setSelecionada(null);
   };
 
@@ -380,6 +404,23 @@ function PainelEstacao({
         <button type="button" onClick={onFechar} className="text-[11px] text-suave hover:text-texto">✕</button>
       </div>
       <p className="mb-2 text-[11px] text-suave">{def.desc}</p>
+
+      {/* 🖼️ preview da estação (arte real; some sozinho se o asset não existir) */}
+      {!bloqueada && (
+        <img
+          src={
+            ehMental && variante !== "traco"
+              ? `/carreira/casa/variante_${variante}_1.webp`
+              : `/carreira/casa/estacao_${estacao}_1.webp`
+          }
+          alt=""
+          onError={(e) => {
+            e.currentTarget.style.display = "none";
+          }}
+          className="mb-2 max-h-36 w-full border-2 border-borda object-cover object-top"
+          style={{ imageRendering: "pixelated" }}
+        />
+      )}
 
       {bloqueada ? (
         <p className="text-[11px] text-amber-300">🔒 Destrava na semana 2 (unlock progressivo).</p>

@@ -1,44 +1,41 @@
-// 🏠 Cena da Gaming House — reusa os BLOCOS do motor do diorama (Regra 5: atlas de
-// sprites do jogador, textoPixel, paleta CORD, pré-render offscreen, pools sem alocação
-// por frame, rAF capado na casca). Não é um segundo motor: é a mesma linguagem visual
-// com outra coreografia — aqui o herói ANDA até a estação e executa a atividade.
+// 🏠 Cena da Gaming House — agora com a ARTE REAL (build-casa.mjs):
 //
-// A cena é TEATRO: o engine já aplicou a sessão quando ela começa a rodar; os "+X"
-// flutuantes no fim mostram os ganhos reais (mesma disciplina do resto do jogo).
+//  • CENA AMPLA: o fundo pintado da casa (960×480) com 8 HOTSPOTS pulsantes na cor de
+//    cada estação; o herói (sprites do MESMO atlas do diorama, ×2) anda até o hotspot.
+//  • CLOSE-UP CINEMATOGRÁFICO: ao treinar, crossfade pro quadro da estação alternando
+//    APAGADA→ATIVA (2 frames pintados), com a FACECAM do herói em ação no canto
+//    (as poses do Grupo C), fagulhas tingidas na cor da estação, barra de progresso e
+//    celebração no final. A cena é TEATRO: o engine já aplicou tudo no clique.
+//  • ESTADOS na casa: burnout = herói desaba no sofá do fundo + vinheta pintada + Zzz
+//    reais; moral alta = luz dourada + brilhos no troféu; fadiga = véu + lentidão.
+//
+// Fallback: sem a arte (falha de rede/arquivo), a cena desenha um palco programático
+// simples com os mesmos hotspots — a decisão continua 100% jogável.
 
 import type { EstacaoId } from "@/data/gamingHouse";
+import { ESTACOES } from "@/data/gamingHouse";
 import type { Role } from "@/engine/types";
 import { CORD, criarAtlas, textoPixel, type AtlasDiorama } from "../grind/diorama/pixels";
+import { tintar, type ArteCasa, type PoseCasa } from "./arteCasa";
 
 export const CASA_W = 480;
-export const CASA_H = 120;
-const CHAO_Y = CASA_H - 18;
+export const CASA_H = 240;
+const CHAO_Y = 214; // linha do chão do fundo pintado
+const SOFA_X = 240; // o sofá do fundo (burnout) — centro da sala
 
-// posição x de cada estação na casa (ordem de leitura: estudo → treino → descanso)
+// hotspots das estações (o centro fica livre pro sofá)
 export const POSICOES: Record<EstacaoId, number> = {
   ANALISE_ADVERSARIO: 34,
-  REPLAY_ROOM: 86,
-  SCRIM_SIM: 140,
-  AIM_TRAINER: 194,
-  CUSTOM_1V1: 246,
-  CHAMPION_PRACTICE: 298,
-  SALA_DE_STREAM: 356,
-  ACADEMIA_SONO_TERAPIA: 424,
+  REPLAY_ROOM: 90,
+  SCRIM_SIM: 144,
+  AIM_TRAINER: 196,
+  CUSTOM_1V1: 286,
+  CHAMPION_PRACTICE: 340,
+  SALA_DE_STREAM: 394,
+  ACADEMIA_SONO_TERAPIA: 448,
 };
-const SOFA_X = CASA_W / 2 - 6; // burnout: o herói desaba no sofá
 
-type Pose = "sit" | "attack" | "idle";
-const POSE_ESTACAO: Record<EstacaoId, Pose> = {
-  ANALISE_ADVERSARIO: "idle",
-  REPLAY_ROOM: "sit",
-  SCRIM_SIM: "sit",
-  AIM_TRAINER: "attack",
-  CUSTOM_1V1: "attack",
-  CHAMPION_PRACTICE: "attack",
-  SALA_DE_STREAM: "sit",
-  ACADEMIA_SONO_TERAPIA: "idle",
-};
-const COR_ESTACAO: Record<EstacaoId, string> = {
+export const COR_ESTACAO: Record<EstacaoId, string> = {
   ANALISE_ADVERSARIO: "#f5e6d0",
   REPLAY_ROOM: "#19e6e0",
   SCRIM_SIM: "#9a6bff",
@@ -65,109 +62,168 @@ interface Fagulha {
   vx: number;
   vy: number;
   vida: number;
-  cor: string;
+  max: number;
+  idx: number; // sprite tingido (ou -1 = quadradinho programático)
+  escala: number;
+}
+interface Zzz {
+  vivo: boolean;
+  x: number;
+  y: number;
+  vida: number;
+  max: number;
+  idx: number;
 }
 
 export interface EstadoVisualCasa {
-  fadiga01: number; // 0..1 (postura cansada + véu)
-  burnout: boolean; // casa escura + herói no sofá
-  moralAlta: boolean; // casa iluminada + pôster brilhando
-  aoVivo: boolean; // luz ON AIR (sessão de stream rodando)
+  fadiga01: number;
+  burnout: boolean;
+  moralAlta: boolean;
+  aoVivo: boolean;
+}
+
+interface Sessao {
+  estacao: EstacaoId;
+  pose: PoseCasa | null;
+  varianteFrames: [HTMLImageElement, HTMLImageElement] | null; // Bem-estar usa a variante
+  resta: number;
+  dur: number;
+  fase: "andando" | "zoomIn" | "rodando" | "celebrando" | "zoomOut";
+  faseT: number;
+  aoTerminar: () => void;
+  fagulhasTintadas: HTMLCanvasElement[];
+  cor: string;
 }
 
 export interface CenaCasa {
   atualizar(dt: number): void;
   desenhar(): void;
-  irPara(estacao: EstacaoId, duracaoSeg: number, aoTerminar: () => void): void;
+  irPara(estacao: EstacaoId, duracaoSeg: number, aoTerminar: () => void, pose?: PoseCasa, variante?: "academia" | "sono" | "terapia"): void;
   soltarGanhos(itens: { txt: string; cor: string }[]): void;
   definirEstado(e: EstadoVisualCasa): void;
+  definirArte(a: ArteCasa | null): void;
   emSessao(): boolean;
-  estacaoEm(x01: number): EstacaoId | null; // hit-test por fração X do clique
+  estacaoEm(x01: number, y01: number): EstacaoId | null;
 }
+
+const ZOOM_SEG = 0.35;
+const CELEBRA_SEG = 0.85;
+const FRAME_ESTACAO_SEG = 0.55; // apagada↔ativa
+const FRAME_POSE_SEG = 0.5; // facecam
 
 export function criarCenaCasa(c: CanvasRenderingContext2D, opts: { rota: Role; familia: string }): CenaCasa {
   const atlas: AtlasDiorama = criarAtlas(opts.rota);
-  const fundo = prerenderCasa();
+  let arte: ArteCasa | null = null;
 
-  // pools (zero alocação no loop — mesma disciplina do diorama)
+  // pools (zero alocação no loop)
   const flutuantes: Flutuante[] = Array.from({ length: 12 }, () => ({ vivo: false, x: 0, y: 0, vida: 0, max: 1, txt: "", cor: "" }));
-  const fagulhas: Fagulha[] = Array.from({ length: 24 }, () => ({ vivo: false, x: 0, y: 0, vx: 0, vy: 0, vida: 0, cor: "" }));
+  const fagulhas: Fagulha[] = Array.from({ length: 28 }, () => ({ vivo: false, x: 0, y: 0, vx: 0, vy: 0, vida: 0, max: 1, idx: -1, escala: 1 }));
+  const zzzs: Zzz[] = Array.from({ length: 5 }, () => ({ vivo: false, x: 0, y: 0, vida: 0, max: 1, idx: 0 }));
 
   let heroX = POSICOES.REPLAY_ROOM;
   let alvoX = heroX;
-  let virado = false; // olhando pra esquerda
+  let virado = false;
   let frameT = 0;
   let estado: EstadoVisualCasa = { fadiga01: 0, burnout: false, moralAlta: false, aoVivo: false };
-
-  // sessão em andamento (teatro): andar → atividade com barra → callback
-  let sessao: { estacao: EstacaoId; pose: Pose; resta: number; dur: number; aoTerminar: () => void } | null = null;
+  let sessao: Sessao | null = null;
   let fagulhaT = 0;
   let zzzT = 0;
+  let brilhoT = 0;
 
   function alocar<T extends { vivo: boolean }>(pool: T[]): T | null {
     for (const p of pool) if (!p.vivo) return p;
     return null;
   }
 
-  function soltarFagulhas(x: number, cor: string, n: number): void {
-    for (let i = 0; i < n; i++) {
-      const f = alocar(fagulhas);
-      if (!f) return;
-      f.vivo = true;
-      f.x = x + (Math.random() - 0.5) * 10;
-      f.y = CHAO_Y - 22 + (Math.random() - 0.5) * 8;
-      f.vx = (Math.random() - 0.5) * 30;
-      f.vy = -20 - Math.random() * 25;
-      f.vida = 0.5 + Math.random() * 0.3;
-      f.cor = cor;
-    }
+  function soltarFagulhaSessao(): void {
+    const f = alocar(fagulhas);
+    if (!f || !sessao) return;
+    f.vivo = true;
+    f.x = CASA_W * (0.3 + Math.random() * 0.5);
+    f.y = CASA_H * (0.35 + Math.random() * 0.4);
+    f.vx = (Math.random() - 0.5) * 22;
+    f.vy = -26 - Math.random() * 30;
+    f.vida = f.max = 0.7 + Math.random() * 0.5;
+    f.idx = sessao.fagulhasTintadas.length > 0 ? Math.floor(Math.random() * sessao.fagulhasTintadas.length) : -1;
+    f.escala = 0.35 + Math.random() * 0.4;
   }
 
+  function rajadaCelebracao(): void {
+    for (let i = 0; i < 14; i++) soltarFagulhaSessao();
+  }
+
+  // ---------------------------------------------------------------- update
   function atualizar(dt: number): void {
     frameT += dt;
 
-    // burnout: o herói larga tudo e vai pro sofá (leitura de estado sem menu)
-    const destino = estado.burnout && !sessao ? SOFA_X : alvoX;
-    const vel = 55 * (1 - estado.fadiga01 * 0.45); // cansado anda mais devagar
-    if (Math.abs(heroX - destino) > 2) {
-      virado = destino < heroX;
-      heroX += Math.sign(destino - heroX) * vel * dt;
-    } else if (sessao) {
-      // chegou: a atividade roda (barra + fagulhas na cor da estação)
-      sessao.resta -= dt;
-      fagulhaT -= dt;
-      if (fagulhaT <= 0) {
-        fagulhaT = 0.3;
-        soltarFagulhas(heroX + 10, COR_ESTACAO[sessao.estacao], 2);
-      }
-      if (sessao.resta <= 0) {
+    if (sessao) {
+      sessao.faseT += dt;
+      if (sessao.fase === "andando") {
+        const vel = 70 * (1 - estado.fadiga01 * 0.4);
+        if (Math.abs(heroX - alvoX) > 3) {
+          virado = alvoX < heroX;
+          heroX += Math.sign(alvoX - heroX) * vel * dt;
+        } else {
+          sessao.fase = "zoomIn";
+          sessao.faseT = 0;
+        }
+      } else if (sessao.fase === "zoomIn") {
+        if (sessao.faseT >= ZOOM_SEG) {
+          sessao.fase = "rodando";
+          sessao.faseT = 0;
+        }
+      } else if (sessao.fase === "rodando") {
+        sessao.resta -= dt;
+        fagulhaT -= dt;
+        if (fagulhaT <= 0) {
+          fagulhaT = 0.22;
+          soltarFagulhaSessao();
+        }
+        if (sessao.resta <= 0) {
+          sessao.fase = "celebrando";
+          sessao.faseT = 0;
+          rajadaCelebracao();
+        }
+      } else if (sessao.fase === "celebrando") {
+        if (sessao.faseT >= CELEBRA_SEG) {
+          sessao.fase = "zoomOut";
+          sessao.faseT = 0;
+        }
+      } else if (sessao.fase === "zoomOut" && sessao.faseT >= ZOOM_SEG) {
         const fim = sessao.aoTerminar;
         sessao = null;
-        fim();
+        fim(); // os "+X" da view caem na cena ampla
       }
-    }
-
-    // zzz do cansaço alto (idle) — o corpo avisa
-    if ((estado.fadiga01 >= 0.7 || estado.burnout) && !sessao) {
-      zzzT += dt;
-      if (zzzT > 1.8) {
-        zzzT = 0;
-        const f = alocar(flutuantes);
-        if (f) {
-          f.vivo = true;
-          f.x = heroX + 8;
-          f.y = CHAO_Y - 34;
-          f.vida = f.max = 1.1;
-          f.txt = "z";
-          f.cor = CORD.suave;
+    } else {
+      // ampla: burnout arrasta o herói pro sofá; senão ele fica onde parou
+      const destino = estado.burnout ? SOFA_X : alvoX;
+      const vel = 62 * (1 - estado.fadiga01 * 0.4);
+      if (Math.abs(heroX - destino) > 3) {
+        virado = destino < heroX;
+        heroX += Math.sign(destino - heroX) * vel * dt;
+      }
+      // Zzz do cansaço/burnout (sprites reais quando houver)
+      if (estado.burnout || estado.fadiga01 >= 0.7) {
+        zzzT += dt;
+        if (zzzT > 1.4) {
+          zzzT = 0;
+          const z = alocar(zzzs);
+          if (z) {
+            z.vivo = true;
+            z.x = heroX + 12;
+            z.y = CHAO_Y - 78;
+            z.vida = z.max = 1.6;
+            z.idx = Math.floor(Math.random() * Math.max(1, arte?.zzz.length ?? 1));
+          }
         }
       }
+      if (estado.moralAlta) brilhoT += dt;
     }
 
     for (const f of flutuantes) {
       if (!f.vivo) continue;
       f.vida -= dt;
-      f.y -= dt * 14;
+      f.y -= dt * 16;
       if (f.vida <= 0) f.vivo = false;
     }
     for (const f of fagulhas) {
@@ -175,93 +231,285 @@ export function criarCenaCasa(c: CanvasRenderingContext2D, opts: { rota: Role; f
       f.vida -= dt;
       f.x += f.vx * dt;
       f.y += f.vy * dt;
-      f.vy += 60 * dt;
+      f.vy += 34 * dt;
       if (f.vida <= 0) f.vivo = false;
+    }
+    for (const z of zzzs) {
+      if (!z.vivo) continue;
+      z.vida -= dt;
+      z.y -= dt * 12;
+      z.x += Math.sin(frameT * 3 + z.y) * 0.3;
+      if (z.vida <= 0) z.vivo = false;
     }
   }
 
-  function desenhar(): void {
-    c.clearRect(0, 0, CASA_W, CASA_H);
-    c.drawImage(fundo, 0, 0);
-
-    // luz ON AIR da sala de stream (pisca quando ao vivo)
-    if (estado.aoVivo && Math.sin(frameT * 5) > -0.3) {
-      c.fillStyle = "#ff4d4d";
-      c.fillRect(POSICOES.SALA_DE_STREAM - 12, 22, 24, 8);
-      c.fillStyle = CORD.fundo;
-      c.font = `6px ${opts.familia}`;
-      c.textAlign = "center";
-      c.fillText("ON AIR", POSICOES.SALA_DE_STREAM, 24);
+  // ---------------------------------------------------------------- draw
+  function desenharAmpla(): void {
+    // palco
+    if (arte) {
+      c.drawImage(arte.fundo, 0, 0, CASA_W, CASA_H);
+    } else {
+      c.fillStyle = "#141026";
+      c.fillRect(0, 0, CASA_W, CASA_H - 26);
+      c.fillStyle = "#1c1533";
+      c.fillRect(0, CASA_H - 26, CASA_W, 26);
+      c.fillStyle = "#241b40";
+      for (let x = 0; x < CASA_W; x += 40) c.fillRect(x, CHAO_Y, 1, CASA_H - CHAO_Y);
     }
 
-    // herói (sprites do MESMO atlas do diorama)
-    const andando = Math.abs(heroX - (estado.burnout && !sessao ? SOFA_X : alvoX)) > 2;
-    const pose: Pose | "run" = andando ? "run" : sessao ? sessao.pose : estado.burnout ? "sit" : "idle";
-    const frames = atlas.jogador[pose === "run" ? "run" : pose];
+    // hotspots pulsantes (a cor é a identidade da estação)
+    (Object.keys(POSICOES) as EstacaoId[]).forEach((id, i) => {
+      const x = POSICOES[id];
+      const puls = 0.55 + 0.45 * Math.sin(frameT * 2.2 + i * 1.3);
+      const cor = COR_ESTACAO[id];
+      // glow no chão
+      c.globalAlpha = 0.16 + puls * 0.12;
+      c.fillStyle = cor;
+      c.beginPath();
+      c.ellipse(x, CHAO_Y + 6, 17, 4, 0, 0, Math.PI * 2);
+      c.fill();
+      c.globalAlpha = 1;
+      // plaquinha com emoji
+      c.fillStyle = "rgba(11,6,23,0.82)";
+      c.fillRect(x - 11, CHAO_Y - 26, 22, 20);
+      c.strokeStyle = cor;
+      c.globalAlpha = 0.55 + puls * 0.45;
+      c.strokeRect(x - 11.5, CHAO_Y - 26.5, 23, 21);
+      c.globalAlpha = 1;
+      c.font = `10px ${opts.familia}`;
+      c.textAlign = "center";
+      c.fillText(ESTACOES[id].emoji, x, CHAO_Y - 11);
+    });
+
+    // brilhos de moral alta flutuando perto do troféu do pôster
+    if (estado.moralAlta && !estado.burnout) {
+      const bx = CASA_W * 0.475;
+      const by = 66 + Math.sin(brilhoT * 1.8) * 4;
+      if (arte?.brilho) {
+        c.globalAlpha = 0.75 + 0.25 * Math.sin(brilhoT * 3);
+        c.drawImage(arte.brilho, bx - 20, by, 40, 12);
+        c.globalAlpha = 1;
+      } else {
+        c.fillStyle = CORD.ouro;
+        c.globalAlpha = 0.6 + 0.4 * Math.sin(brilhoT * 3);
+        c.fillRect(bx, by, 3, 3);
+        c.fillRect(bx + 10, by + 5, 2, 2);
+        c.globalAlpha = 1;
+      }
+    }
+
+    // herói (atlas do diorama ×2 — mesma linguagem do resto do jogo)
+    const andando = Math.abs(heroX - (estado.burnout ? SOFA_X : alvoX)) > 3;
+    const pose = andando ? "run" : estado.burnout ? "sit" : "idle";
+    const frames = atlas.jogador[pose];
     const frame = frames[Math.floor(frameT * (andando ? 8 : 3)) % frames.length];
+    const fw = atlas.jw * 2;
+    const fh = atlas.jh * 2;
+    // burnout no sofá: senta um pouco acima do chão (assento)
+    const heroY = estado.burnout && !andando ? CHAO_Y - fh - 8 : CHAO_Y - fh;
     c.save();
     if (virado) {
       c.translate(Math.round(heroX) * 2, 0);
       c.scale(-1, 1);
     }
-    c.drawImage(frame, Math.round(heroX) - Math.floor(atlas.jw / 2), CHAO_Y - atlas.jh);
+    c.imageSmoothingEnabled = false;
+    c.drawImage(frame, Math.round(heroX) - Math.floor(fw / 2), heroY, fw, fh);
     c.restore();
 
-    // barra de progresso da sessão (em cima da estação)
-    if (sessao && !andando) {
-      const pct = 1 - sessao.resta / sessao.dur;
-      const x = Math.round(heroX) - 14;
-      c.fillStyle = CORD.fundo;
-      c.fillRect(x, CHAO_Y - atlas.jh - 10, 28, 5);
-      c.fillStyle = COR_ESTACAO[sessao.estacao];
-      c.fillRect(x + 1, CHAO_Y - atlas.jh - 9, Math.round(26 * pct), 3);
-    }
-
-    for (const f of fagulhas) {
-      if (!f.vivo) continue;
-      c.globalAlpha = Math.max(0, f.vida / 0.6);
-      c.fillStyle = f.cor;
-      c.fillRect(Math.round(f.x), Math.round(f.y), 2, 2);
+    // Zzz (sprites reais recortados; fallback = "z" pixel)
+    for (const z of zzzs) {
+      if (!z.vivo) continue;
+      c.globalAlpha = Math.min(1, z.vida / (z.max * 0.5));
+      const img = arte?.zzz[z.idx % Math.max(1, arte.zzz.length)];
+      if (img) c.drawImage(img, z.x, z.y, 14, 14);
+      else textoPixel(c, opts.familia, "z", z.x, z.y, CORD.suave, 8);
       c.globalAlpha = 1;
     }
+
+    // "+X" dos ganhos
     for (const f of flutuantes) {
       if (!f.vivo) continue;
       c.globalAlpha = Math.min(1, f.vida / (f.max * 0.6));
-      textoPixel(c, opts.familia, f.txt, f.x, f.y, f.cor, 7);
+      textoPixel(c, opts.familia, f.txt, f.x, f.y, f.cor, 9);
       c.globalAlpha = 1;
     }
 
-    // 🌡️ a casa REFLETE o estado (leitura sem abrir menu):
+    // 🌡️ estados por cima (a casa REFLETE o jogador)
     if (estado.moralAlta && !estado.burnout) {
-      c.fillStyle = "rgba(255, 211, 77, 0.07)"; // luz quente
-      c.fillRect(0, 0, CASA_W, CASA_H);
+      if (arte?.overlayMoral) {
+        c.globalAlpha = 0.9;
+        c.drawImage(arte.overlayMoral, 0, 0, CASA_W, CASA_H);
+        c.globalAlpha = 1;
+      } else {
+        c.fillStyle = "rgba(255,211,77,0.06)";
+        c.fillRect(0, 0, CASA_W, CASA_H);
+      }
     }
     if (estado.fadiga01 > 0.6 && !estado.burnout) {
-      c.fillStyle = `rgba(20, 20, 60, ${(estado.fadiga01 - 0.6) * 0.35})`; // véu do cansaço
+      c.fillStyle = `rgba(20,20,60,${(estado.fadiga01 - 0.6) * 0.4})`;
       c.fillRect(0, 0, CASA_W, CASA_H);
     }
     if (estado.burnout) {
-      c.fillStyle = "rgba(5, 3, 18, 0.55)"; // casa apagada
-      c.fillRect(0, 0, CASA_W, CASA_H);
-      textoPixel(c, opts.familia, "BURNOUT — descanse", CASA_W / 2, 8, "#ff9a9a", 8);
+      if (arte?.overlayBurnout) c.drawImage(arte.overlayBurnout, 0, 0, CASA_W, CASA_H);
+      else {
+        c.fillStyle = "rgba(5,3,18,0.55)";
+        c.fillRect(0, 0, CASA_W, CASA_H);
+      }
+      textoPixel(c, opts.familia, "BURNOUT — descanse", CASA_W / 2, 10, "#ff9a9a", 9);
     }
   }
 
+  // desenha uma imagem cobrindo o retângulo (crop central) — "object-fit: cover"
+  function drawCover(img: HTMLImageElement, x: number, y: number, w: number, h: number): void {
+    const ri = img.width / img.height;
+    const rd = w / h;
+    let sw = img.width;
+    let sh = img.height;
+    let sx = 0;
+    let sy = 0;
+    if (ri > rd) {
+      sw = img.height * rd;
+      sx = (img.width - sw) / 2;
+    } else {
+      sh = img.width / rd;
+      sy = (img.height - sh) / 2;
+    }
+    c.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+  }
+
+  function desenharSessao(s: Sessao): void {
+    const frames = s.varianteFrames ?? arte?.estacoes[s.estacao] ?? null;
+    const idxFrame = s.fase === "rodando" || s.fase === "celebrando" ? (Math.floor(frameT / FRAME_ESTACAO_SEG) % 2) : 0;
+
+    if (frames) {
+      drawCover(frames[idxFrame], 0, 0, CASA_W, CASA_H);
+      // vinheta leve pra integrar o quadro
+      const vg = c.createRadialGradient(CASA_W / 2, CASA_H / 2, CASA_H * 0.45, CASA_W / 2, CASA_H / 2, CASA_W * 0.62);
+      vg.addColorStop(0, "rgba(0,0,0,0)");
+      vg.addColorStop(1, "rgba(5,3,18,0.55)");
+      c.fillStyle = vg;
+      c.fillRect(0, 0, CASA_W, CASA_H);
+    } else {
+      // fallback: cartão na cor da estação
+      c.fillStyle = "#0b0617";
+      c.fillRect(0, 0, CASA_W, CASA_H);
+      c.font = `44px ${opts.familia}`;
+      c.textAlign = "center";
+      c.fillText(ESTACOES[s.estacao].emoji, CASA_W / 2, CASA_H / 2 + 14);
+    }
+
+    // fagulhas tingidas
+    for (const f of fagulhas) {
+      if (!f.vivo) continue;
+      c.globalAlpha = Math.min(1, f.vida / (f.max * 0.5));
+      const sprite = f.idx >= 0 ? s.fagulhasTintadas[f.idx] : null;
+      if (sprite) {
+        const w = sprite.width * f.escala * 0.5;
+        const h = sprite.height * f.escala * 0.5;
+        c.drawImage(sprite, f.x - w / 2, f.y - h / 2, w, h);
+      } else {
+        c.fillStyle = s.cor;
+        c.fillRect(Math.round(f.x), Math.round(f.y), 3, 3);
+      }
+      c.globalAlpha = 1;
+    }
+
+    // 🎥 FACECAM: o herói em ação (pose real do Grupo C) numa moldura de streamer
+    const poseAtual: PoseCasa | null = s.fase === "celebrando" && arte?.poses.comemorando ? "comemorando" : s.pose;
+    const par = poseAtual ? arte?.poses[poseAtual] : null;
+    if (par) {
+      const fw = 86;
+      const fh = 112;
+      const fx = 10;
+      const fy = CASA_H - fh - 12;
+      const idxPose = Math.floor(frameT / FRAME_POSE_SEG) % 2;
+      c.fillStyle = "#0b0617";
+      c.fillRect(fx - 3, fy - 3, fw + 6, fh + 6);
+      drawCover(par[idxPose], fx, fy, fw, fh);
+      c.strokeStyle = s.fase === "celebrando" ? CORD.ouro : s.cor;
+      c.lineWidth = 2;
+      c.strokeRect(fx - 2, fy - 2, fw + 4, fh + 4);
+      c.lineWidth = 1;
+      // 🔴 REC piscando (charme de facecam)
+      if (Math.sin(frameT * 4) > 0) {
+        c.fillStyle = "#ff4d4d";
+        c.beginPath();
+        c.arc(fx + 8, fy + 9, 3, 0, Math.PI * 2);
+        c.fill();
+      }
+    }
+
+    // rótulo + barra de progresso
+    const nome = ESTACOES[s.estacao].nome.toUpperCase();
+    c.fillStyle = "rgba(11,6,23,0.75)";
+    const tw = nome.length * 7 + 18;
+    c.fillRect(CASA_W / 2 - tw / 2, 8, tw, 15);
+    textoPixel(c, opts.familia, nome, CASA_W / 2, 11, s.cor, 8);
+
+    const pct = s.fase === "celebrando" || s.fase === "zoomOut" ? 1 : Math.max(0, Math.min(1, 1 - s.resta / s.dur));
+    c.fillStyle = "rgba(11,6,23,0.8)";
+    c.fillRect(0, CASA_H - 5, CASA_W, 5);
+    c.fillStyle = s.fase === "celebrando" ? CORD.ouro : s.cor;
+    c.fillRect(0, CASA_H - 4, Math.round(CASA_W * pct), 3);
+
+    if (s.fase === "celebrando") {
+      c.globalAlpha = Math.min(0.9, s.faseT * 3);
+      textoPixel(c, opts.familia, "SESSÃO COMPLETA!", CASA_W / 2, CASA_H / 2 - 30, CORD.ouro, 12);
+      c.globalAlpha = 1;
+    }
+  }
+
+  function desenhar(): void {
+    c.clearRect(0, 0, CASA_W, CASA_H);
+    c.imageSmoothingEnabled = false;
+
+    if (!sessao || sessao.fase === "andando") {
+      desenharAmpla();
+      return;
+    }
+
+    // crossfade entre a casa e o close-up
+    const s = sessao;
+    if (s.fase === "zoomIn" || s.fase === "zoomOut") {
+      const t = Math.min(1, s.faseT / ZOOM_SEG);
+      const alphaClose = s.fase === "zoomIn" ? t : 1 - t;
+      desenharAmpla();
+      c.globalAlpha = alphaClose;
+      desenharSessao(s);
+      c.globalAlpha = 1;
+      return;
+    }
+    desenharSessao(s);
+  }
+
+  // ---------------------------------------------------------------- API
   return {
     atualizar,
     desenhar,
-    irPara: (estacao, duracaoSeg, aoTerminar) => {
+    irPara: (estacao, duracaoSeg, aoTerminar, pose, variante) => {
       alvoX = POSICOES[estacao];
-      sessao = { estacao, pose: POSE_ESTACAO[estacao], resta: duracaoSeg, dur: duracaoSeg, aoTerminar };
+      const cor = COR_ESTACAO[estacao];
+      sessao = {
+        estacao,
+        pose: pose ?? null,
+        varianteFrames: variante ? (arte?.variantes[variante] ?? null) : null,
+        resta: duracaoSeg,
+        dur: duracaoSeg,
+        fase: "andando",
+        faseT: 0,
+        aoTerminar,
+        fagulhasTintadas: (arte?.fagulhas ?? []).map((f) => tintar(f, cor)),
+        cor,
+      };
     },
     soltarGanhos: (itens) => {
       itens.slice(0, 6).forEach((item, i) => {
         const f = alocar(flutuantes);
         if (!f) return;
         f.vivo = true;
-        f.x = heroX + (i % 2 === 0 ? -10 : 12);
-        f.y = CHAO_Y - atlas.jh - 6 - i * 9;
-        f.vida = f.max = 1.6;
+        f.x = heroX + (i % 2 === 0 ? -16 : 18);
+        f.y = CHAO_Y - 80 - i * 11;
+        f.vida = f.max = 1.7;
         f.txt = item.txt;
         f.cor = item.cor;
       });
@@ -269,11 +517,17 @@ export function criarCenaCasa(c: CanvasRenderingContext2D, opts: { rota: Role; f
     definirEstado: (e) => {
       estado = e;
     },
+    definirArte: (a) => {
+      arte = a;
+    },
     emSessao: () => sessao !== null,
-    estacaoEm: (x01) => {
+    estacaoEm: (x01, y01) => {
+      if (sessao) return null; // durante o close-up a cena não é clicável
       const x = x01 * CASA_W;
+      const y = y01 * CASA_H;
+      if (y < CHAO_Y - 70) return null; // só a faixa do chão/hotspots
       let melhor: EstacaoId | null = null;
-      let dist = 30; // raio de clique de cada estação
+      let dist = 26;
       for (const [id, px] of Object.entries(POSICOES) as [EstacaoId, number][]) {
         const d = Math.abs(px - x);
         if (d < dist) {
@@ -284,139 +538,4 @@ export function criarCenaCasa(c: CanvasRenderingContext2D, opts: { rota: Role; f
       return melhor;
     },
   };
-}
-
-// Pré-render do fundo (uma vez): parede, janela, chão e os props das estações —
-// mesma técnica do prerenderCenario do diorama.
-function prerenderCasa(): HTMLCanvasElement {
-  const cv = document.createElement("canvas");
-  cv.width = CASA_W;
-  cv.height = CASA_H;
-  const c = cv.getContext("2d")!;
-  c.imageSmoothingEnabled = false;
-
-  // parede + rodapé + chão
-  c.fillStyle = "#141026";
-  c.fillRect(0, 0, CASA_W, CHAO_Y);
-  c.fillStyle = "#0e0a1e";
-  c.fillRect(0, CHAO_Y - 4, CASA_W, 4);
-  c.fillStyle = "#1c1533";
-  c.fillRect(0, CHAO_Y, CASA_W, CASA_H - CHAO_Y);
-  // tábuas do chão
-  c.fillStyle = "#241b40";
-  for (let x = 0; x < CASA_W; x += 32) c.fillRect(x, CHAO_Y, 1, CASA_H - CHAO_Y);
-
-  // janela com noite estrelada
-  c.fillStyle = "#0b0617";
-  c.fillRect(CASA_W / 2 - 26, 14, 52, 30);
-  c.strokeStyle = "#3a2e63";
-  c.strokeRect(CASA_W / 2 - 26.5, 13.5, 53, 31);
-  c.fillStyle = "#f5e6d0";
-  c.fillRect(CASA_W / 2 - 14, 20, 2, 2);
-  c.fillRect(CASA_W / 2 + 8, 28, 2, 2);
-  c.fillRect(CASA_W / 2 - 2, 36, 1, 1);
-
-  // pôster (brilha com moral alta via overlay)
-  c.fillStyle = "#2a1f4d";
-  c.fillRect(SOFA_X - 40, 18, 22, 28);
-  c.fillStyle = "#ffd34d";
-  c.fillRect(SOFA_X - 33, 26, 8, 8);
-
-  // sofá central (o refúgio do burnout)
-  c.fillStyle = "#4d2a5e";
-  c.fillRect(SOFA_X - 16, CHAO_Y - 14, 32, 14);
-  c.fillRect(SOFA_X - 20, CHAO_Y - 20, 6, 20);
-  c.fillRect(SOFA_X + 14, CHAO_Y - 20, 6, 20);
-
-  const prop = (x: number, desenhar: (px: number) => void) => desenhar(x);
-
-  // 📋 quadro tático
-  prop(POSICOES.ANALISE_ADVERSARIO, (x) => {
-    c.fillStyle = "#e8e3f5";
-    c.fillRect(x - 14, 20, 28, 20);
-    c.strokeStyle = "#3a2e63";
-    c.strokeRect(x - 14.5, 19.5, 29, 21);
-    c.fillStyle = "#ff2d7e";
-    c.fillRect(x - 9, 25, 3, 3);
-    c.fillRect(x + 2, 32, 3, 3);
-    c.fillStyle = "#19e6e0";
-    c.fillRect(x + 5, 24, 3, 3);
-    c.fillRect(x - 4, 30, 3, 3);
-  });
-  // 📼 replay room: mesa + monitor
-  prop(POSICOES.REPLAY_ROOM, (x) => mesaComMonitor(c, x, "#19e6e0"));
-  // 🖥️ scrim: fileira de 3 monitores
-  prop(POSICOES.SCRIM_SIM, (x) => {
-    mesaComMonitor(c, x - 12, "#9a6bff");
-    mesaComMonitor(c, x, "#9a6bff");
-    mesaComMonitor(c, x + 12, "#9a6bff");
-  });
-  // 🎯 aim trainer: alvo na parede + mesa
-  prop(POSICOES.AIM_TRAINER, (x) => {
-    c.fillStyle = "#f5e6d0";
-    c.beginPath();
-    c.arc(x, 28, 9, 0, Math.PI * 2);
-    c.fill();
-    c.fillStyle = "#ff2d7e";
-    c.beginPath();
-    c.arc(x, 28, 5.5, 0, Math.PI * 2);
-    c.fill();
-    c.fillStyle = "#f5e6d0";
-    c.beginPath();
-    c.arc(x, 28, 2.5, 0, Math.PI * 2);
-    c.fill();
-    mesa(c, x);
-  });
-  // ⚔️ custom 1v1: dois PCs frente a frente
-  prop(POSICOES.CUSTOM_1V1, (x) => {
-    mesaComMonitor(c, x - 8, "#ffd34d");
-    mesaComMonitor(c, x + 8, "#ffd34d");
-  });
-  // 🧙 treino de campeão: banner com estrela
-  prop(POSICOES.CHAMPION_PRACTICE, (x) => {
-    c.fillStyle = "#173a33";
-    c.fillRect(x - 10, 16, 20, 26);
-    c.fillStyle = "#2ee6a0";
-    c.fillRect(x - 3, 25, 6, 6);
-    c.fillRect(x - 1, 23, 2, 10);
-    c.fillRect(x - 5, 27, 10, 2);
-    mesa(c, x);
-  });
-  // 🔴 sala de stream: mesa + painel ON AIR (apagado; acende ao vivo)
-  prop(POSICOES.SALA_DE_STREAM, (x) => {
-    c.fillStyle = "#331520";
-    c.fillRect(x - 12, 22, 24, 8);
-    mesaComMonitor(c, x, "#ff9a9a");
-  });
-  // 🛏️ bem-estar: peso da academia + cama
-  prop(POSICOES.ACADEMIA_SONO_TERAPIA, (x) => {
-    c.fillStyle = "#9a90c0";
-    c.fillRect(x - 16, CHAO_Y - 6, 14, 2); // barra
-    c.fillStyle = "#5a5480";
-    c.fillRect(x - 18, CHAO_Y - 9, 3, 8);
-    c.fillRect(x - 4, CHAO_Y - 9, 3, 8);
-    c.fillStyle = "#2a4d6e";
-    c.fillRect(x + 2, CHAO_Y - 10, 26, 10); // cama
-    c.fillStyle = "#7ec8ff";
-    c.fillRect(x + 4, CHAO_Y - 12, 8, 4); // travesseiro
-  });
-
-  return cv;
-}
-
-function mesa(c: CanvasRenderingContext2D, x: number): void {
-  c.fillStyle = "#3a2e63";
-  c.fillRect(x - 12, CHAO_Y - 16, 24, 3);
-  c.fillRect(x - 10, CHAO_Y - 13, 2, 13);
-  c.fillRect(x + 8, CHAO_Y - 13, 2, 13);
-}
-
-function mesaComMonitor(c: CanvasRenderingContext2D, x: number, corTela: string): void {
-  mesa(c, x);
-  c.fillStyle = "#0b0617";
-  c.fillRect(x - 6, CHAO_Y - 26, 12, 10);
-  c.fillStyle = corTela;
-  c.fillRect(x - 5, CHAO_Y - 25, 10, 8);
-  c.fillStyle = "#0b0617";
-  c.fillRect(x - 1, CHAO_Y - 16, 2, 2);
 }

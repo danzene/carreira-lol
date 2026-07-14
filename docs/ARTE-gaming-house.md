@@ -111,36 +111,116 @@ game controller abandoned on the floor, dim mood. (Static, 1 frame — the hero 
 
 ## GRUPO C — Animações NOVAS do herói (mesmo personagem dos sprites existentes!)
 
-⚠️ CRÍTICO: é o MESMO herói dos assets atuais (o jogador chibi do diorama — anexar
-1-2 PNGs da pasta "Personagem carreira lol" como referência de personagem em toda
-geração deste grupo). 2 frames por animação, side-view, mesma escala.
+⚠️ CRÍTICO — em TODA mensagem deste grupo: **anexe 1-2 PNGs** da pasta
+"Personagem carreira lol" (ex.: o de correr e o de idle) junto com o prompt. Todos os
+prompts abaixo já dizem "use the attached character reference".
 
-- **C1 — Sentado digitando** (replay/scrim/stream/1v1): sentado numa cadeira gamer de
-  perfil, mãos no teclado; frame B = mãos em outra posição + cabeça levemente inclinada.
-- **C2 — Mirando** (aim trainer): em pé, braço esticado com mouse na mão apontando pro
-  alvo; frame B = braço em outro ângulo com um flick.
-- **C3 — Levantando peso** (academia): segurando a barra; frame A embaixo, frame B em cima,
-  bochechas vermelhas.
-- **C4 — Dormindo** (sono): deitado na cama de perfil, cobertor subindo/descendo entre
-  os frames, "z" saindo.
-- **C5 — Na poltrona (terapia)**: sentado relaxado, xícara na mão; frame B = bebendo.
-- **C6 — Exausto no sofá (burnout)**: largado no sofá, olheiras, controle caído; frame B =
-  cabeça pendendo mais + suspiro (nuvenzinha).
-- **C7 — Anotando no quadro (análise)**: em pé de frente pro quadro tático com marcador na
-  mão; frame B = braço em outra posição escrevendo.
-- **C8 — Comemorando treino (fim de sessão)**: soquinho no ar com sorriso; frame B = pose
-  relaxada com estrelinhas. (Opcional — já existe "victory", mas uma versão casual fica melhor.)
+**C1 — Sentado digitando** (usada em replay/scrim/stream/1v1):
+```
+Use the attached character reference: SAME hero, same face, same hair, same outfit and colors.
+The hero sitting on a gamer chair in strict side-view profile, typing on a keyboard at a desk (chair + hero only, NO desk in the image).
+2 frames side by side, same canvas: frame A = hands on keyboard, relaxed; frame B = hands slightly raised mid-typing, head tilted a bit forward.
+Transparent background.
+```
+
+**C2 — Mirando** (aim trainer):
+```
+Use the attached character reference: SAME hero, same colors.
+The hero standing in side-view profile, one arm extended forward holding a computer mouse like aiming at a target, focused expression.
+2 frames side by side: frame A = arm level; frame B = quick flick, arm slightly higher, tiny motion lines.
+Transparent background.
+```
+
+**C3 — Levantando peso** (academia):
+```
+Use the attached character reference: SAME hero, same colors.
+The hero in side-view profile lifting a small barbell with both hands, cheeks slightly red from effort.
+2 frames side by side: frame A = barbell at chest height, knees bent; frame B = barbell lifted overhead, body stretched.
+Transparent background.
+```
+
+**C4 — Dormindo** (sono):
+```
+Use the attached character reference: SAME hero, same colors.
+The hero lying down asleep in side-view profile, under a blue blanket, eyes closed, peaceful (hero + blanket only, NO bed in the image).
+2 frames side by side: frame A = blanket low, mouth closed; frame B = blanket slightly risen (breathing), tiny "z" above the head.
+Transparent background.
+```
+
+**C5 — Na poltrona / terapia:**
+```
+Use the attached character reference: SAME hero, same colors.
+The hero sitting relaxed in side-view profile holding a warm mug with both hands, calm smile (hero only, NO armchair in the image).
+2 frames side by side: frame A = mug at chest, steam wisp; frame B = sipping from the mug, eyes closed happy.
+Transparent background.
+```
+
+**C6 — Exausto no sofá (BURNOUT):**
+```
+Use the attached character reference: SAME hero, same colors.
+The hero slumped in side-view profile as if sunk into a couch: dark circles under the eyes, messy hair, arms fallen,
+a game controller dropped near his hand (hero + controller only, NO couch in the image).
+2 frames side by side: frame A = head drooping; frame B = head drops lower with a small sigh cloud.
+Transparent background.
+```
+
+**C7 — Anotando no quadro (análise):**
+```
+Use the attached character reference: SAME hero, same colors.
+The hero standing in side-view profile writing with a marker on an invisible board in front of him, thinking hard
+(hero + marker only, NO whiteboard in the image).
+2 frames side by side: frame A = arm up writing high; frame B = arm mid-height writing, other hand on chin.
+Transparent background.
+```
+
+**C8 — Comemorando treino (fim de sessão — opcional):**
+```
+Use the attached character reference: SAME hero, same colors.
+The hero in side-view profile doing a small casual fist pump with a happy grin.
+2 frames side by side: frame A = fist up, one eye winking; frame B = relaxed pose, two tiny gold stars near the head.
+Transparent background.
+```
 
 ## GRUPO D — Efeitos e overlays (PNG transparente, pequenos)
 
-- **D1 — Fagulhas de treino**: mini sprite sheet com 4-6 partículas pixel (faísca, +,
-  estrelinha) em BRANCO puro (o jogo tinge na cor da estação).
-- **D2 — "Zzz" do sono/fadiga**: 3 tamanhos de "z" pixelado, lavanda #9a90c0.
-- **D3 — Balão ON AIR**: a plaquinha acesa isolada (pra piscar por cima da estação).
-- **D4 — Corações/notas de moral alta**: 2-3 mini sprites dourados (pôster brilhando).
-- **D5 — Vinheta de burnout**: gradiente radial escuro-azulado 480×120 (@1x) com bordas
-  mais pesadas (overlay multiplicativo).
-- **D6 — Luz quente de moral alta**: overlay 480×120 dourado suave saindo da janela/LEDs.
+**D1 — Fagulhas de treino (o jogo tinge na cor de cada estação — gerar em BRANCO):**
+```
+Tiny pixel art particle sprite sheet on transparent background: 6 small separate particles in a row, PURE WHITE only —
+a spark, a plus sign, a 4-point star, a small diamond, a dot cluster, a tiny burst. Each particle max 8x8 pixels (draw at 8x scale).
+Chunky pixels, no anti-aliasing, no outline, no colors other than white.
+```
+
+**D2 — "Zzz" do sono/fadiga:**
+```
+Pixel art "Z" letters for a sleeping effect, transparent background: three separate Z's in a row, small / medium / large,
+soft lavender color #9a90c0, chunky pixels with 1px dark outline, no anti-aliasing.
+```
+
+**D3 — Plaquinha ON AIR acesa:**
+```
+Pixel art "ON AIR" sign, lit bright red (#ff4d4d) with warm glow pixels around it, dark frame, side-view flat front,
+transparent background, chunky pixels, readable at small size. Deliver 2 frames side by side: lit / slightly dimmer (for blinking).
+```
+
+**D4 — Brilhos de moral alta:**
+```
+Tiny pixel art sprite sheet, transparent background: 3 separate small sprites in a row — a gold heart, a gold music note,
+a gold sparkle star (#ffd34d), each with 1px dark outline, max 10x10 pixels each (draw at 8x scale), chunky pixels.
+```
+
+**D5 — Vinheta de burnout (overlay):**
+```
+A 1920x480 overlay image (no transparency needed at edges): dark blue-purple radial vignette — fully transparent in the center,
+gradually darkening to heavy #050312 at the edges and corners. Smooth but with a subtle pixel-dither texture in the gradient.
+PNG with alpha.
+```
+
+**D6 — Luz quente de moral alta (overlay):**
+```
+A 1920x480 overlay image, PNG with alpha: soft warm golden light (#ffd34d at very low opacity) spilling diagonally
+from the upper area like cozy ceiling LEDs, strongest at top-center, fading to fully transparent at the bottom.
+Subtle pixel-dither texture in the gradient.
+```
 
 ## Regras de consistência (repetir se a IA derrapar)
 1. Mesma paleta em tudo (cores do prompt-mestre) — nada de cores novas saturadas.

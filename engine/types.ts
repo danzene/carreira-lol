@@ -116,6 +116,8 @@ export interface MatchResult {
 
 // ----- Opções de nova carreira (Fase 11) -----
 // (sem dificuldade — o jogo é linear; ver data/opcoes.ts)
+export type CantoWidget = "dir-baixo" | "dir-cima" | "esq-baixo" | "esq-cima";
+
 export interface OpcoesCarreira {
   esconderAtributos: boolean; // modo imersão: esconde os números dos atributos
   fearless: boolean; // não dá pra repetir campeões jogados recentemente
@@ -123,6 +125,7 @@ export interface OpcoesCarreira {
   grindPilula?: boolean; // prefere o widget-pílula discreto ao diorama animado
   reduzirAnimacoes?: boolean; // modo economia: 12fps e sem partículas no diorama
   volumeDiorama?: number; // 0..1 — fração do volume global pros sons do diorama
+  grindCanto?: CantoWidget; // canto da tela onde o widget flutuante ancora (padrão: dir-baixo)
 }
 
 // ----- Partidas-evento (Fase 11 p2) -----

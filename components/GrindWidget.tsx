@@ -4,12 +4,29 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { GRIND } from "@/data/grind";
 import { grindDisponivel, placarDoDia, tetoAtingido } from "@/engine/grind";
+import type { CantoWidget } from "@/engine/types";
 import { tocarSom } from "@/lib/som";
 import { rastrear } from "@/lib/telemetria";
 import { useCareer } from "@/store/careerStore";
 import DioramaGrind from "./grind/DioramaGrind";
 import { grindVisivel } from "./grind/pip";
 import { modoVisualGrind } from "./grind/visual";
+
+// 🧭 O widget ancora num CANTO da tela (preferência do jogador, persistida no save) —
+// nunca mais uma faixa por cima do conteúdo. `top` desvia do header fixo.
+const CANTOS: CantoWidget[] = ["dir-baixo", "dir-cima", "esq-baixo", "esq-cima"];
+const CLASSE_CANTO: Record<CantoWidget, string> = {
+  "dir-baixo": "bottom-2 right-2 sm:bottom-3 sm:right-3",
+  "dir-cima": "top-14 right-2 sm:top-16 sm:right-3",
+  "esq-baixo": "bottom-2 left-2 sm:bottom-3 sm:left-3",
+  "esq-cima": "top-14 left-2 sm:top-16 sm:left-3",
+};
+const ROTULO_CANTO: Record<CantoWidget, string> = {
+  "dir-baixo": "direita, embaixo",
+  "dir-cima": "direita, em cima",
+  "esq-baixo": "esquerda, embaixo",
+  "esq-cima": "esquerda, em cima",
+};
 
 // 🛋️ Coordenador do Grind de Normais: heartbeat de segundos VISÍVEIS (aba visível OU
 // janela PiP aberta — guard único, sem dupla contagem), resumo de retorno, título e
@@ -112,8 +129,11 @@ export default function GrindWidget() {
 
   const g = career.grind;
   const noTeto = g ? tetoAtingido(g) : false;
+  const canto: CantoWidget = career.opcoes?.grindCanto ?? "dir-baixo";
+  const proximoCanto = CANTOS[(CANTOS.indexOf(canto) + 1) % CANTOS.length];
+  const trocarCanto = () => useCareer.getState().definirOpcaoGrind({ grindCanto: proximoCanto });
 
-  // ---- PÍLULA ----
+  // ---- PÍLULA (ancorada no canto escolhido) ----
   if (usaPilula) {
     const corFlash = flash === "v" ? "border-emerald-400" : flash === "d" ? "border-rosa" : "border-borda";
     const pctTeto = Math.min(100, Math.round(((g?.segundosHoje ?? 0) / GRIND.tetoSegundosDia) * 100));
@@ -124,7 +144,7 @@ export default function GrindWidget() {
           if (minimizado) setMinimizado(false);
           else useCareer.getState().alternarGrind();
         }}
-        className={`fixed bottom-2 right-2 z-30 flex items-center gap-2 border-2 bg-painel/95 px-2.5 py-1.5 shadow-lg backdrop-blur transition-colors sm:bottom-3 sm:right-3 ${corFlash}`}
+        className={`fixed z-30 flex items-center gap-2 border-2 bg-painel/95 px-2.5 py-1.5 shadow-lg backdrop-blur transition-colors ${CLASSE_CANTO[canto]} ${corFlash}`}
         title={minimizado ? "Reabrir o diorama do grind" : ligado ? "Grind ativo — clique pra pausar" : "Grind pausado — clique pra ligar"}
       >
         <span className="text-[13px]">{ligado ? (noTeto ? "😴" : "⚔️") : "⏸️"}</span>
@@ -140,18 +160,29 @@ export default function GrindWidget() {
     );
   }
 
-  // ---- STRIP flutuante do diorama (todas as rotas fora do dashboard) ----
+  // ---- CARTÃO flutuante do diorama: compacto e ancorado no canto escolhido (nunca
+  // mais uma faixa por cima do conteúdo da tela) ----
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 px-1.5 pb-1.5 sm:px-3 sm:pb-2">
-      <div className="pointer-events-auto relative mx-auto w-full max-w-3xl">
-        <button
-          type="button"
-          onClick={() => setMinimizado(true)}
-          className="absolute -top-2 right-1 z-10 border border-borda bg-fundo px-1.5 font-pixel text-[8px] text-suave transition hover:text-texto"
-          title="Recolher pra pílula"
-        >
-          ▁
-        </button>
+    <div className={`fixed z-30 w-[min(94vw,400px)] ${CLASSE_CANTO[canto]}`}>
+      <div className="relative">
+        <div className="absolute -top-2 right-1 z-10 flex gap-1">
+          <button
+            type="button"
+            onClick={trocarCanto}
+            className="border border-borda bg-fundo px-1.5 font-pixel text-[8px] text-suave transition hover:text-texto"
+            title={`Mover pro canto: ${ROTULO_CANTO[proximoCanto]}`}
+          >
+            ⇄
+          </button>
+          <button
+            type="button"
+            onClick={() => setMinimizado(true)}
+            className="border border-borda bg-fundo px-1.5 font-pixel text-[8px] text-suave transition hover:text-texto"
+            title="Recolher pra pílula"
+          >
+            ▁
+          </button>
+        </div>
         <DioramaGrind resultado={resultado} />
       </div>
     </div>

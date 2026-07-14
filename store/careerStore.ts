@@ -173,7 +173,7 @@ interface CareerStore {
   tickGrind: (deltaSegundos: number) => void;
   alternarGrind: () => void;
   alternarOcultarGrind: () => void;
-  definirOpcaoGrind: (patch: Partial<Pick<OpcoesCarreira, "grindPilula" | "reduzirAnimacoes" | "volumeDiorama">>) => void;
+  definirOpcaoGrind: (patch: Partial<Pick<OpcoesCarreira, "grindPilula" | "reduzirAnimacoes" | "volumeDiorama" | "grindCanto">>) => void;
   // 🎯 Grind com Propósito
   abrirBauGrind: (escolha?: number) => { tier: TierBau; cosmetico?: string } | null;
   comprarTalento: (id: string) => boolean;

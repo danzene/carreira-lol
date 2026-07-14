@@ -303,6 +303,14 @@ export function executarSessao(career: CareerState, p: ParamsSessao): ResultadoS
   };
 }
 
+// Mapeamento EXPLÍCITO sessão → missão do passe (as missões antigas de "treinar" e
+// "stream" continuam progredindo com as sessões novas — testado).
+export function chavePasseDaSessao(estacao: EstacaoId): "treinar" | "stream" | null {
+  if (estacao === "SALA_DE_STREAM") return "stream";
+  if (estacao === "ANALISE_ADVERSARIO") return null; // estudo não é treino nem stream
+  return "treinar";
+}
+
 // ---- 🎯 Foco da Semana ----
 export function definirFoco(career: CareerState, foco: AtributoKey[], chaveSemana: number): CareerState {
   const casa = casaDe(career);

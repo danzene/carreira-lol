@@ -5,6 +5,7 @@ import {
   analiseValePara,
   casaDe,
   casaInicial,
+  chavePasseDaSessao,
   consolidar,
   consumirAnalise,
   decairComPisos,
@@ -17,6 +18,7 @@ import {
   normalizarCasa,
   tendenciasDoTime,
 } from "./gamingHouse";
+import { treinar } from "./loop";
 import { avancarSemana } from "./loop";
 import { criarCareerState, criarPlayer, normalizarCareer } from "./player";
 import type { Attributes, AtributoKey, CareerState } from "./types";
@@ -274,16 +276,108 @@ describe("gaming house — foco honrado, migração e calibração", () => {
     expect(sujo.analise).toBeNull();
   });
 
-  it("CALIBRAÇÃO por energia: o melhor caso novo fica na ordem do ESPECIAL antigo (sem inflar)", () => {
-    // antigo: ESPECIAL = 3.0 attr / 35⚡ ≈ 0.0857/⚡ (era o teto do otimizador)
+  it("missões do passe: sessões de treino contam como 'treinar', stream como 'stream', análise não conta", () => {
+    expect(chavePasseDaSessao("AIM_TRAINER")).toBe("treinar");
+    expect(chavePasseDaSessao("REPLAY_ROOM")).toBe("treinar");
+    expect(chavePasseDaSessao("CUSTOM_1V1")).toBe("treinar");
+    expect(chavePasseDaSessao("SCRIM_SIM")).toBe("treinar");
+    expect(chavePasseDaSessao("CHAMPION_PRACTICE")).toBe("treinar");
+    expect(chavePasseDaSessao("ACADEMIA_SONO_TERAPIA")).toBe("treinar");
+    expect(chavePasseDaSessao("SALA_DE_STREAM")).toBe("stream");
+    expect(chavePasseDaSessao("ANALISE_ADVERSARIO")).toBeNull();
+  });
+
+  it("CALIBRAÇÃO por energia: o PICO por sessão pode superar o especial antigo (é o prêmio da gestão), mas com teto", () => {
+    // O guarda REAL da Regra 3 é a SIMULAÇÃO SEMANAL (±15%, abaixo): o pico com tudo
+    // alinhado (intensa + foco + moral alta + 1ª sessão) excede o especial antigo de
+    // propósito — o overhead de fadiga/sono/rendimento decrescente cobra de volta na
+    // média da semana. Aqui só travamos que o pico não é ABSURDO (≤ ×1.8 do antigo).
     const antigoPorEnergia = LOOP.ganhoEspecial / LOOP.custoEspecial;
-    // novo (teto): AIM intensa + foco + moral alta, 1ª sessão da semana
     const c = definirFoco(carreira({ moral: 90 }), ["mecanica", "macro"], 1001);
     const r = executarSessao(c, { estacao: "AIM_TRAINER", intensidade: "intensa", agora: AGORA })!;
     const custo = 100 - r.career.player.energia;
     const novoPorEnergia = r.ganhos.mecanica! / custo;
-    // mesma ordem de grandeza: nem 15% acima do antigo (a simulação completa é a F3)
-    expect(novoPorEnergia).toBeLessThanOrEqual(antigoPorEnergia * 1.15);
-    expect(novoPorEnergia).toBeGreaterThanOrEqual(antigoPorEnergia * 0.6);
+    expect(novoPorEnergia).toBeLessThanOrEqual(antigoPorEnergia * 1.8);
+    expect(novoPorEnergia).toBeGreaterThanOrEqual(antigoPorEnergia * 0.8);
+  });
+});
+
+describe("SIMULAÇÃO COMPARATIVA (Regra 3): sistema antigo vs Gaming House, otimizador em ambos", () => {
+  const SEMANAS = 8;
+  const ORCAMENTO = 200; // ⚡ de treino por semana (igual pros dois — só a decisão muda)
+
+  const soma = (a: Attributes) => (Object.values(a) as number[]).reduce((s, v) => s + v, 0);
+
+  // ANTIGO: spam de ESPECIAL (o teto do otimizador) + treino comum na sobra.
+  function semanaAntiga(c: CareerState): CareerState {
+    let atual: CareerState = { ...c, player: { ...c.player, energia: 100 } };
+    let gasto = 0;
+    const alvos: AtributoKey[] = ["mecanica", "laning", "macro", "teamfight"];
+    let i = 0;
+    while (gasto < ORCAMENTO) {
+      atual = { ...atual, player: { ...atual.player, energia: 100 } }; // orçamento simulado
+      const especial = ORCAMENTO - gasto >= 35;
+      const r = treinar(atual, alvos[i % alvos.length], especial);
+      if (!r) break;
+      atual = r;
+      gasto += especial ? 35 : 20;
+      if (!especial && ORCAMENTO - gasto < 20) break;
+      i++;
+    }
+    return atual;
+  }
+
+  // NOVO: foco declarado, roda as estações de treino em INTENSA (1ª de cada = cheia),
+  // dorme quando a fadiga ameaça estourar (gestão que o jogo ensina).
+  function semanaNova(c: CareerState): CareerState {
+    let atual = definirFoco({ ...c, player: { ...c.player, energia: 100 } }, ["mecanica", "laning"], 1);
+    const rotacao: Parameters<typeof executarSessao>[1]["estacao"][] = [
+      "AIM_TRAINER", "CUSTOM_1V1", "REPLAY_ROOM", "SCRIM_SIM", "CHAMPION_PRACTICE",
+    ];
+    let gasto = 0;
+    let i = 0;
+    let guard = 0;
+    while (gasto < ORCAMENTO && guard++ < 40) {
+      atual = { ...atual, player: { ...atual.player, energia: 100 } };
+      const fadiga = casaDe(atual).fadiga;
+      if (fadiga >= 70) {
+        const r = executarSessao(atual, { estacao: "ACADEMIA_SONO_TERAPIA", variante: "sono", intensidade: "normal", agora: AGORA })!;
+        atual = r.career;
+        gasto += 5;
+        continue;
+      }
+      const estacao = rotacao[i % rotacao.length];
+      const r = executarSessao(atual, { estacao, intensidade: "intensa", championId: "Ahri", agora: AGORA });
+      if (!r) break;
+      atual = r.career;
+      gasto += 32; // AIM/1V1/REPLAY/CHAMPION intensa = 32; SCRIM = 40 (aproximação a favor do novo)
+      i++;
+    }
+    return atual;
+  }
+
+  it(`crescimento semanal do NOVO fica em ±15% do ANTIGO ao longo de ${SEMANAS} semanas`, () => {
+    let antigo = carreira();
+    let novo = carreira();
+    const base = soma(antigo.player.atributos);
+
+    for (let s = 0; s < SEMANAS; s++) {
+      antigo = semanaAntiga(antigo);
+      novo = semanaNova(novo);
+      // as duas linhas viram a semana pelo MESMO caminho real (decay com pisos incluso)
+      antigo = { ...antigo, avancosEm: [], descansosEm: [] };
+      novo = { ...novo, avancosEm: [], descansosEm: [] };
+      antigo = avancarSemana(antigo);
+      novo = avancarSemana(novo);
+    }
+
+    const cresceuAntigo = (soma(antigo.player.atributos) - base) / SEMANAS;
+    const cresceuNovo = (soma(novo.player.atributos) - base) / SEMANAS;
+    const razao = cresceuNovo / cresceuAntigo;
+    // números MEDIDOS congelados no CHANGELOG-gaming-house.md
+    // eslint-disable-next-line no-console
+    console.log(`[sim comparativa] antigo ${cresceuAntigo.toFixed(2)} attr/semana · novo ${cresceuNovo.toFixed(2)} attr/semana · razão ${razao.toFixed(2)}`);
+    expect(razao).toBeGreaterThanOrEqual(0.85); // profundidade sem ROUBAR rendimento
+    expect(razao).toBeLessThanOrEqual(1.15); // e sem INFLAR a curva de elo
   });
 });

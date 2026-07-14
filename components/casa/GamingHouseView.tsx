@@ -20,6 +20,14 @@ import { CASA_H, CASA_W, criarCenaCasa, type CenaCasa } from "./cenaCasa";
 // antes de confirmar; confirmar roda a cena (o herói anda até a estação e treina).
 
 const NOME_ATTR = Object.fromEntries(ATRIBUTOS.map((a) => [a.chave, a.nome])) as Record<AtributoKey, string>;
+const LS_INTRO_CASA = "carreira-casa-intro";
+
+// Onboarding de 3 balões na primeira visita (estação → intensidade → foco).
+const PASSOS_INTRO = [
+  { emoji: "🖱️", txt: "Clique numa ESTAÇÃO da casa — cada uma treina atributos diferentes e o seu jogador vai até lá." },
+  { emoji: "🎚️", txt: "Escolha a INTENSIDADE: intensa rende mais, mas cansa (fadiga) e belisca a Moral. Os números aparecem ANTES de confirmar." },
+  { emoji: "🎯", txt: "Declare o FOCO DA SEMANA: 2 atributos com +28% de rendimento. Variar as estações também rende mais (repetir cansa a rotina)." },
+];
 
 export default function GamingHouseView() {
   const career = useCareer((s) => s.career);
@@ -37,6 +45,15 @@ export default function GamingHouseView() {
   const [aviso, setAviso] = useState<string | null>(null);
   const [editandoFoco, setEditandoFoco] = useState(false);
   const [agora, setAgora] = useState(() => Date.now());
+  const [intro, setIntro] = useState(-1); // -1 = sem tutorial; 0..2 = passo atual
+
+  useEffect(() => {
+    try {
+      if (!window.localStorage.getItem(LS_INTRO_CASA)) setIntro(0);
+    } catch {
+      /* localStorage indisponível: segue sem tutorial */
+    }
+  }, []);
 
   useEffect(() => {
     const id = setInterval(() => setAgora(Date.now()), 1000);
@@ -226,6 +243,33 @@ export default function GamingHouseView() {
       )}
 
       {aviso && <p className="text-[11px] text-amber-400">{aviso}</p>}
+
+      {/* 🎈 onboarding: 3 balões na primeira visita */}
+      {intro >= 0 && intro < PASSOS_INTRO.length && (
+        <div className="fixed inset-x-0 bottom-4 z-40 mx-auto w-[min(92vw,420px)] border-2 border-ciano bg-painel p-3 shadow-lg">
+          <p className="text-[12px] text-texto">
+            <span className="mr-1 text-lg">{PASSOS_INTRO[intro].emoji}</span>
+            {PASSOS_INTRO[intro].txt}
+          </p>
+          <div className="mt-2 flex items-center justify-between">
+            <span className="font-pixel text-[8px] text-suave">{intro + 1}/{PASSOS_INTRO.length}</span>
+            <button
+              type="button"
+              onClick={() => {
+                if (intro + 1 >= PASSOS_INTRO.length) {
+                  try {
+                    window.localStorage.setItem(LS_INTRO_CASA, "1");
+                  } catch { /* sem persistência: ok */ }
+                  setIntro(-1);
+                } else setIntro(intro + 1);
+              }}
+              className="border-2 border-ciano bg-ciano/10 px-3 py-1 font-pixel text-[9px] text-ciano transition hover:bg-ciano hover:text-fundo"
+            >
+              {intro + 1 >= PASSOS_INTRO.length ? "ENTENDI!" : "PRÓXIMO →"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

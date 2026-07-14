@@ -39,32 +39,32 @@ export const ESTACOES: Record<EstacaoId, DefEstacao> = {
   REPLAY_ROOM: {
     id: "REPLAY_ROOM", nome: "Sala de Replay", emoji: "📼",
     desc: "VOD review: entender o mapa vem antes do clique.",
-    custoBase: 20, fadigaBase: 12, ganhos: { macro: 0.8, consistencia: 0.3 },
+    custoBase: 20, fadigaBase: 12, ganhos: { macro: 1.25, consistencia: 0.45 },
   },
   AIM_TRAINER: {
     id: "AIM_TRAINER", nome: "Aim Trainer", emoji: "🎯",
     desc: "Precisão crua: flicks, tracking, combos.",
-    custoBase: 20, fadigaBase: 12, ganhos: { mecanica: 1.0 },
+    custoBase: 20, fadigaBase: 12, ganhos: { mecanica: 1.55 },
   },
   CUSTOM_1V1: {
     id: "CUSTOM_1V1", nome: "Custom 1v1", emoji: "⚔️",
     desc: "Lane de verdade contra sparring: trades, waves, all-in.",
-    custoBase: 20, fadigaBase: 14, ganhos: { laning: 0.8, mecanica: 0.3 },
+    custoBase: 20, fadigaBase: 14, ganhos: { laning: 1.25, mecanica: 0.45 },
   },
   SCRIM_SIM: {
     id: "SCRIM_SIM", nome: "Simulador de Scrim", emoji: "🖥️",
     desc: "Teamfight 5v5 com calls: quem fala, ganha.",
-    custoBase: 25, fadigaBase: 16, ganhos: { teamfight: 0.75, comunicacao: 0.55 },
+    custoBase: 25, fadigaBase: 16, ganhos: { teamfight: 1.15, comunicacao: 0.85 },
   },
   CHAMPION_PRACTICE: {
     id: "CHAMPION_PRACTICE", nome: "Treino de Campeão", emoji: "🧙",
     desc: "Reps num campeão da sua pool: maestria sobe junto.",
-    custoBase: 20, fadigaBase: 12, ganhos: { championPool: 0.7 }, maestria: 2.5,
+    custoBase: 20, fadigaBase: 12, ganhos: { championPool: 1.1 }, maestria: 2.5,
   },
   ACADEMIA_SONO_TERAPIA: {
     id: "ACADEMIA_SONO_TERAPIA", nome: "Bem-estar", emoji: "🛏️",
     desc: "Academia (Mental), sono (recupera fadiga) ou terapia (recupera Moral).",
-    custoBase: 20, fadigaBase: 10, ganhos: { mental: 0.9 }, // variante ACADEMIA; sono/terapia abaixo
+    custoBase: 20, fadigaBase: 10, ganhos: { mental: 1.4 }, // variante ACADEMIA; sono/terapia abaixo
   },
   SALA_DE_STREAM: {
     id: "SALA_DE_STREAM", nome: "Sala de Stream", emoji: "🔴",

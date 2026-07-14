@@ -20,7 +20,7 @@ import { criarRng } from "@/engine/rng";
 import { counterComp, counterLanes, type MatchupRota, type PickRota } from "@/engine/counters";
 import { proibidosProva, type ProvaSemanal } from "@/engine/prova";
 import { buscarCampeoes, type Campeao } from "@/lib/ddragon";
-import type { ChampionDef, Role } from "@/engine/types";
+import type { ChampionDef, Classe, Role } from "@/engine/types";
 
 export interface LutadorInfo {
   championId: string;
@@ -51,6 +51,7 @@ export default function DraftBoard({
   draftInicial,
   onDraft,
   onJogar,
+  viesInimigo = [],
 }: {
   comfort: string[];
   maestria?: Record<string, number>;
@@ -62,6 +63,7 @@ export default function DraftBoard({
   draftInicial?: EstadoDraft; // retomar um draft em andamento (voltou pra tela)
   onDraft?: (e: EstadoDraft) => void; // espelha o progresso pro fluxo persistente
   onJogar: (info: JogarInfo) => void;
+  viesInimigo?: Classe[]; // 📋 Análise de Adversário: o time inimigo TENDE a picar estas classes
 }) {
   const [campeoes, setCampeoes] = useState<Campeao[]>([]);
   const [carregando, setCarregando] = useState(true);
@@ -119,7 +121,8 @@ export default function DraftBoard({
     const t = setTimeout(() => {
       // seu coach draft "sério" mesmo em soloq quando pega os seus picks (conforto)
       const modoDoPasso = passo.time === "azul" && comfortDoTime.length > 0 ? "competitivo" : modo;
-      const escolha = escolhaIA(estado, banco, comfortDoTime, modoDoPasso, rng);
+      // 📋 análise: o time VERMELHO pica de verdade as classes reveladas (viés counterável)
+      const escolha = escolhaIA(estado, banco, comfortDoTime, modoDoPasso, rng, passo.time === "vermelho" ? viesInimigo : []);
       if (escolha) setEstado((e) => aplicarEscolha(e, escolha));
     }, 650);
     return () => clearTimeout(t);

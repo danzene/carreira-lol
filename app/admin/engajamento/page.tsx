@@ -58,6 +58,18 @@ interface Eng {
       conquistas_total: number;
     };
   } | null;
+  casa: {
+    estacao_hist: KV[];
+    intensidade_hist: KV[];
+    sessoes_total: number;
+    usuarios: number;
+    burnout_usuarios: number;
+    burnout_taxa: number;
+    foco_usuarios: number;
+    foco_pct: number;
+    stream_tipos: KV[];
+    analises: number;
+  } | null;
 }
 
 // Tipos de cerimônia (do EventBus do jogo) → nome legível em PT.
@@ -263,6 +275,52 @@ export default function AdminEngajamento() {
           </>
         )}
       </Secao>
+
+      <Secao
+        titulo="Gaming House — Treino Profundo"
+        sub="Uso por estação (estação morta aparece aqui), taxa de burnout (se alta, a fadiga está cruel — recalibrar) e adoção do Foco da Semana."
+      >
+        {!dados.casa ? (
+          <Vazio msg="Sem dados da Gaming House (rode a migration 021 e aguarde eventos sessao_treino)." />
+        ) : (
+          <>
+            <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <KpiCard rotulo="Sessões de treino" valor={Number(dados.casa.sessoes_total)} />
+              <KpiCard rotulo="Taxa de burnout" valor={Number(dados.casa.burnout_taxa)} formato={(n) => `${n}%`} />
+              <KpiCard rotulo="Adoção do Foco" valor={Number(dados.casa.foco_pct)} formato={(n) => `${n}%`} />
+              <KpiCard rotulo="Análises de adversário" valor={Number(dados.casa.analises)} />
+            </div>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <Painel>
+                <p className="mb-1 text-[11px] text-zinc-400">Sessões por estação (a morta é candidata a rework)</p>
+                <BarChart dados={dados.casa.estacao_hist.map((e) => ({ x: nomeEstacao(e.k), y: Number(e.v), cor: "#34d399" }))} altura={170} />
+              </Painel>
+              <Painel>
+                <p className="mb-1 text-[11px] text-zinc-400">Intensidades e tipos de stream</p>
+                <BarChart
+                  dados={[
+                    ...dados.casa.intensidade_hist.map((i) => ({ x: humanizar(i.k), y: Number(i.v), cor: "#f59e0b" })),
+                    ...dados.casa.stream_tipos.map((t) => ({ x: `📺 ${humanizar(t.k)}`, y: Number(t.v), cor: "#f43f5e" })),
+                  ]}
+                  altura={170}
+                />
+              </Painel>
+            </div>
+          </>
+        )}
+      </Secao>
     </div>
   );
 }
+
+const NOME_ESTACAO: Record<string, string> = {
+  REPLAY_ROOM: "Replay",
+  AIM_TRAINER: "Aim",
+  CUSTOM_1V1: "1v1",
+  SCRIM_SIM: "Scrim",
+  CHAMPION_PRACTICE: "Campeão",
+  ACADEMIA_SONO_TERAPIA: "Bem-estar",
+  SALA_DE_STREAM: "Stream",
+  ANALISE_ADVERSARIO: "Análise",
+};
+const nomeEstacao = (e: string) => NOME_ESTACAO[e] ?? humanizar(e);

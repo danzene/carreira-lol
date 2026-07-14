@@ -5,8 +5,6 @@ import {
   alteracaoMental as alteracaoMentalEngine,
   avancarSemana as avancarSemanaEngine,
   gastarEnergiaSoloq,
-  streaming as streamingEngine,
-  treinar as treinarEngine,
 } from "@/engine/loop";
 import {
   alternarCoach as alternarCoachEngine,
@@ -103,6 +101,8 @@ import {
 } from "@/engine/grind";
 import { passivoAtivo, type EventoFase } from "@/engine/expedicao";
 import {
+  chavePasseDaSessao,
+  consumirAnalise as consumirAnaliseEngine,
   executarSessao as executarSessaoEngine,
   definirFoco as definirFocoEngine,
   focoHonrado as focoHonradoCasa,
@@ -195,8 +195,8 @@ interface CareerStore {
   carregar: (slotId: string) => boolean;
   recarregarAtual: () => boolean;
   aplicarPartida: (resultado: MatchResult) => void;
-  treinar: (atributo: AtributoKey, especial?: boolean) => boolean;
-  streaming: () => boolean;
+  // (treinar/streaming antigos REMOVIDOS — a Gaming House os substituiu; o engine
+  //  treinar/streaming permanece como referência da simulação comparativa)
   alteracaoMental: (traco: TraitId) => boolean;
   avancarSemana: (modo?: "normal" | "descanso") => void;
   limparResumo: () => void;
@@ -229,6 +229,7 @@ interface CareerStore {
   // 🏠 Gaming House
   executarSessaoCasa: (p: Omit<ParamsSessao, "agora" | "timeIdAlvo">) => ResultadoSessao | null;
   definirFocoSemana: (foco: AtributoKey[]) => void;
+  consumirAnaliseAdversario: (venceu: boolean) => void; // após a partida contra o time estudado
   apagar: (slotId: string) => void;
   sair: () => void;
 }
@@ -455,11 +456,10 @@ export const useCareer = create<CareerStore>((set, get) => ({
     const timeIdAlvo = p.estacao === "ANALISE_ADVERSARIO" ? proximoConfrontoJogador(career.liga) ?? undefined : undefined;
     const r = executarSessaoEngine(career, { ...p, timeIdAlvo, agora: Date.now() });
     if (!r) return null;
-    // missões do passe seguem contando: sessões de treino = "treinar"; stream = "stream"
-    if (p.estacao === "SALA_DE_STREAM") {
-      usePasse.getState().progredir("stream");
-      rastrear("stream_tipo", { tipo: p.tipoStream ?? "ranqueada" });
-    } else if (p.estacao !== "ANALISE_ADVERSARIO") usePasse.getState().progredir("treinar");
+    // missões do passe seguem contando (mapeamento explícito e testado no engine)
+    const chavePasse = chavePasseDaSessao(p.estacao);
+    if (chavePasse) usePasse.getState().progredir(chavePasse);
+    if (p.estacao === "SALA_DE_STREAM") rastrear("stream_tipo", { tipo: p.tipoStream ?? "ranqueada" });
     rastrear("sessao_treino", {
       estacao: p.estacao,
       intensidade: p.intensidade,
@@ -475,6 +475,16 @@ export const useCareer = create<CareerStore>((set, get) => ({
     set({ career: r.career });
     if (slotId) salvarSlot(slotId, r.career);
     return r;
+  },
+
+  // 📋 A análise vale UMA partida: consumida ao fim do jogo contra o time estudado.
+  consumirAnaliseAdversario: (venceu) => {
+    const { career: c0, slotId } = get();
+    if (!c0?.casa?.analise) return;
+    rastrear("analise_partida_fim", { time: c0.casa.analise.timeId, vitoria: venceu });
+    const novo = consumirAnaliseEngine(c0);
+    set({ career: novo });
+    if (slotId) salvarSlot(slotId, novo);
   },
 
   // 🎯 Declara o Foco da Semana (2 atributos; troca livre).
@@ -820,30 +830,6 @@ export const useCareer = create<CareerStore>((set, get) => ({
     if (subiuElo > 0) usePasse.getState().progredir("subir_elo", subiuElo);
     set({ career: novo });
     if (slotId) salvarSlot(slotId, novo);
-  },
-
-  treinar: (atributo, especial = false) => {
-    const { career: c0, slotId } = get();
-    if (!c0) return false;
-    const career = sincronizarEnergia(c0, Date.now());
-    const novo = treinarEngine(career, atributo, especial);
-    if (!novo) return false;
-    usePasse.getState().progredir("treinar");
-    set({ career: novo });
-    if (slotId) salvarSlot(slotId, novo);
-    return true;
-  },
-
-  streaming: () => {
-    const { career: c0, slotId } = get();
-    if (!c0) return false;
-    const career = sincronizarEnergia(c0, Date.now());
-    const novo = streamingEngine(career);
-    if (!novo) return false;
-    usePasse.getState().progredir("stream");
-    set({ career: novo });
-    if (slotId) salvarSlot(slotId, novo);
-    return true;
   },
 
   alteracaoMental: (traco) => {

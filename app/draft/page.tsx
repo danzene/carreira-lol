@@ -15,6 +15,8 @@ import { timeDe } from "@/data/times";
 import { energiaAgora } from "@/engine/tempo";
 import { dificuldadeSoloq } from "@/engine/elo";
 import { efeitoLendas } from "@/engine/gacha";
+import { CASA } from "@/data/gamingHouse";
+import { analiseValePara, tendenciasDoTime } from "@/engine/gamingHouse";
 import { efeitoItens } from "@/engine/itens";
 import { forcaTimeDe, proximoConfrontoJogador } from "@/engine/liga";
 import { proximoConfrontoTorneio } from "@/engine/internacional";
@@ -125,6 +127,8 @@ function DraftFlow() {
   }
 
   const adversario = adversarioId ? timeDe(adversarioId) : null;
+  // 📋 Quadro Tático: análise vale SÓ contra o time estudado (bônus 1 partida + viés real)
+  const analiseAtiva = career ? analiseValePara(career, adversarioId) : false;
 
   // bônus de gear: lendas equipadas + itens RPG. A Prova pode DESLIGAR cada um (modificador).
   const ef = efeitoLendas(career);
@@ -155,6 +159,8 @@ function DraftFlow() {
       else if (evento) aplicarPartidaEvento(r);
       else if (oficial) aplicarPartidaOficial(r);
       else aplicarPartida(r);
+      // 📋 a análise é consumida NA partida contra o time estudado (1 uso)
+      if (analiseAtiva) useCareer.getState().consumirAnaliseAdversario(r.vitoria);
     }
     atualizarFlow({ fase: "resultado", resultado: r, aplicado: true });
   }
@@ -206,6 +212,14 @@ function DraftFlow() {
         </div>
       )}
 
+      {/* 📋 a joia da Gaming House: o dever de casa REVELA as tendências do time */}
+      {analiseAtiva && adversarioId && fase !== "resultado" && (
+        <div className="flex items-center gap-2 border-2 border-ciano/60 bg-ciano/10 px-3 py-2 text-[11px] text-ciano">
+          📋 <span className="font-pixel text-[10px]">ANALISADO</span> · {adversario?.nome ?? adversarioId} tende a picar{" "}
+          <b>{tendenciasDoTime(adversarioId).join(" + ")}</b> — pique os counters! (+{CASA.analiseBonusComp} de counter nesta partida)
+        </div>
+      )}
+
       {provaAtiva && fase === "draft" && (
         <div className="flex flex-wrap gap-2">
           {provaAtiva.modificadores.map((m) => {
@@ -234,6 +248,7 @@ function DraftFlow() {
             draftInicial={draftSalvo ?? undefined}
             onDraft={salvarDraft}
             onJogar={aoJogar}
+            viesInimigo={analiseAtiva && adversarioId ? tendenciasDoTime(adversarioId) : []}
           />
         </>
       )}
@@ -263,7 +278,8 @@ function DraftFlow() {
               bonusInimigo: mod(career.opcoes).forcaInimigo + (evento && career.eventoAtual ? career.eventoAtual.bonusInimigo : 0),
               dificuldadeElo: !oficial && !internacional && !evento && !ehProva ? dificuldadeSoloq(career.player.rankSoloq.elo) : 0,
               counterLane: info.counterLane + (preparado ? LOJA.preparacao.counterLane : 0) + (ritmo ? ritmo.bonusCounter : 0),
-              counterComp: info.counterComp,
+              // 📋 análise do Quadro Tático: bônus PEQUENO de counter, só vs o time estudado
+              counterComp: info.counterComp + (analiseAtiva ? CASA.analiseBonusComp : 0),
             };
             return provaAtiva ? ajustarCtxProva(base, provaAtiva) : base; // modificadores honrados no engine
           })()}

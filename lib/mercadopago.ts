@@ -131,6 +131,19 @@ export async function buscarPagamento(mpPaymentId: string): Promise<PagamentoMP 
   };
 }
 
+// Acha o id do pagamento pelo external_reference (= id do pedido). Necessário no
+// Checkout Pro: o pagamento só nasce quando a pessoa paga, e o pedido não guarda
+// o mp_payment_id de antemão. Prefere um pagamento aprovado; senão o mais recente.
+export async function buscarPagamentoIdPorRef(pedidoId: string): Promise<string | null> {
+  const payment = cliente();
+  if (!payment) return null;
+  const res = await payment.search({ options: { external_reference: pedidoId } });
+  const results = res.results ?? [];
+  const aprovado = results.find((r) => r.status === "approved");
+  const escolhido = aprovado ?? results[0];
+  return escolhido?.id ? String(escolhido.id) : null;
+}
+
 // Valida a assinatura HMAC do webhook (lança InvalidWebhookSignatureError se falhar).
 // Sem MP_WEBHOOK_SECRET, retorna false (fail-closed) em vez de aceitar cego.
 export function assinaturaWebhookValida(params: {

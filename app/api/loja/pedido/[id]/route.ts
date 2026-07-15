@@ -1,6 +1,6 @@
 import { requireUser } from "@/lib/userAuth";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { creditarSePago } from "@/lib/creditarPedido";
+import { creditarPorRef, creditarSePago } from "@/lib/creditarPedido";
 
 // GET /api/loja/pedido/[id] — o cliente consulta enquanto o QR está na tela.
 // Se ainda pendente, tenta confirmar direto no MP (fallback caso o webhook atrase).
@@ -26,9 +26,11 @@ export async function GET(req: Request, { params }: { params: { id: string } }):
     .maybeSingle();
   if (!pedido || pedido.user_id !== auth.ctx.userId) return json({ error: "nao_encontrado" }, 404);
 
-  // fallback: ainda não aprovado? tenta confirmar no MP agora
-  if (pedido.status !== "aprovado" && pedido.mp_payment_id) {
-    await creditarSePago(admin, pedido.mp_payment_id);
+  // fallback: ainda não aprovado? confirma no MP agora (independe do webhook).
+  // Checkout Pro não guarda mp_payment_id de antemão → acha pelo external_reference.
+  if (pedido.status !== "aprovado") {
+    if (pedido.mp_payment_id) await creditarSePago(admin, pedido.mp_payment_id);
+    else await creditarPorRef(admin, pedido.id);
     const { data: fresco } = await admin.from("pedidos").select("status").eq("id", pedido.id).maybeSingle();
     return json({ status: fresco?.status ?? pedido.status });
   }

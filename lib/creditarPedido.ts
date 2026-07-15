@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { buscarPagamento } from "./mercadopago";
+import { buscarPagamento, buscarPagamentoIdPorRef } from "./mercadopago";
 
 // 💰 Crédito idempotente de um pagamento aprovado. Usado pelo WEBHOOK e pelo POLLING
 // (fallback: se o webhook atrasar/falhar, o cliente consultando o pedido também
@@ -56,4 +56,13 @@ export async function creditarSePago(admin: SupabaseClient, mpPaymentId: string)
 
   await admin.from("pedidos").update({ status: "aprovado", updated_at: new Date().toISOString() }).eq("id", pedido.id);
   return { estado: "creditado" };
+}
+
+// Confirma um pedido pelo ID DELE (external_reference), buscando o pagamento no MP.
+// É o caminho do Checkout Pro (o pedido não guarda mp_payment_id de antemão). Usado
+// pelo polling e pela auto-cura da loja — funciona sem depender do webhook.
+export async function creditarPorRef(admin: SupabaseClient, pedidoId: string): Promise<ResultadoCredito> {
+  const paymentId = await buscarPagamentoIdPorRef(pedidoId);
+  if (!paymentId) return { estado: "pendente", status: "sem_pagamento" };
+  return creditarSePago(admin, paymentId);
 }

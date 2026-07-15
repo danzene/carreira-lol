@@ -11,6 +11,7 @@ import {
   statusPedido,
   type StatusAssinatura,
 } from "@/lib/lojaClient";
+import { getSupabase } from "@/lib/supabaseClient";
 import { tocarSom } from "@/lib/som";
 import { rastrear } from "@/lib/telemetria";
 import { useProfile } from "@/store/profileStore";
@@ -69,6 +70,38 @@ export default function ComprarCoinPoints() {
         tocarSom("moeda");
       }
       window.history.replaceState({}, "", "/loja"); // limpa a query
+    })();
+  }, [recarregarPerfil, recarregarPasse]);
+
+  // AUTO-CURA: pagou (ex.: Pix no celular) e o navegador não voltou pro jogo? Ao
+  // abrir a loja, reconfirma os pedidos pendentes no MP e credita. Independe do
+  // webhook (usa só o Access Token). Roda sempre, sem precisar de ?pedido= na URL.
+  useEffect(() => {
+    (async () => {
+      try {
+        const sb = getSupabase();
+        const { data: u } = await sb.auth.getUser();
+        if (!u.user) return;
+        const { data } = await sb
+          .from("pedidos")
+          .select("id")
+          .eq("status", "pendente")
+          .order("created_at", { ascending: false })
+          .limit(5);
+        if (!data?.length) return;
+        let creditou = false;
+        for (const p of data as { id: string }[]) {
+          const st = await statusPedido(p.id).catch(() => "");
+          if (st === "aprovado") creditou = true;
+        }
+        if (creditou) {
+          await Promise.all([recarregarPerfil(), recarregarPasse()]);
+          setAviso("Pagamento confirmado! Seu saldo foi atualizado. 🎉");
+          tocarSom("moeda");
+        }
+      } catch {
+        /* silencioso */
+      }
     })();
   }, [recarregarPerfil, recarregarPasse]);
 

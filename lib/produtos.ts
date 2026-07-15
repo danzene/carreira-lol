@@ -17,6 +17,10 @@ export interface Produto {
 export const PRODUTOS: Record<string, Produto> = {
   passe_premium: { id: "passe_premium", nome: "Passe Premium", valorCentavos: 990, moedas: 0, concedePasse: true, destaque: "Oferta de lançamento" },
 
+  // 🧪 PACOTE DE TESTE — R$1. Deixe enquanto está validando; remova antes do lançamento
+  // final (ou mantenha como pacote de entrada barato, se quiser).
+  moedas_teste: { id: "moedas_teste", nome: "100 moedas", valorCentavos: 100, moedas: 100, concedePasse: false, destaque: "🧪 teste R$1" },
+
   moedas_10:  { id: "moedas_10",  nome: "1.000 moedas",  valorCentavos: 1000,  moedas: 1000,  concedePasse: false },
   moedas_25:  { id: "moedas_25",  nome: "2.700 moedas",  valorCentavos: 2500,  moedas: 2700,  concedePasse: false, destaque: "+8%" },
   moedas_50:  { id: "moedas_50",  nome: "5.750 moedas",  valorCentavos: 5000,  moedas: 5750,  concedePasse: false, destaque: "+15%" },
@@ -27,6 +31,7 @@ export const PRODUTOS: Record<string, Produto> = {
 
 /** Lista os pacotes de moeda (sem o passe), na ordem de preço. */
 export const PACOTES_MOEDA: Produto[] = [
+  PRODUTOS.moedas_teste,
   PRODUTOS.moedas_10, PRODUTOS.moedas_25, PRODUTOS.moedas_50,
   PRODUTOS.moedas_100, PRODUTOS.moedas_200, PRODUTOS.moedas_300,
 ];

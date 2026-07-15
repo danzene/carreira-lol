@@ -162,7 +162,11 @@ function GachaPageConteudo() {
         <div>
           <h1 className="font-pixel text-xs text-ciano">CARREIRA BOOSTER</h1>
           <p className="mt-1 text-[11px] text-suave">
-            🪙 <AnimatedNumber valor={ps} className="text-texto" /> CoinPoints · pity 5★ {career.pity ?? 0}/{GACHA.pity5}
+            🪙 <AnimatedNumber valor={ps} className="text-texto" /> CoinPoints ·{" "}
+            <Link href="/loja" className="text-rosa underline hover:text-texto">
+              + comprar
+            </Link>{" "}
+            · pity 5★ {career.pity ?? 0}/{GACHA.pity5}
           </p>
         </div>
         <Link href="/dashboard" className="border-2 border-borda px-3 py-1.5 text-[11px] text-suave transition hover:text-texto">

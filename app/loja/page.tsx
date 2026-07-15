@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Loja from "@/components/Loja";
+import ComprarCoinPoints from "@/components/ComprarCoinPoints";
 import { useCareer } from "@/store/careerStore";
 
 export default function LojaPage() {
@@ -30,6 +31,12 @@ export default function LojaPage() {
           Voltar
         </Link>
       </header>
+      {/* Compra com dinheiro real (Pix) — CoinPoints + Passe Premium */}
+      <ComprarCoinPoints />
+
+      <div className="my-1 border-t border-borda" />
+
+      {/* Loja interna (gasta $ do jogo) */}
       <Loja career={career} />
     </main>
   );

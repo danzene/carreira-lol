@@ -166,7 +166,10 @@ export default function PassePage() {
         </div>
         {!passe.premium && (
           <p className="text-[10px] text-suave">
-            Ative o Premium pra resgatar esta trilha e ganhar +{Math.round(PASSE.premiumBonusPP * 100)}% de PP. (compra em breve)
+            Ative o Premium pra resgatar esta trilha e ganhar +{Math.round(PASSE.premiumBonusPP * 100)}% de PP.{" "}
+            <Link href="/loja" className="text-amber-300 underline hover:text-texto">
+              desbloquear premium →
+            </Link>
           </p>
         )}
         <div className="flex gap-2 overflow-x-auto pb-1">

@@ -1,5 +1,5 @@
 -- ============================================================================
--- SETUP DO PAINEL ADMIN - Carreira LoL  (v11 - inclui 021 gaming house)
+-- SETUP DO PAINEL ADMIN - Carreira LoL  (v12 - inclui 022 teto coinpoints)
 -- Cole TUDO isto no Supabase (SQL Editor -> New query -> Run). Idempotente.
 -- Pre-requisito: as migrations 001..009 (tabelas base do jogo) ja rodadas.
 -- ============================================================================
@@ -969,3 +969,33 @@ returns jsonb language sql stable security definer set search_path = public as $
 $$;
 revoke execute on function public.admin_casa(integer) from public;
 grant execute on function public.admin_casa(integer) to service_role;
+
+-- >>>>>>>>>>>>>>>>>>>> 022_coinpoints_cap.sql >>>>>>>>>>>>>>>>>>>>
+-- 🛡️ Blindagem leve dos CoinPoints: a função é chamada pelo CLIENTE, então sem teto
+-- um jogador pediria `ajustar_coinpoints(delta => 999999)` no console e teria moeda
+-- infinita. Teto de 700 por chamada nos CRÉDITOS (maior fonte legítima = passe premium
+-- 600); débitos livres com saldo>=0. Ponte até a economia virar server-authoritative.
+create or replace function public.ajustar_coinpoints(delta integer, motivo text default null)
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  novo integer;
+  limite constant integer := 700; -- teto de crédito por chamada (maior fonte legítima = 600)
+begin
+  if delta > limite then
+    raise exception 'credito_acima_do_limite';
+  end if;
+  update public.profiles
+     set coinpoints = coinpoints + delta
+   where id = auth.uid() and coinpoints + delta >= 0
+   returning coinpoints into novo;
+  if novo is null then
+    raise exception 'saldo insuficiente ou perfil inexistente';
+  end if;
+  return novo;
+end;
+$$;
+grant execute on function public.ajustar_coinpoints(integer, text) to authenticated;

@@ -52,8 +52,11 @@ export async function POST(req: Request): Promise<Response> {
   if (erroPedido || !pedido) return json({ error: "falha_criar_pedido" }, 500);
 
   // 2) cria a preferência de Checkout Pro (página do MP com Pix + cartão)
-  const baseUrl = new URL(req.url).origin;
-  let pref;
+  const proto = req.headers.get("x-forwarded-proto") ?? "https";
+  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
+  const baseUrl = host ? `${proto}://${host}` : new URL(req.url).origin;
+  let pref = null;
+  let detalhe = "";
   try {
     pref = await criarPreferencia({
       produtoId: p.id,
@@ -63,12 +66,13 @@ export async function POST(req: Request): Promise<Response> {
       pedidoId: pedido.id,
       baseUrl,
     });
-  } catch {
-    pref = null;
+  } catch (e) {
+    detalhe = e instanceof Error ? e.message : String(e);
+    console.error("checkout criarPreferencia falhou:", detalhe);
   }
   if (!pref) {
     await admin.from("pedidos").update({ status: "erro", updated_at: new Date().toISOString() }).eq("id", pedido.id);
-    return json({ error: "falha_checkout" }, 502);
+    return json({ error: "falha_checkout", detalhe }, 502);
   }
 
   return json({ pedidoId: pedido.id, produto: p.id, nome: p.nome, valorCentavos: p.valorCentavos, initPoint: pref.initPoint });

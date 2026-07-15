@@ -24,8 +24,8 @@ export async function criarCheckout(produto: string): Promise<CheckoutResp> {
     body: JSON.stringify({ produto }),
   });
   if (!res.ok) {
-    const erro = (await res.json().catch(() => ({})))?.error as string | undefined;
-    throw new Error(erro ?? `checkout ${res.status}`);
+    const j = (await res.json().catch(() => ({}))) as { error?: string; detalhe?: string };
+    throw new Error(j.detalhe || j.error || `checkout ${res.status}`);
   }
   return res.json() as Promise<CheckoutResp>;
 }
@@ -56,8 +56,8 @@ export async function criarAssinatura(): Promise<string> {
     headers: t ? { Authorization: `Bearer ${t}` } : {},
   });
   if (!res.ok) {
-    const erro = (await res.json().catch(() => ({})))?.error as string | undefined;
-    throw new Error(erro ?? `assinar ${res.status}`);
+    const j = (await res.json().catch(() => ({}))) as { error?: string; detalhe?: string };
+    throw new Error(j.detalhe || j.error || `assinar ${res.status}`);
   }
   return ((await res.json()) as { initPoint: string }).initPoint;
 }

@@ -23,14 +23,18 @@ export async function POST(req: Request): Promise<Response> {
   const admin = getSupabaseAdmin();
   if (!admin) return json({ error: "backend_nao_configurado" }, 503);
 
-  const baseUrl = new URL(req.url).origin;
-  let ass;
+  const proto = req.headers.get("x-forwarded-proto") ?? "https";
+  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
+  const baseUrl = host ? `${proto}://${host}` : new URL(req.url).origin;
+  let ass = null;
+  let detalhe = "";
   try {
     ass = await criarAssinatura({ userId, email, baseUrl });
-  } catch {
-    ass = null;
+  } catch (e) {
+    detalhe = e instanceof Error ? e.message : String(e);
+    console.error("assinar criarAssinatura falhou:", detalhe);
   }
-  if (!ass) return json({ error: "falha_assinatura" }, 502);
+  if (!ass) return json({ error: "falha_assinatura", detalhe }, 502);
 
   // registra a assinatura como pendente (o webhook liga o premium quando autorizada)
   await admin.from("assinaturas").upsert(

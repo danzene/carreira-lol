@@ -24,7 +24,8 @@ function msgErro(e: unknown): string {
   const m = e instanceof Error ? e.message : "";
   if (m === "pagamento_nao_configurado") return "Pagamentos ainda não ativados aqui. Volte em breve!";
   if (m === "sem_email") return "Sua conta precisa de um e-mail pra pagar.";
-  return "Não deu pra continuar agora. Tenta de novo.";
+  if (m === "falha_checkout" || m === "falha_assinatura" || !m) return "Não deu pra continuar agora. Tenta de novo.";
+  return `Erro do Mercado Pago: ${m}`; // mostra o motivo real (diagnóstico)
 }
 
 const fmtData = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("pt-BR") : "—");

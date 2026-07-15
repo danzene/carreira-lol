@@ -2,16 +2,24 @@
 
 import Link from "next/link";
 import { RARIDADES } from "@/data/gacha";
+import { formatarReais } from "@/lib/produtos";
 import { classificarAnomalia, corSeveridade } from "@/lib/economiaAnomalia";
 import { useAdmin } from "@/components/admin/PeriodoContext";
 import { BarChart, Carregando, KpiCard, LineChart, Painel, Secao, Vazio } from "@/components/admin/ui";
 
 type KV = { k: string; v: number };
+interface Receita {
+  total_centavos: number;
+  pedidos: number;
+  por_dia: { dia: string; v: number }[];
+  por_produto: KV[];
+}
 interface Eco {
   economia: { serie: { dia: string; criado: number; destruido: number }[]; por_motivo: KV[]; saldo_hist: KV[]; top_saldos: { user_id: string; nick: string; saldo: number }[] };
   gacha: { puxadas_dia: { dia: string; v: number }[]; raridade_obs: KV[]; pity_5: KV[] };
   itens: { drops_por_raridade: KV[]; reroll: number; desmonte: number; drops_total: number };
   anomalias: { user_id: string; nick: string; saldo: number; soma_eventos: number }[];
+  receita: Receita | null;
 }
 
 const NOME_RAR: Record<string, string> = Object.fromEntries(RARIDADES.map((r) => [String(r.n), r.nome]));
@@ -27,6 +35,30 @@ export default function AdminEconomia() {
   return (
     <div>
       <h1 className="mb-4 text-lg font-bold text-zinc-100">Economia</h1>
+
+      {dados.receita && (
+        <Secao titulo="Receita real (R$)" sub="Pedidos Pix aprovados (Mercado Pago) no período. Fonte da verdade: tabela pedidos.">
+          <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <KpiCard rotulo="Receita" valor={dados.receita.total_centavos} formato={formatarReais} />
+            <KpiCard rotulo="Pedidos pagos" valor={dados.receita.pedidos} />
+            <KpiCard
+              rotulo="Ticket médio"
+              valor={dados.receita.pedidos > 0 ? Math.round(dados.receita.total_centavos / dados.receita.pedidos) : 0}
+              formato={formatarReais}
+            />
+          </div>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Painel>
+              <p className="mb-1 text-[11px] text-emerald-400">Receita por dia (R$)</p>
+              <LineChart dados={dados.receita.por_dia.map((d) => ({ x: d.dia.slice(5), y: Number(d.v) / 100 }))} cor="#34d399" altura={130} />
+            </Painel>
+            <Painel>
+              <p className="mb-1 text-[11px] text-zinc-400">Por produto (R$)</p>
+              <BarChart dados={dados.receita.por_produto.map((p) => ({ x: p.k, y: Number(p.v) / 100, cor: "#f59e0b" }))} altura={130} />
+            </Painel>
+          </div>
+        </Secao>
+      )}
 
       <Secao titulo="Fluxo de CoinPoints por dia" sub="Verde = criado (fontes) · vermelho = destruído (sinks). Base: evento coinpoints (best-effort).">
         <Painel>

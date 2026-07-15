@@ -9,12 +9,15 @@ create table if not exists public.user_saves (
 
 alter table public.user_saves enable row level security;
 
--- Cada usuário só acessa a própria linha.
+-- Cada usuário só acessa a própria linha. (drop antes de create = idempotente)
+drop policy if exists "user_saves_select_own" on public.user_saves;
 create policy "user_saves_select_own" on public.user_saves
   for select using (auth.uid() = user_id);
 
+drop policy if exists "user_saves_insert_own" on public.user_saves;
 create policy "user_saves_insert_own" on public.user_saves
   for insert with check (auth.uid() = user_id);
 
+drop policy if exists "user_saves_update_own" on public.user_saves;
 create policy "user_saves_update_own" on public.user_saves
   for update using (auth.uid() = user_id) with check (auth.uid() = user_id);

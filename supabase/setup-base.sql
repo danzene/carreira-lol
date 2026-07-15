@@ -1,9 +1,8 @@
 -- ============================================================================
 -- SETUP BASE (tabelas do jogo) - Carreira LoL
--- Cole TUDO isto no Supabase (SQL Editor -> New query -> Run) num banco VAZIO.
+-- Cole TUDO isto no Supabase (SQL Editor -> New query -> Run).
 -- Rode ESTE primeiro; depois rode o setup-admin.sql (admin + teto de coinpoints).
--- OBS: rode UMA vez. Se reexecutar e aparecer "already exists", aquela peca ja
---      existe -> pode ignorar/pular (as migrations base nao sao idempotentes).
+-- IDEMPOTENTE: pode re-rodar sem erro (create if not exists + drop policy if exists).
 -- Concatena as migrations 001..009 na ordem correta.
 -- ============================================================================
 
@@ -77,13 +76,16 @@ create table if not exists public.user_saves (
 
 alter table public.user_saves enable row level security;
 
--- Cada usuário só acessa a própria linha.
+-- Cada usuário só acessa a própria linha. (drop antes de create = idempotente)
+drop policy if exists "user_saves_select_own" on public.user_saves;
 create policy "user_saves_select_own" on public.user_saves
   for select using (auth.uid() = user_id);
 
+drop policy if exists "user_saves_insert_own" on public.user_saves;
 create policy "user_saves_insert_own" on public.user_saves
   for insert with check (auth.uid() = user_id);
 
+drop policy if exists "user_saves_update_own" on public.user_saves;
 create policy "user_saves_update_own" on public.user_saves
   for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
@@ -314,7 +316,6 @@ revoke execute on function public.rls_auto_enable() from authenticated;
 
 -- >>>>>>>>>>>>>>>>>>>> 022_coinpoints_cap.sql (blindagem) >>>>>>>>>>>>>>>>>>>>
 -- Teto de credito por chamada no RPC chamado pelo cliente (mata o "delta 999999").
--- Redefine a funcao acima; fica valido mesmo se voce rodar so o setup-base.
 create or replace function public.ajustar_coinpoints(delta integer, motivo text default null)
 returns integer language plpgsql security definer set search_path = public as $$
 declare

@@ -39,3 +39,27 @@ create index if not exists pedidos_status_idx on public.pedidos (status, created
 -- load, mas o UPDATE dessa coluna é revogado (o upsert dele nunca a inclui).
 alter table public.battle_pass add column if not exists premium boolean not null default false;
 revoke update (premium) on public.battle_pass from authenticated;
+
+-- ── Crédito da compra (SÓ service_role, chamado pelo webhook) ────────────────
+-- Incrementa moedas de forma ATÔMICA (evita lost-update se duas compras caírem
+-- juntas) e liga o premium. NUNCA exposto ao cliente (auth/anon revogados).
+create or replace function public.creditar_compra(p_user_id uuid, p_moedas integer, p_premium boolean)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if p_moedas > 0 then
+    update public.profiles set coinpoints = coinpoints + p_moedas where id = p_user_id;
+  end if;
+  if p_premium then
+    insert into public.battle_pass (user_id, premium) values (p_user_id, true)
+      on conflict (user_id) do update set premium = true;
+  end if;
+end;
+$$;
+revoke execute on function public.creditar_compra(uuid, integer, boolean) from public;
+revoke execute on function public.creditar_compra(uuid, integer, boolean) from anon;
+revoke execute on function public.creditar_compra(uuid, integer, boolean) from authenticated;
+grant execute on function public.creditar_compra(uuid, integer, boolean) to service_role;

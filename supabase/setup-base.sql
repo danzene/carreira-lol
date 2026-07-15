@@ -1,9 +1,9 @@
 -- ============================================================================
 -- SETUP BASE (tabelas do jogo) - Carreira LoL
 -- Cole TUDO isto no Supabase (SQL Editor -> New query -> Run).
--- Rode ESTE primeiro; depois rode o setup-admin.sql (admin + teto de coinpoints).
+-- Rode ESTE primeiro; depois rode o setup-admin.sql (admin + metricas).
 -- IDEMPOTENTE: pode re-rodar sem erro (create if not exists + drop policy if exists).
--- Concatena as migrations 001..009 na ordem correta.
+-- Concatena as migrations 001..009 + 022 (teto coinpoints) + 023 (loja/pagamentos).
 -- ============================================================================
 
 
@@ -314,46 +314,110 @@ revoke execute on function public.rls_auto_enable() from anon;
 revoke execute on function public.rls_auto_enable() from authenticated;
 
 
--- >>>>>>>>>>>>>>>>>>>> 022_coinpoints_cap.sql (blindagem) >>>>>>>>>>>>>>>>>>>>
--- Teto de credito por chamada no RPC chamado pelo cliente (mata o "delta 999999").
+-- >>>>>>>>>>>>>>>>>>>> 022_coinpoints_cap.sql >>>>>>>>>>>>>>>>>>>>
+-- 🛡️ Blindagem leve dos CoinPoints (pré-lançamento). A função é chamada pelo CLIENTE,
+-- então um jogador poderia pedir `ajustar_coinpoints(delta => 999999)` no console e se
+-- dar moeda infinita. Até a economia virar 100% server-authoritative (rodada dedicada,
+-- antes de ligar pagamento), pomos um TETO por chamada nos CRÉDITOS:
+--
+--  • crédito (delta > 0): no máximo LIMITE por chamada (cobre todas as fontes legítimas —
+--    a maior é a recompensa premium do passe, 600). O "milhão instantâneo" morre; quem
+--    insistir em loopar aparece no detector de anomalias do admin (telemetria coinpoints).
+--  • débito (delta <= 0): livre, mas o saldo nunca fica negativo (como já era).
+--
+-- Rode no Supabase: SQL Editor → cole → Run. Substitui a função de 001_profiles.
+
 create or replace function public.ajustar_coinpoints(delta integer, motivo text default null)
-returns integer language plpgsql security definer set search_path = public as $$
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
 declare
   novo integer;
-  limite constant integer := 700; -- maior fonte legitima = 600 (passe premium)
+  limite constant integer := 700; -- teto de crédito por chamada (maior fonte legítima = 600)
 begin
-  if delta > limite then raise exception 'credito_acima_do_limite'; end if;
-  update public.profiles set coinpoints = coinpoints + delta
+  if delta > limite then
+    raise exception 'credito_acima_do_limite';
+  end if;
+  update public.profiles
+     set coinpoints = coinpoints + delta
    where id = auth.uid() and coinpoints + delta >= 0
    returning coinpoints into novo;
-  if novo is null then raise exception 'saldo insuficiente ou perfil inexistente'; end if;
+  if novo is null then
+    raise exception 'saldo insuficiente ou perfil inexistente';
+  end if;
   return novo;
-end; $$;
+end;
+$$;
+
 grant execute on function public.ajustar_coinpoints(integer, text) to authenticated;
 
+
 -- >>>>>>>>>>>>>>>>>>>> 023_loja_pagamentos.sql >>>>>>>>>>>>>>>>>>>>
--- Loja de pagamentos (Mercado Pago / Pix). Pedidos server-authoritative + premium autoritativo.
+-- 💳 Loja de pagamentos (Mercado Pago / Pix) — tudo server-authoritative.
+-- O cliente NUNCA credita moeda comprada nem liga o premium: quem faz isso é o
+-- servidor (service_role) DEPOIS que o webhook do Mercado Pago confirma o pagamento.
+-- Rode no Supabase: SQL Editor → New query → cole → Run. Idempotente.
+
+-- ── Pedidos: a fonte da verdade de cada compra ──────────────────────────────
 create table if not exists public.pedidos (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id) on delete cascade,
-  produto text not null,
+  produto text not null,                 -- chave do catálogo (lib/produtos.ts)
   valor_centavos integer not null check (valor_centavos > 0),
   moedas integer not null default 0 check (moedas >= 0),
   concede_passe boolean not null default false,
   status text not null default 'pendente'
     check (status in ('pendente','aprovado','expirado','cancelado','erro')),
-  mp_payment_id text unique,
-  creditado_at timestamptz,
+  mp_payment_id text unique,             -- id do pagamento no Mercado Pago (idempotência)
+  creditado_at timestamptz,              -- trava: crédito acontece UMA vez só
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
 alter table public.pedidos enable row level security;
+
+-- o cliente SÓ LÊ os próprios pedidos (pra saber se o Pix caiu — polling do QR).
+-- NUNCA escreve: criação e mudança de status são do servidor (service_role ignora RLS).
 grant select on public.pedidos to authenticated;
+
 drop policy if exists "pedidos: ler os proprios" on public.pedidos;
 create policy "pedidos: ler os proprios" on public.pedidos
   for select to authenticated using (auth.uid() = user_id);
+
 create index if not exists pedidos_user_idx on public.pedidos (user_id, created_at desc);
 create index if not exists pedidos_mp_idx on public.pedidos (mp_payment_id);
 create index if not exists pedidos_status_idx on public.pedidos (status, created_at desc);
+
+-- ── Passe premium AUTORITATIVO ──────────────────────────────────────────────
+-- Hoje o premium mora no jsonb `estado` (que o cliente sobrescreve no upsert →
+-- burlável). Passa a morar numa COLUNA que só o servidor liga. O cliente lê no
+-- load, mas o UPDATE dessa coluna é revogado (o upsert dele nunca a inclui).
 alter table public.battle_pass add column if not exists premium boolean not null default false;
 revoke update (premium) on public.battle_pass from authenticated;
+
+-- ── Crédito da compra (SÓ service_role, chamado pelo webhook) ────────────────
+-- Incrementa moedas de forma ATÔMICA (evita lost-update se duas compras caírem
+-- juntas) e liga o premium. NUNCA exposto ao cliente (auth/anon revogados).
+create or replace function public.creditar_compra(p_user_id uuid, p_moedas integer, p_premium boolean)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if p_moedas > 0 then
+    update public.profiles set coinpoints = coinpoints + p_moedas where id = p_user_id;
+  end if;
+  if p_premium then
+    insert into public.battle_pass (user_id, premium) values (p_user_id, true)
+      on conflict (user_id) do update set premium = true;
+  end if;
+end;
+$$;
+revoke execute on function public.creditar_compra(uuid, integer, boolean) from public;
+revoke execute on function public.creditar_compra(uuid, integer, boolean) from anon;
+revoke execute on function public.creditar_compra(uuid, integer, boolean) from authenticated;
+grant execute on function public.creditar_compra(uuid, integer, boolean) to service_role;
+

@@ -49,7 +49,10 @@ export async function POST(req: Request): Promise<Response> {
     })
     .select("id")
     .single();
-  if (erroPedido || !pedido) return json({ error: "falha_criar_pedido" }, 500);
+  if (erroPedido || !pedido) {
+    console.error("checkout insert pedido falhou:", erroPedido);
+    return json({ error: "falha_criar_pedido", detalhe: erroPedido?.message ?? "sem detalhe" }, 500);
+  }
 
   // 2) cria a preferência de Checkout Pro (página do MP com Pix + cartão)
   const proto = req.headers.get("x-forwarded-proto") ?? "https";

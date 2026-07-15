@@ -20,6 +20,8 @@ export type Cerimonia =
   | { tipo: "STREAK_MILESTONE"; dias: number; recompensa: string }
   | { tipo: "RIVAL_DECLARED"; nome: string }
   | { tipo: "RIVAL_DEFEATED"; nome: string }
+  | { tipo: "COMPRA_MOEDAS"; moedas: number } // compra de CoinPoints confirmada (dinheiro real)
+  | { tipo: "ASSINATURA_PREMIUM" } // assinatura do Passe Premium ativada
   | { tipo: "MENSAGEM"; texto: string; emoji: string }; // toast sutil (ex.: anti-tilt)
 
 export type TipoCerimonia = Cerimonia["tipo"];
@@ -36,6 +38,8 @@ export const CERIMONIAS_FULLSCREEN: TipoCerimonia[] = [
   "STREAK_MILESTONE",
   "RIVAL_DECLARED",
   "RIVAL_DEFEATED",
+  "COMPRA_MOEDAS",
+  "ASSINATURA_PREMIUM",
 ];
 
 export function ehFullscreen(c: Cerimonia): boolean {

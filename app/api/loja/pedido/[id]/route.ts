@@ -21,10 +21,12 @@ export async function GET(req: Request, { params }: { params: { id: string } }):
 
   const { data: pedido } = await admin
     .from("pedidos")
-    .select("id, user_id, status, mp_payment_id")
+    .select("id, user_id, status, mp_payment_id, moedas, concede_passe")
     .eq("id", params.id)
     .maybeSingle();
   if (!pedido || pedido.user_id !== auth.ctx.userId) return json({ error: "nao_encontrado" }, 404);
+
+  const base = { moedas: pedido.moedas, concedePasse: pedido.concede_passe };
 
   // fallback: ainda não aprovado? confirma no MP agora (independe do webhook).
   // Checkout Pro não guarda mp_payment_id de antemão → acha pelo external_reference.
@@ -32,8 +34,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }):
     if (pedido.mp_payment_id) await creditarSePago(admin, pedido.mp_payment_id);
     else await creditarPorRef(admin, pedido.id);
     const { data: fresco } = await admin.from("pedidos").select("status").eq("id", pedido.id).maybeSingle();
-    return json({ status: fresco?.status ?? pedido.status });
+    return json({ status: fresco?.status ?? pedido.status, ...base });
   }
 
-  return json({ status: pedido.status });
+  return json({ status: pedido.status, ...base });
 }

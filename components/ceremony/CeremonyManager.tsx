@@ -11,6 +11,7 @@ import PixelBurst from "@/components/juice/PixelBurst";
 import CerimoniaDrop from "./CerimoniaDrop";
 import CerimoniaElo from "./CerimoniaElo";
 import CerimoniaPasse from "./CerimoniaPasse";
+import CerimoniaCompra from "./CerimoniaCompra";
 
 // 🎭 Apresenta as cerimônias da fila: UMA fullscreen por vez (fases: antecipação →
 // revelação → celebração), toasts em paralelo no canto. Sempre dispensável com 1 clique;
@@ -78,6 +79,10 @@ function apresentar(c: Cerimonia): Apresentacao {
       return { emoji: "😤", titulo: "RIVALIDADE!", sub: c.nome, detalhe: "Duas derrotas seguidas pra eles. Hora do troco.", tier: 4, som: "rebaixamento" };
     case "RIVAL_DEFEATED":
       return { emoji: "🏴", titulo: "RIVAL SUPERADO!", sub: c.nome, detalhe: "Você virou o jogo — a rixa acabou.", tier: 4, som: "conquista" };
+    case "COMPRA_MOEDAS":
+      return { emoji: "🪙", titulo: "COMPRA CONFIRMADA!", sub: `+${c.moedas} CoinPoints`, tier: 4, som: "conquista" };
+    case "ASSINATURA_PREMIUM":
+      return { emoji: "👑", titulo: "PASSE PREMIUM ATIVO!", sub: "Trilha premium liberada", tier: 4, som: "conquista" };
     case "MENSAGEM":
       return { emoji: c.emoji, titulo: c.texto, sub: "", tier: 1, som: null };
   }
@@ -215,6 +220,8 @@ export default function CeremonyManager() {
   else if (atual?.tipo === "RANK_DEMOTED") fullscreen = <CerimoniaElo key={chave} de={atual.de} para={atual.para} promocao={false} onFechar={dispensar} />;
   else if (atual?.tipo === "PASS_LEVEL_UP")
     fullscreen = <CerimoniaPasse key={chave} de={atual.de} para={atual.para} recompensas={atual.recompensas} onFechar={dispensar} />;
+  else if (atual?.tipo === "COMPRA_MOEDAS") fullscreen = <CerimoniaCompra key={chave} moedas={atual.moedas} onFechar={dispensar} />;
+  else if (atual?.tipo === "ASSINATURA_PREMIUM") fullscreen = <CerimoniaCompra key={chave} premium onFechar={dispensar} />;
   else if (atual) fullscreen = <CerimoniaFullscreen key={chave} c={atual} onFechar={dispensar} />;
 
   return (

@@ -30,14 +30,20 @@ export async function criarCheckout(produto: string): Promise<CheckoutResp> {
   return res.json() as Promise<CheckoutResp>;
 }
 
-export async function statusPedido(id: string): Promise<string> {
+export interface StatusPedido {
+  status: string; // pendente | aprovado | ...
+  moedas: number;
+  concedePasse: boolean;
+}
+
+export async function statusPedido(id: string): Promise<StatusPedido> {
   const t = await token();
   const res = await fetch(`/api/loja/pedido/${id}`, {
     headers: t ? { Authorization: `Bearer ${t}` } : {},
     cache: "no-store",
   });
   if (!res.ok) throw new Error(`status ${res.status}`);
-  return ((await res.json()) as { status: string }).status;
+  return (await res.json()) as StatusPedido;
 }
 
 // ── Assinatura do Passe Premium (cartão recorrente) ──────────────────────────

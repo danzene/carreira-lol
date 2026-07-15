@@ -12,8 +12,9 @@ import {
   type StatusAssinatura,
 } from "@/lib/lojaClient";
 import { getSupabase } from "@/lib/supabaseClient";
-import { tocarSom } from "@/lib/som";
 import { rastrear } from "@/lib/telemetria";
+import type { Cerimonia } from "@/engine/cerimonias";
+import { useCerimonias } from "@/store/cerimoniaStore";
 import { useProfile } from "@/store/profileStore";
 import { usePasse } from "@/store/passeStore";
 
@@ -34,6 +35,7 @@ const fmtData = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString(
 export default function ComprarCoinPoints() {
   const recarregarPerfil = useProfile((s) => s.carregar);
   const recarregarPasse = usePasse((s) => s.carregar);
+  const emitir = useCerimonias((s) => s.emitir);
 
   const [ass, setAss] = useState<StatusAssinatura | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null); // id da ação em andamento
@@ -45,65 +47,56 @@ export default function ComprarCoinPoints() {
     statusAssinatura().then(setAss).catch(() => {});
   }, []);
 
-  // retorno do Checkout Pro / assinatura (back_url do MP)
+  // RETORNO do MP + AUTO-CURA: confirma pedidos pendentes (inclui o que voltou pela
+  // URL e o caso "paguei Pix no celular e o navegador não voltou") e dispara a
+  // CERIMÔNIA de compra. Roda sempre; independe do webhook (usa só o Access Token).
   useEffect(() => {
-    const q = new URLSearchParams(window.location.search);
-    const pedido = q.get("pedido");
-    const assin = q.get("assinatura");
-    if (!pedido && !assin) return;
     (async () => {
-      if (pedido) {
-        try {
-          await statusPedido(pedido); // força confirmar no MP se o webhook atrasou
-        } catch {
-          /* ignora */
-        }
-        await recarregarPerfil();
-        setAviso("Pagamento recebido! Seu saldo foi atualizado. 🎉");
-        tocarSom("moeda");
-      }
-      if (assin) {
-        const s = await statusAssinatura().catch(() => null);
-        if (s) setAss(s);
-        await recarregarPasse();
-        setAviso("Assinatura ativada! Passe Premium liberado. 👑");
-        tocarSom("moeda");
-      }
-      window.history.replaceState({}, "", "/loja"); // limpa a query
-    })();
-  }, [recarregarPerfil, recarregarPasse]);
+      const q = new URLSearchParams(window.location.search);
+      const urlPedido = q.get("pedido");
+      const urlAssin = q.get("assinatura");
+      if (urlPedido || urlAssin) window.history.replaceState({}, "", "/loja");
 
-  // AUTO-CURA: pagou (ex.: Pix no celular) e o navegador não voltou pro jogo? Ao
-  // abrir a loja, reconfirma os pedidos pendentes no MP e credita. Independe do
-  // webhook (usa só o Access Token). Roda sempre, sem precisar de ?pedido= na URL.
-  useEffect(() => {
-    (async () => {
       try {
         const sb = getSupabase();
         const { data: u } = await sb.auth.getUser();
         if (!u.user) return;
+
+        // ids a confirmar: pendentes no banco + o que voltou pela URL (dedupe)
         const { data } = await sb
           .from("pedidos")
           .select("id")
           .eq("status", "pendente")
           .order("created_at", { ascending: false })
-          .limit(5);
-        if (!data?.length) return;
-        let creditou = false;
-        for (const p of data as { id: string }[]) {
-          const st = await statusPedido(p.id).catch(() => "");
-          if (st === "aprovado") creditou = true;
+          .limit(8);
+        const ids = Array.from(new Set([...(data?.map((p) => p.id as string) ?? []), ...(urlPedido ? [urlPedido] : [])]));
+
+        let totalMoedas = 0;
+        for (const id of ids) {
+          const r = await statusPedido(id).catch(() => null);
+          if (r?.status === "aprovado" && !r.concedePasse) totalMoedas += r.moedas ?? 0;
         }
-        if (creditou) {
+
+        const cers: Cerimonia[] = [];
+        if (totalMoedas > 0) cers.push({ tipo: "COMPRA_MOEDAS", moedas: totalMoedas });
+
+        // assinatura (só celebra se voltou pela URL E realmente ativou)
+        if (urlAssin) {
+          const s = await statusAssinatura().catch(() => null);
+          if (s) setAss(s);
+          if (s?.premiumAtivo) cers.push({ tipo: "ASSINATURA_PREMIUM" });
+        }
+
+        if (cers.length) {
           await Promise.all([recarregarPerfil(), recarregarPasse()]);
-          setAviso("Pagamento confirmado! Seu saldo foi atualizado. 🎉");
-          tocarSom("moeda");
+          emitir(cers);
         }
       } catch {
         /* silencioso */
       }
     })();
-  }, [recarregarPerfil, recarregarPasse]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function comprarMoedas(p: Produto) {
     setErro(null);

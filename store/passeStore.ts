@@ -70,15 +70,18 @@ export const usePasse = create<PasseStore>((set, get) => {
           set({ passe: null, carregando: false });
           return;
         }
-        const { data } = await sb.from("battle_pass").select("estado, premium").eq("user_id", u.user.id).maybeSingle();
+        const { data } = await sb.from("battle_pass").select("estado, premium, premium_ate").eq("user_id", u.user.id).maybeSingle();
         const agora = Date.now();
         const salvo = data?.estado as Partial<PasseState> | undefined;
         const criou = !salvo || Object.keys(salvo).length === 0;
         // normaliza SEMPRE: jsonb do servidor pode estar vazio, parcial ou de versão antiga
         const base = normalizarPasse(salvo, seedAgora(), agora);
-        // premium é AUTORITATIVO na coluna (ligado pelo servidor após a compra),
-        // não no jsonb `estado` (que o cliente sobrescreve). A coluna manda.
-        const comPremium = data?.premium === true ? { ...base, premium: true } : base;
+        // premium é AUTORITATIVO no servidor (nunca no jsonb `estado`, que o cliente
+        // sobrescreve): ou o boolean `premium` (legado), ou a assinatura via `premium_ate`
+        // (ativa enquanto now() < premium_ate). Nunca confia no estado local.
+        const ateMs = data?.premium_ate ? new Date(data.premium_ate).getTime() : 0;
+        const premiumAtivo = data?.premium === true || ateMs > agora;
+        const comPremium = { ...base, premium: premiumAtivo };
         const passe = renovarMissoes(comPremium, seedAgora(), agora);
         set({ passe, carregando: false });
         if (criou || passe !== base) persistir();

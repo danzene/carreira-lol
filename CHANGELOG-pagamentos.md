@@ -1,16 +1,26 @@
-# 💳 Loja de Pagamentos (Mercado Pago / Pix)
+# 💳 Loja de Pagamentos (Mercado Pago)
 
-Venda de **CoinPoints** (moeda do gacha) e do **Passe Premium** com Pix, tudo
-server-authoritative. Modelo de "doação com recompensa" no estilo PxG — mas tratado
-tecnicamente como **venda de bem digital** (é o que é juridicamente).
+- **Moedas (CoinPoints):** compra avulsa via **Checkout Pro** — aceita **Pix e cartão**.
+- **Passe Premium:** **assinatura recorrente** (cartão) de **R$9,90/mês** até cancelar
+  (Netflix-style), via API de Assinaturas (**PreApproval**).
+
+Tudo server-authoritative. Tratado como **venda de bem digital** (é o que é juridicamente,
+independente do rótulo "doação").
 
 ## Arquitetura (por que é seguro)
 
+**Moedas (Checkout Pro):**
 ```
-cliente pede comprar → /api/loja/checkout (cria pedido + cobrança Pix no MP)
-   → pessoa paga no app do banco (o servidor NUNCA vê cartão/conta)
-   → webhook do MP → /api/webhooks/mercadopago (valida assinatura HMAC)
-      → creditarSePago(): busca a verdade no MP, credita UMA vez (claim atômico)
+/api/loja/checkout (cria pedido + preferência Checkout Pro) → pessoa paga no MP (Pix/cartão)
+   → webhook type=payment → creditarSePago(): verdade no MP, credita 1x (claim atômico)
+```
+
+**Assinatura do Premium (PreApproval):**
+```
+/api/loja/assinar (cria preapproval) → pessoa autoriza o cartão no MP
+   → webhook type=subscription_preapproval → sincronizarAssinatura(): liga premium com
+     VALIDADE (premium_ate = próximo pagamento + graça). Renova mês a mês; cancelou → não
+     estende mais e expira sozinho. Fallback: GET /api/loja/assinatura re-sincroniza.
 ```
 
 - **Preço vem do servidor** (`lib/produtos.ts`), nunca do cliente.
@@ -28,7 +38,7 @@ cliente pede comprar → /api/loja/checkout (cria pedido + cobrança Pix no MP)
 
 | Produto | Paga | Recebe |
 |---|---|---|
-| Passe Premium | R$ 9,90 | trilha premium do passe |
+| Passe Premium | R$ 9,90 **/mês** (assinatura) | trilha premium enquanto assinar |
 | Pacote | R$ 10 | 🪙 1.000 |
 | Pacote +8% | R$ 25 | 🪙 2.700 |
 | Pacote +15% | R$ 50 | 🪙 5.750 |
@@ -48,10 +58,13 @@ cliente pede comprar → /api/loja/checkout (cria pedido + cobrança Pix no MP)
    - `MP_ACCESS_TOKEN` = o Access Token
    - `MP_WEBHOOK_SECRET` = a chave secreta do webhook
    - (redeploy depois de adicionar)
-5. **Supabase** → rode `setup-base.sql` (já inclui a migration 023: `pedidos`,
-   `premium`, `creditar_compra`) e `setup-admin.sql` v13 (migration 024: receita real).
-6. **Teste** com as credenciais de teste + um comprador de teste do MP antes de ir a
-   dinheiro real.
+5. **Supabase** → rode `setup-base.sql` (migrations 023 `pedidos`/`creditar_compra` +
+   025 `assinaturas`/`ativar_premium`/`premium_ate`) e `setup-admin.sql` v13 (024 receita).
+6. **Habilite cartão e assinaturas na conta MP** — Pix costuma liberar na hora, mas
+   **cartão e Assinaturas (PreApproval) podem exigir completar o cadastro/verificação**
+   da conta. Sem isso, o Checkout Pro com cartão e a assinatura não funcionam.
+7. **Teste** com credenciais e **cartões de teste** do MP (dinheiro fake) antes de ir a
+   dinheiro real — tanto uma compra de moedas (Pix + cartão) quanto uma assinatura.
 
 ## Admin
 
@@ -62,6 +75,8 @@ ticket médio, por dia e por produto (fonte: tabela `pedidos`, status `aprovado`
 
 - Ganho de moeda **por gameplay** ainda é client-side (teto 700 por chamada). A COMPRA é
   segura; o farm de moeda de jogo é a próxima rodada de server-authority.
-- Reembolso: hoje "não reembolsável após crédito" no aviso. Se for oferecer estorno,
-  tratar o evento `refunded` do MP e debitar.
+- **Renovação da assinatura** depende do webhook `subscription_preapproval` + do fallback
+  (a pessoa abrir a loja re-sincroniza o `premium_ate`). Sem cron, se alguém pagar e sumir
+  por semanas, o premium só reflete a renovação no próximo acesso — aceitável no MVP.
+- Reembolso/estorno: tratar `refunded`/`chargeback` do MP e debitar/revogar.
 - Nota fiscal / imposto: encaminhar com um contador (a receita é tributável).

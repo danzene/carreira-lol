@@ -13,9 +13,7 @@ export interface CheckoutResp {
   produto: string;
   nome: string;
   valorCentavos: number;
-  qrCode: string; // copia e cola
-  qrCodeBase64: string; // imagem do QR (base64)
-  ticketUrl: string | null;
+  initPoint: string; // URL do Checkout Pro (Pix + cartão)
 }
 
 export async function criarCheckout(produto: string): Promise<CheckoutResp> {
@@ -40,4 +38,45 @@ export async function statusPedido(id: string): Promise<string> {
   });
   if (!res.ok) throw new Error(`status ${res.status}`);
   return ((await res.json()) as { status: string }).status;
+}
+
+// ── Assinatura do Passe Premium (cartão recorrente) ──────────────────────────
+
+export interface StatusAssinatura {
+  status: string; // nenhuma | pendente | autorizada | pausada | cancelada
+  proximoPagamento: string | null;
+  premiumAte: string | null;
+  premiumAtivo: boolean;
+}
+
+export async function criarAssinatura(): Promise<string> {
+  const t = await token();
+  const res = await fetch("/api/loja/assinar", {
+    method: "POST",
+    headers: t ? { Authorization: `Bearer ${t}` } : {},
+  });
+  if (!res.ok) {
+    const erro = (await res.json().catch(() => ({})))?.error as string | undefined;
+    throw new Error(erro ?? `assinar ${res.status}`);
+  }
+  return ((await res.json()) as { initPoint: string }).initPoint;
+}
+
+export async function cancelarAssinatura(): Promise<void> {
+  const t = await token();
+  const res = await fetch("/api/loja/cancelar-assinatura", {
+    method: "POST",
+    headers: t ? { Authorization: `Bearer ${t}` } : {},
+  });
+  if (!res.ok) throw new Error(`cancelar ${res.status}`);
+}
+
+export async function statusAssinatura(): Promise<StatusAssinatura> {
+  const t = await token();
+  const res = await fetch("/api/loja/assinatura", {
+    headers: t ? { Authorization: `Bearer ${t}` } : {},
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`status assinatura ${res.status}`);
+  return res.json() as Promise<StatusAssinatura>;
 }

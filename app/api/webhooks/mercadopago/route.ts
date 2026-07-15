@@ -1,6 +1,7 @@
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { assinaturaWebhookValida } from "@/lib/mercadopago";
 import { creditarSePago } from "@/lib/creditarPedido";
+import { sincronizarAssinatura } from "@/lib/aplicarAssinatura";
 
 // POST /api/webhooks/mercadopago — o Mercado Pago chama aqui quando um pagamento muda.
 // Valida a ASSINATURA, e o crédito (idempotente) fica no helper creditarSePago, que
@@ -32,14 +33,25 @@ export async function POST(req: Request): Promise<Response> {
     /* corpo vazio é ok — usamos a query */
   }
   const tipo = corpo.type ?? url.searchParams.get("type") ?? url.searchParams.get("topic");
-  const paymentId = String(dataIdQuery ?? corpo.data?.id ?? "");
-  if (tipo !== "payment" || !paymentId) return ok({ ignorado: true });
+  const dataId = String(dataIdQuery ?? corpo.data?.id ?? "");
+  if (!dataId) return ok({ ignorado: true });
 
   const admin = getSupabaseAdmin();
   if (!admin) return ok({ error: "backend" }, 503);
 
-  const r = await creditarSePago(admin, paymentId);
-  // 500 só quando o crédito falhou de fato (pra MP reenviar); o resto é 200 (ack)
-  if (r.estado === "erro" && r.motivo === "falha_credito") return ok(r, 500);
-  return ok(r);
+  // assinatura do passe (cartão recorrente): data.id = id do preapproval
+  if (tipo === "subscription_preapproval") {
+    const status = await sincronizarAssinatura(admin, dataId);
+    return ok({ assinatura: status });
+  }
+
+  // compra de moedas (Checkout Pro): data.id = id do pagamento
+  if (tipo === "payment") {
+    const r = await creditarSePago(admin, dataId);
+    // 500 só quando o crédito falhou de fato (pra MP reenviar); o resto é 200 (ack)
+    if (r.estado === "erro" && r.motivo === "falha_credito") return ok(r, 500);
+    return ok(r);
+  }
+
+  return ok({ ignorado: tipo ?? "desconhecido" });
 }

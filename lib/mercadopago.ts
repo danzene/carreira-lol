@@ -1,7 +1,9 @@
-import { MercadoPagoConfig, Payment, WebhookSignatureValidator } from "mercadopago";
+import { MercadoPagoConfig, Payment, Preference, WebhookSignatureValidator } from "mercadopago";
 
-// 💠 Integração Mercado Pago (Pix) — SÓ SERVIDOR. O Access Token (MP_ACCESS_TOKEN)
-// nunca é NEXT_PUBLIC → nunca entra no bundle do cliente. Importe só em Route Handlers.
+// 💠 Integração Mercado Pago — SÓ SERVIDOR. O Access Token (MP_ACCESS_TOKEN) nunca é
+// NEXT_PUBLIC → nunca entra no bundle do cliente. Importe só em Route Handlers.
+//   • Moedas: Checkout Pro (Preference) → aceita Pix + cartão numa página do MP.
+//   • Assinatura do passe: PreApproval (ver lib/assinatura.ts).
 
 function token(): string | null {
   return process.env.MP_ACCESS_TOKEN || null;
@@ -11,10 +13,62 @@ export function mpConfigurado(): boolean {
   return Boolean(token());
 }
 
-function cliente(): Payment | null {
+export function mpConfig(): MercadoPagoConfig | null {
   const t = token();
-  if (!t) return null;
-  return new Payment(new MercadoPagoConfig({ accessToken: t }));
+  return t ? new MercadoPagoConfig({ accessToken: t }) : null;
+}
+
+function config(): MercadoPagoConfig | null {
+  return mpConfig();
+}
+
+function cliente(): Payment | null {
+  const c = config();
+  return c ? new Payment(c) : null;
+}
+
+export interface CheckoutPro {
+  initPoint: string; // URL da página de pagamento (Pix + cartão)
+  preferenceId: string;
+}
+
+// Cria uma preferência de Checkout Pro (Pix + cartão). `pedidoId` = external_reference
+// (liga o pagamento ao pedido; o webhook casa por ele).
+export async function criarPreferencia(params: {
+  produtoId: string;
+  nome: string;
+  valorCentavos: number;
+  email: string;
+  pedidoId: string;
+  baseUrl: string;
+}): Promise<CheckoutPro | null> {
+  const c = config();
+  if (!c) return null;
+  const pref = new Preference(c);
+  const res = await pref.create({
+    body: {
+      items: [
+        {
+          id: params.produtoId,
+          title: params.nome,
+          quantity: 1,
+          unit_price: Number((params.valorCentavos / 100).toFixed(2)),
+          currency_id: "BRL",
+        },
+      ],
+      external_reference: params.pedidoId,
+      payer: { email: params.email },
+      back_urls: {
+        success: `${params.baseUrl}/loja?pedido=${params.pedidoId}`,
+        failure: `${params.baseUrl}/loja?pedido=${params.pedidoId}`,
+        pending: `${params.baseUrl}/loja?pedido=${params.pedidoId}`,
+      },
+      auto_return: "approved",
+    },
+  });
+  const initPoint = res.init_point ?? res.sandbox_init_point;
+  if (!res.id || !initPoint) return null;
+  return { initPoint, preferenceId: String(res.id) };
 }
 
 export interface PixCriado {

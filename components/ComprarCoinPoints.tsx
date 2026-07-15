@@ -1,88 +1,167 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { PACOTES_MOEDA, PRODUTOS, formatarReais, type Produto } from "@/lib/produtos";
+import { useEffect, useState } from "react";
+import { PACOTES_MOEDA, formatarReais, type Produto } from "@/lib/produtos";
 import { RARIDADES } from "@/data/gacha";
-import { criarCheckout, statusPedido, type CheckoutResp } from "@/lib/lojaClient";
+import {
+  cancelarAssinatura,
+  criarAssinatura,
+  criarCheckout,
+  statusAssinatura,
+  statusPedido,
+  type StatusAssinatura,
+} from "@/lib/lojaClient";
 import { tocarSom } from "@/lib/som";
 import { rastrear } from "@/lib/telemetria";
 import { useProfile } from "@/store/profileStore";
 import { usePasse } from "@/store/passeStore";
 
-// 💳 Comprar CoinPoints / Passe Premium com Pix (Mercado Pago). O servidor faz tudo
-// que importa (preço, cobrança, crédito); aqui só pedimos o QR e ficamos ouvindo o
-// pedido até o Pix cair. Estilo casado com o resto do jogo.
+// 💳 Comprar CoinPoints (Pix ou cartão via Checkout Pro) e assinar o Passe Premium
+// (cartão recorrente, R$9,90/mês até cancelar). O servidor faz tudo que importa
+// (preço, cobrança, crédito); aqui a gente redireciona pro MP e trata o retorno.
 
-type Fase = "escolha" | "gerando" | "aguardando" | "pago" | "erro";
+function msgErro(e: unknown): string {
+  const m = e instanceof Error ? e.message : "";
+  if (m === "pagamento_nao_configurado") return "Pagamentos ainda não ativados aqui. Volte em breve!";
+  if (m === "sem_email") return "Sua conta precisa de um e-mail pra pagar.";
+  return "Não deu pra continuar agora. Tenta de novo.";
+}
+
+const fmtData = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("pt-BR") : "—");
 
 export default function ComprarCoinPoints() {
   const recarregarPerfil = useProfile((s) => s.carregar);
   const recarregarPasse = usePasse((s) => s.carregar);
-  const jaPremium = usePasse((s) => s.passe?.premium === true);
 
-  const [fase, setFase] = useState<Fase>("escolha");
+  const [ass, setAss] = useState<StatusAssinatura | null>(null);
+  const [ocupado, setOcupado] = useState<string | null>(null); // id da ação em andamento
   const [erro, setErro] = useState<string | null>(null);
-  const [copiado, setCopiado] = useState(false);
-  const [pix, setPix] = useState<CheckoutResp | null>(null);
-  const passe = PRODUTOS.passe_premium;
+  const [aviso, setAviso] = useState<string | null>(null);
 
-  async function comprar(p: Produto) {
+  // status da assinatura ao abrir
+  useEffect(() => {
+    statusAssinatura().then(setAss).catch(() => {});
+  }, []);
+
+  // retorno do Checkout Pro / assinatura (back_url do MP)
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    const pedido = q.get("pedido");
+    const assin = q.get("assinatura");
+    if (!pedido && !assin) return;
+    (async () => {
+      if (pedido) {
+        try {
+          await statusPedido(pedido); // força confirmar no MP se o webhook atrasou
+        } catch {
+          /* ignora */
+        }
+        await recarregarPerfil();
+        setAviso("Pagamento recebido! Seu saldo foi atualizado. 🎉");
+        tocarSom("moeda");
+      }
+      if (assin) {
+        const s = await statusAssinatura().catch(() => null);
+        if (s) setAss(s);
+        await recarregarPasse();
+        setAviso("Assinatura ativada! Passe Premium liberado. 👑");
+        tocarSom("moeda");
+      }
+      window.history.replaceState({}, "", "/loja"); // limpa a query
+    })();
+  }, [recarregarPerfil, recarregarPasse]);
+
+  async function comprarMoedas(p: Produto) {
     setErro(null);
-    setCopiado(false);
-    setFase("gerando");
+    setOcupado(p.id);
     rastrear("compra_iniciada", { produto: p.id, valor: p.valorCentavos });
     try {
-      const resp = await criarCheckout(p.id);
-      setPix(resp);
-      setFase("aguardando");
+      const { initPoint } = await criarCheckout(p.id);
+      window.location.href = initPoint; // Checkout Pro (Pix + cartão)
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "erro";
-      setErro(
-        msg === "pagamento_nao_configurado"
-          ? "Pagamentos ainda não ativados aqui. Volte em breve!"
-          : "Não deu pra gerar o Pix agora. Tenta de novo.",
-      );
-      setFase("erro");
+      setErro(msgErro(e));
+      setOcupado(null);
     }
   }
 
-  const aoPagar = useCallback(async () => {
-    setFase("pago");
-    tocarSom("moeda");
-    rastrear("compra_aprovada", { produto: pix?.produto });
-    await Promise.all([recarregarPerfil(), recarregarPasse()]);
-  }, [pix, recarregarPerfil, recarregarPasse]);
-
-  function fechar() {
-    setPix(null);
-    setFase("escolha");
+  async function assinar() {
     setErro(null);
+    setOcupado("passe");
+    rastrear("assinatura_iniciada", {});
+    try {
+      const initPoint = await criarAssinatura();
+      window.location.href = initPoint; // página do cartão no MP
+    } catch (e) {
+      setErro(msgErro(e));
+      setOcupado(null);
+    }
   }
+
+  async function cancelar() {
+    if (!window.confirm("Cancelar a assinatura? O Premium continua ativo até o fim do período já pago.")) return;
+    setOcupado("cancelar");
+    try {
+      await cancelarAssinatura();
+      const s = await statusAssinatura().catch(() => null);
+      if (s) setAss(s);
+      setAviso("Assinatura cancelada. Premium segue até o fim do período pago.");
+    } catch {
+      setErro("Não deu pra cancelar agora. Tenta de novo.");
+    }
+    setOcupado(null);
+  }
+
+  const premiumAtivo = ass?.premiumAtivo ?? false;
+  const cancelada = ass?.status === "cancelada";
 
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <h2 className="font-pixel text-[11px] text-rosa">🪙 COMPRAR COINPOINTS</h2>
-        <span className="text-[10px] text-suave">via Pix</span>
+        <h2 className="font-pixel text-[11px] text-rosa">🪙 COMPRAR</h2>
+        <span className="text-[10px] text-suave">Pix ou cartão</span>
       </div>
 
-      {/* Passe Premium — oferta de lançamento */}
-      <button
-        type="button"
-        disabled={jaPremium || fase === "gerando"}
-        onClick={() => comprar(passe)}
-        className="flex items-center justify-between gap-3 border-2 border-amber-400/70 bg-amber-400/10 p-3 text-left transition hover:bg-amber-400/20 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        <div className="min-w-0">
-          <p className="text-sm text-amber-300">👑 Passe Premium</p>
-          <p className="text-[11px] text-suave">
-            {jaPremium ? "Você já tem o Passe Premium ✓" : "Libera a trilha premium do passe · oferta de lançamento"}
-          </p>
+      {aviso && <p className="border-2 border-ciano/40 bg-ciano/10 p-2 text-sm text-ciano">{aviso}</p>}
+      {erro && <p className="border-2 border-rosa/40 bg-rosa/10 p-2 text-sm text-rosa">{erro}</p>}
+
+      {/* Passe Premium — assinatura recorrente */}
+      {premiumAtivo ? (
+        <div className="flex items-center justify-between gap-3 border-2 border-amber-400/70 bg-amber-400/10 p-3">
+          <div className="min-w-0">
+            <p className="text-sm text-amber-300">👑 Passe Premium ativo</p>
+            <p className="text-[11px] text-suave">
+              {cancelada
+                ? `Cancelada — ativo até ${fmtData(ass?.premiumAte ?? null)}`
+                : `Renova em ${fmtData(ass?.proximoPagamento ?? ass?.premiumAte ?? null)} · R$ 9,90/mês`}
+            </p>
+          </div>
+          {!cancelada && (
+            <button
+              type="button"
+              disabled={ocupado === "cancelar"}
+              onClick={cancelar}
+              className="shrink-0 border-2 border-borda px-3 py-1.5 text-[10px] text-suave transition hover:border-rosa hover:text-rosa disabled:opacity-50"
+            >
+              {ocupado === "cancelar" ? "…" : "Cancelar"}
+            </button>
+          )}
         </div>
-        {!jaPremium && (
-          <span className="shrink-0 font-pixel text-[11px] text-amber-300">{formatarReais(passe.valorCentavos)}</span>
-        )}
-      </button>
+      ) : (
+        <button
+          type="button"
+          disabled={ocupado === "passe"}
+          onClick={assinar}
+          className="flex items-center justify-between gap-3 border-2 border-amber-400/70 bg-amber-400/10 p-3 text-left transition hover:bg-amber-400/20 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <div className="min-w-0">
+            <p className="text-sm text-amber-300">👑 Assinar Passe Premium</p>
+            <p className="text-[11px] text-suave">Libera a trilha premium · cobra no cartão, cancela quando quiser</p>
+          </div>
+          <span className="shrink-0 text-right font-pixel text-[11px] text-amber-300">
+            R$ 9,90<span className="block text-[8px] text-suave">/mês</span>
+          </span>
+        </button>
+      )}
 
       {/* Pacotes de moeda */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -90,8 +169,8 @@ export default function ComprarCoinPoints() {
           <button
             key={p.id}
             type="button"
-            disabled={fase === "gerando"}
-            onClick={() => comprar(p)}
+            disabled={ocupado !== null}
+            onClick={() => comprarMoedas(p)}
             className="relative flex flex-col items-center gap-1 border-2 border-borda bg-painel p-3 transition hover:border-rosa disabled:opacity-50"
           >
             {p.destaque && (
@@ -117,131 +196,10 @@ export default function ComprarCoinPoints() {
           ))}
         </ul>
         <p className="mt-2 text-[10px] text-suave">
-          Compra de item virtual, sem valor em dinheiro real e não reembolsável após o crédito. Maiores de 18.
+          Compra de item virtual, sem valor em dinheiro real e não reembolsável após o crédito. Maiores de 18. A assinatura
+          renova automaticamente até você cancelar.
         </p>
       </details>
-
-      {/* Modal Pix */}
-      {(fase === "gerando" || fase === "aguardando" || fase === "pago" || fase === "erro") && (
-        <ModalPix
-          fase={fase}
-          erro={erro}
-          pix={pix}
-          copiado={copiado}
-          onCopiar={() => {
-            if (!pix) return;
-            navigator.clipboard?.writeText(pix.qrCode).then(
-              () => {
-                setCopiado(true);
-                tocarSom("tick");
-              },
-              () => setCopiado(false),
-            );
-          }}
-          onPago={aoPagar}
-          onFechar={fechar}
-        />
-      )}
-    </div>
-  );
-}
-
-function ModalPix({
-  fase,
-  erro,
-  pix,
-  copiado,
-  onCopiar,
-  onPago,
-  onFechar,
-}: {
-  fase: Fase;
-  erro: string | null;
-  pix: CheckoutResp | null;
-  copiado: boolean;
-  onCopiar: () => void;
-  onPago: () => void;
-  onFechar: () => void;
-}) {
-  const jaPagou = useRef(false);
-
-  // polling do pedido enquanto aguarda o Pix cair
-  useEffect(() => {
-    if (fase !== "aguardando" || !pix) return;
-    let vivo = true;
-    const t = setInterval(async () => {
-      try {
-        const st = await statusPedido(pix.pedidoId);
-        if (vivo && st === "aprovado" && !jaPagou.current) {
-          jaPagou.current = true;
-          clearInterval(t);
-          onPago();
-        }
-      } catch {
-        /* tenta na próxima */
-      }
-    }, 3500);
-    return () => {
-      vivo = false;
-      clearInterval(t);
-    };
-  }, [fase, pix, onPago]);
-
-  return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/85 px-4" onClick={onFechar}>
-      <div className="w-full max-w-xs border-2 border-rosa bg-fundo p-4 text-center" onClick={(e) => e.stopPropagation()}>
-        {fase === "gerando" && <p className="py-8 text-sm text-suave">Gerando seu Pix…</p>}
-
-        {fase === "erro" && (
-          <>
-            <p className="py-6 text-sm text-rosa">{erro}</p>
-            <button type="button" onClick={onFechar} className="border-2 border-borda px-4 py-1.5 text-[11px] text-suave hover:text-texto">
-              Fechar
-            </button>
-          </>
-        )}
-
-        {fase === "aguardando" && pix && (
-          <>
-            <p className="font-pixel text-[11px] text-rosa">{pix.nome}</p>
-            <p className="mt-0.5 text-[11px] text-suave">{formatarReais(pix.valorCentavos)} · pague pelo app do banco</p>
-            {pix.qrCodeBase64 ? (
-              <img src={`data:image/png;base64,${pix.qrCodeBase64}`} alt="QR Code Pix" className="mx-auto my-3 h-44 w-44 border-2 border-borda bg-white" />
-            ) : (
-              <div className="my-3 text-[11px] text-suave">Use o código copia-e-cola abaixo:</div>
-            )}
-            <button
-              type="button"
-              onClick={onCopiar}
-              className="w-full border-2 border-rosa bg-rosa/10 px-3 py-2 font-pixel text-[10px] text-rosa transition hover:bg-rosa hover:text-fundo"
-            >
-              {copiado ? "✓ Copiado!" : "Copiar código Pix"}
-            </button>
-            <p className="mt-3 flex items-center justify-center gap-2 text-[11px] text-suave">
-              <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-amber-400" />
-              Aguardando pagamento…
-            </p>
-            <button type="button" onClick={onFechar} className="mt-2 text-[10px] text-suave underline hover:text-texto">
-              cancelar
-            </button>
-          </>
-        )}
-
-        {fase === "pago" && (
-          <>
-            <p className="py-6 text-2xl">🎉</p>
-            <p className="font-pixel text-[11px] text-ciano">Pagamento confirmado!</p>
-            <p className="mt-1 text-[11px] text-suave">Seu saldo já foi creditado.</p>
-            <button
-              type="button"
-              onClick={onFechar}
-              className="mt-4 border-2 border-ciano bg-ciano/10 px-4 py-1.5 font-pixel text-[10px] text-ciano transition hover:bg-ciano hover:text-fundo"
-            >
-              Boa!
-            </button>
-          </>
-        )}
-      </div>
     </div>
   );
 }

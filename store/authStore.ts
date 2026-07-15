@@ -16,6 +16,12 @@ interface AuthStore {
 }
 
 let iniciado = false;
+// Guarda o ÚLTIMO id de usuário aplicado. O Supabase dispara onAuthStateChange com
+// frequência (TOKEN_REFRESHED periódico, refoco de aba, revalidação disparada por
+// getUser). Se re-aplicarmos a sessão a cada evento, o puxarDoCloud sobrescreve o
+// jogo em andamento e o set({user}) faz o AuthGate recarregar tudo — vira loop de
+// reset. Só reagimos quando a IDENTIDADE muda (login/logout), não em refresh.
+let ultimoUserId: string | null | undefined = undefined; // undefined = ainda não aplicado
 
 function traduzErro(msg: string): string {
   const m = msg.toLowerCase();
@@ -54,11 +60,18 @@ export const useAuth = create<AuthStore>((set) => {
       const sb = getSupabase();
 
       sb.auth.getSession().then(async ({ data }) => {
-        await aplicarSessao(data.session?.user ?? null);
+        const u = data.session?.user ?? null;
+        const uid = u?.id ?? null;
         set({ carregando: false });
+        if (uid === ultimoUserId) return; // já aplicado pelo onAuthStateChange
+        ultimoUserId = uid;
+        await aplicarSessao(u);
       });
 
       sb.auth.onAuthStateChange((_evento, session) => {
+        const uid = session?.user?.id ?? null;
+        if (uid === ultimoUserId) return; // MESMO usuário (refresh/refoco) → não repuxa a nuvem nem reseta
+        ultimoUserId = uid;
         void aplicarSessao(session?.user ?? null);
       });
     },

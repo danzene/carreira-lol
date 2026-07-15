@@ -70,17 +70,27 @@ export const usePasse = create<PasseStore>((set, get) => {
           set({ passe: null, carregando: false });
           return;
         }
-        const { data } = await sb.from("battle_pass").select("estado, premium, premium_ate").eq("user_id", u.user.id).maybeSingle();
+        // SELECT resiliente: tenta com as colunas de premium; se falhar (DB sem a
+        // migration 025 → coluna premium_ate ausente), cai pra só `estado`. O passe
+        // NUNCA quebra nem some por causa disso.
+        let linha: { estado?: unknown; premium?: boolean; premium_ate?: string | null } | null = null;
+        const r1 = await sb.from("battle_pass").select("estado, premium, premium_ate").eq("user_id", u.user.id).maybeSingle();
+        if (r1.error) {
+          const r2 = await sb.from("battle_pass").select("estado").eq("user_id", u.user.id).maybeSingle();
+          linha = r2.data ?? null;
+        } else {
+          linha = r1.data ?? null;
+        }
         const agora = Date.now();
-        const salvo = data?.estado as Partial<PasseState> | undefined;
+        const salvo = linha?.estado as Partial<PasseState> | undefined;
         const criou = !salvo || Object.keys(salvo).length === 0;
         // normaliza SEMPRE: jsonb do servidor pode estar vazio, parcial ou de versão antiga
         const base = normalizarPasse(salvo, seedAgora(), agora);
         // premium é AUTORITATIVO no servidor (nunca no jsonb `estado`, que o cliente
         // sobrescreve): ou o boolean `premium` (legado), ou a assinatura via `premium_ate`
         // (ativa enquanto now() < premium_ate). Nunca confia no estado local.
-        const ateMs = data?.premium_ate ? new Date(data.premium_ate).getTime() : 0;
-        const premiumAtivo = data?.premium === true || ateMs > agora;
+        const ateMs = linha?.premium_ate ? new Date(linha.premium_ate).getTime() : 0;
+        const premiumAtivo = linha?.premium === true || ateMs > agora;
         const comPremium = { ...base, premium: premiumAtivo };
         const passe = renovarMissoes(comPremium, seedAgora(), agora);
         set({ passe, carregando: false });

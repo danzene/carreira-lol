@@ -330,3 +330,30 @@ begin
   return novo;
 end; $$;
 grant execute on function public.ajustar_coinpoints(integer, text) to authenticated;
+
+-- >>>>>>>>>>>>>>>>>>>> 023_loja_pagamentos.sql >>>>>>>>>>>>>>>>>>>>
+-- Loja de pagamentos (Mercado Pago / Pix). Pedidos server-authoritative + premium autoritativo.
+create table if not exists public.pedidos (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  produto text not null,
+  valor_centavos integer not null check (valor_centavos > 0),
+  moedas integer not null default 0 check (moedas >= 0),
+  concede_passe boolean not null default false,
+  status text not null default 'pendente'
+    check (status in ('pendente','aprovado','expirado','cancelado','erro')),
+  mp_payment_id text unique,
+  creditado_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+alter table public.pedidos enable row level security;
+grant select on public.pedidos to authenticated;
+drop policy if exists "pedidos: ler os proprios" on public.pedidos;
+create policy "pedidos: ler os proprios" on public.pedidos
+  for select to authenticated using (auth.uid() = user_id);
+create index if not exists pedidos_user_idx on public.pedidos (user_id, created_at desc);
+create index if not exists pedidos_mp_idx on public.pedidos (mp_payment_id);
+create index if not exists pedidos_status_idx on public.pedidos (status, created_at desc);
+alter table public.battle_pass add column if not exists premium boolean not null default false;
+revoke update (premium) on public.battle_pass from authenticated;

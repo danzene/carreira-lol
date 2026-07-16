@@ -972,7 +972,12 @@ export default function BatalhaCanvas({
     };
 
     return () => cancelAnimationFrame(raf);
-  }, [roteiro, iconePorId]);
+    // Roda UMA vez só (no mount). A partida é uma reprodução determinística de mão
+    // única: NUNCA deve reiniciar no meio por causa de re-render do pai (ex.: sync da
+    // nuvem recria os objetos `times`/`ctx`). Uma partida nova = Partida remonta = efeito
+    // novo com o roteiro certo. Por isso deps vazias de propósito.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function pular() {
     const c = canvasRef.current as (HTMLCanvasElement & { __pular?: () => void }) | null;

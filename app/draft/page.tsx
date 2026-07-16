@@ -184,7 +184,7 @@ function DraftFlow() {
         : "RESULTADO";
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-5 px-4 py-6">
+    <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-5 px-2 py-4 sm:px-4 sm:py-6">
       <header className="flex items-center justify-between">
         <div>
           <h1 className="font-pixel text-sm text-ciano">{titulo}</h1>

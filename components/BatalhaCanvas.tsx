@@ -987,34 +987,38 @@ export default function BatalhaCanvas({
   return (
     <div className="flex flex-col gap-2">
       {/* HUD nítido em DOM (retratos reais + placar + tempo) */}
-      <div className="flex items-center justify-between gap-1 border-2 border-borda bg-painel px-2 py-1.5">
-        <div className="flex gap-1">
-          {roster.azul.map((c) => (
-            <Retrato key={c.id} icone={c.icone} ehVoce={c.ehVoce} morto={marcador.mortos.includes(c.id)} lado="azul" />
-          ))}
-        </div>
-        <div className="flex shrink-0 flex-col items-center px-1">
-          <div className="font-pixel text-base leading-none">
-            <span className="text-ciano">{marcador.placar.azul}</span>
-            <span className="px-1.5 text-suave">-</span>
-            <span className="text-rosa">{marcador.placar.vermelho}</span>
+      <div className="flex flex-col gap-1 border-2 border-borda bg-painel py-1.5">
+        {/* fileira: retratos aliados · placar/tempo · retratos inimigos */}
+        <div className="flex items-center justify-between gap-0.5 px-1 sm:gap-1 sm:px-2">
+          <div className="flex gap-0.5 sm:gap-1">
+            {roster.azul.map((c) => (
+              <Retrato key={c.id} icone={c.icone} ehVoce={c.ehVoce} morto={marcador.mortos.includes(c.id)} lado="azul" />
+            ))}
           </div>
-          <div className="mt-1 font-pixel text-[11px] text-suave">{`${marcador.minuto}:00`}</div>
-          <div className="mt-0.5 font-pixel text-[9px] leading-none">
-            <span className="text-amber-300">💰</span>{" "}
-            <span className={marcador.ouro.azul >= marcador.ouro.vermelho ? "text-ciano" : "text-suave"}>
-              {(marcador.ouro.azul / 1000).toFixed(1)}k
-            </span>
-            <span className="text-suave"> · </span>
-            <span className={marcador.ouro.vermelho > marcador.ouro.azul ? "text-rosa" : "text-suave"}>
-              {(marcador.ouro.vermelho / 1000).toFixed(1)}k
-            </span>
+          <div className="flex shrink-0 flex-col items-center px-0.5 sm:px-1">
+            <div className="font-pixel text-sm leading-none sm:text-base">
+              <span className="text-ciano">{marcador.placar.azul}</span>
+              <span className="px-1 text-suave sm:px-1.5">-</span>
+              <span className="text-rosa">{marcador.placar.vermelho}</span>
+            </div>
+            <div className="mt-1 font-pixel text-[10px] text-suave sm:text-[11px]">{`${marcador.minuto}:00`}</div>
+          </div>
+          <div className="flex gap-0.5 sm:gap-1">
+            {roster.vermelho.map((c) => (
+              <Retrato key={c.id} icone={c.icone} ehVoce={c.ehVoce} morto={marcador.mortos.includes(c.id)} lado="vermelho" />
+            ))}
           </div>
         </div>
-        <div className="flex gap-1">
-          {roster.vermelho.map((c) => (
-            <Retrato key={c.id} icone={c.icone} ehVoce={c.ehVoce} morto={marcador.mortos.includes(c.id)} lado="vermelho" />
-          ))}
+        {/* ouro na própria linha (não espreme os retratos no celular) */}
+        <div className="flex items-center justify-center gap-1 border-t border-borda pt-1 font-pixel text-[9px] leading-none">
+          <span className="text-amber-300">💰</span>
+          <span className={marcador.ouro.azul >= marcador.ouro.vermelho ? "text-ciano" : "text-suave"}>
+            {(marcador.ouro.azul / 1000).toFixed(1)}k
+          </span>
+          <span className="text-suave">·</span>
+          <span className={marcador.ouro.vermelho > marcador.ouro.azul ? "text-rosa" : "text-suave"}>
+            {(marcador.ouro.vermelho / 1000).toFixed(1)}k
+          </span>
         </div>
       </div>
 
@@ -1074,7 +1078,7 @@ function Retrato({
   const borda = ehVoce ? "border-amber-300" : lado === "azul" ? "border-ciano" : "border-rosa";
   return (
     <div className="flex flex-col items-center gap-0.5">
-      <div className={`relative h-7 w-7 border-2 sm:h-9 sm:w-9 ${borda}`}>
+      <div className={`relative h-6 w-6 border-2 sm:h-9 sm:w-9 ${borda}`}>
         {icone ? (
           <img src={icone} alt="" className={`h-full w-full object-cover ${morto ? "opacity-40 grayscale" : ""}`} />
         ) : (
@@ -1083,7 +1087,7 @@ function Retrato({
         {ehVoce && <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-[10px] leading-none text-amber-300">★</span>}
         {morto && <span className="absolute inset-0 flex items-center justify-center font-pixel text-[11px] text-rosa">✕</span>}
       </div>
-      <div className="h-1 w-7 bg-rosa/30 sm:w-9">{!morto && <div className="h-full w-full bg-emerald-400" />}</div>
+      <div className="h-1 w-6 bg-rosa/30 sm:w-9">{!morto && <div className="h-full w-full bg-emerald-400" />}</div>
     </div>
   );
 }

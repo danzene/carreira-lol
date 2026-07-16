@@ -232,6 +232,9 @@ interface CareerStore {
   consumirAnaliseAdversario: (venceu: boolean) => void; // após a partida contra o time estudado
   apagar: (slotId: string) => void;
   sair: () => void;
+  // Limpa SÓ a memória (troca/logout de conta) — não toca no localStorage, pra não
+  // vazar a carreira pro namespace `anon` nem carregar pra outra conta.
+  esquecerCarreira: () => void;
 }
 
 // iLvl dos drops conforme o MMR do jogador (elo mais alto → itens melhores).
@@ -1169,4 +1172,15 @@ export const useCareer = create<CareerStore>((set, get) => ({
     definirSlotAtual(null);
     set({ career: null, slotId: null });
   },
+
+  esquecerCarreira: () =>
+    set({
+      career: null,
+      slotId: null,
+      ultimoResumo: null,
+      dailyHub: null,
+      recapSemanal: null,
+      grindResultado: null,
+      grindResumo: null,
+    }),
 }));

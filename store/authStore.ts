@@ -3,6 +3,7 @@ import type { User } from "@supabase/supabase-js";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabaseClient";
 import { definirUsuario, migrarAnonParaUsuario, observarSaves } from "./saves";
 import { agendarPush, puxarDoCloud } from "./cloudSync";
+import { useCareer } from "./careerStore";
 
 interface AuthStore {
   user: User | null;
@@ -34,9 +35,14 @@ function traduzErro(msg: string): string {
 
 export const useAuth = create<AuthStore>((set) => {
   async function aplicarSessao(user: User | null): Promise<void> {
+    // ⚠️ ORDEM IMPORTA: esquece a carreira em memória ANTES de trocar o namespace dos
+    // saves. Senão, entre o definirUsuario(novo) e as páginas recarregarem, um save
+    // (ex.: heartbeat do grind) gravaria a carreira da conta ANTERIOR no namespace da
+    // NOVA — contaminação cruzada. Roda em toda troca/login/logout (no-op se já vazio).
+    useCareer.getState().esquecerCarreira();
     definirUsuario(user?.id ?? null);
     if (user) {
-      migrarAnonParaUsuario(user.id); // 1º login: traz a carreira anônima pra conta
+      migrarAnonParaUsuario(user.id); // 1º login: traz a carreira anônima pra conta (e limpa o anon)
       await puxarDoCloud();
     }
     set({ user });

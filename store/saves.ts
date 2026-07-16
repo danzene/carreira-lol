@@ -129,15 +129,22 @@ export function importarTudo(dados: Record<string, Slot>): void {
 
 // No 1º login, leva os saves que estavam como anônimos pra conta (sem sobrescrever
 // se a conta já tiver saves). Evita "perder" a carreira ao ativar o login.
+// ⚠️ A carreira anônima pertence a UMA conta (a primeira que loga). Depois de migrar,
+// LIMPA o anon — senão ela seria clonada pra TODA conta que logar depois nesse
+// aparelho (era o bug de "toda conta com os mesmos personagens").
 export function migrarAnonParaUsuario(userId: string): void {
   if (typeof window === "undefined" || !userId || userId === "anon") return;
   const chaveUser = `${PREFIXO}:saves:v1:${userId}`;
   const jaTem = window.localStorage.getItem(chaveUser);
   if (jaTem && jaTem !== "{}") return; // conta já tem saves — não mexe
-  const anon = window.localStorage.getItem(`${PREFIXO}:saves:v1:anon`);
+  const anonSaves = `${PREFIXO}:saves:v1:anon`;
+  const anonSlot = `${PREFIXO}:slot-atual:v1:anon`;
+  const anon = window.localStorage.getItem(anonSaves);
   if (anon && anon !== "{}") {
     window.localStorage.setItem(chaveUser, anon);
-    const slotAnon = window.localStorage.getItem(`${PREFIXO}:slot-atual:v1:anon`);
+    const slotAnon = window.localStorage.getItem(anonSlot);
     if (slotAnon) window.localStorage.setItem(`${PREFIXO}:slot-atual:v1:${userId}`, slotAnon);
+    window.localStorage.removeItem(anonSaves); // ← impede clonagem pras próximas contas
+    window.localStorage.removeItem(anonSlot);
   }
 }
